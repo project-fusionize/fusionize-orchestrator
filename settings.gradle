@@ -1,0 +1,3 @@
+rootProject.name = 'fusionize-orchestrator'
+include 'app-orchestrator'
+include 'lib-security'
