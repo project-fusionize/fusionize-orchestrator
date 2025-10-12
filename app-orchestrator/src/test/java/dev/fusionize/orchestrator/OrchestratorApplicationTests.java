@@ -1,10 +1,10 @@
-package dev.fusionize.libsecurity;
+package dev.fusionize.orchestrator;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class LibSecurityApplicationTests {
+class OrchestratorApplicationTests {
 
     @Test
     void contextLoads() {

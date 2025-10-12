@@ -1,13 +1,13 @@
-package dev.fusionize.libsecurity;
+package dev.fusionize.orchestrator;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class LibSecurityApplication {
+public class OrchestratorApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(LibSecurityApplication.class, args);
+        SpringApplication.run(OrchestratorApplication.class, args);
     }
 
 }
