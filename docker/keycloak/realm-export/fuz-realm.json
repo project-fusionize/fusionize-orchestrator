@@ -1,0 +1,26 @@
+{
+  "realm": "fuz",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "fusionize-orchestrator",
+      "secret": "fusionize-secret",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "redirectUris": ["*"]
+    }
+  ],
+  "users": [
+    {
+      "username": "fusionize-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Fusionize",
+      "lastName": "Admin",
+      "email": "admin@fusionize.dev",
+      "credentials": [{ "type": "password", "value": "admin", "temporary": false }]
+    }
+  ]
+}
