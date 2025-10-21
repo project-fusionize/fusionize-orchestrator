@@ -5,5 +5,5 @@ include 'lib-user'
 include 'lib-project'
 include 'lib-common-test'
 include 'lib-common'
-
+include 'lib-workflow'
 
