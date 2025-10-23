@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 @Component
 public class WorkflowComponentRegistry {
     private final ConcurrentHashMap<String, WorkflowComponentRuntime> registry = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, WorkflowComponentFactory> factoryRegistry = new ConcurrentHashMap<>();
 
     /**
      * Registers a workflow component runtime with the registry.
@@ -56,17 +57,54 @@ public class WorkflowComponentRegistry {
     }
 
     /**
-     * Retrieves a workflow component runtime by prefix and config.
+     * Registers a workflow component factory with the registry.
      * The prefix should be in format "TYPE:domain" (e.g., "TASK:com.example.sendEmail")
      *
      * @param prefix The key prefix (TYPE:domain)
+     * @param factory The factory for creating component instances
+     */
+    public void registerFactory(String prefix, WorkflowComponentFactory factory) {
+        if (prefix == null || factory == null) {
+            throw new IllegalArgumentException("Prefix and factory cannot be null");
+        }
+        factoryRegistry.put(prefix.toLowerCase(), factory);
+    }
+
+    /**
+     * Registers a workflow component factory with the registry using component metadata.
+     *
+     * @param component The component metadata
+     * @param factory The factory for creating component instances
+     */
+    public void registerFactory(WorkflowComponent component, WorkflowComponentFactory factory) {
+        if (component == null || factory == null) {
+            throw new IllegalArgumentException("Component and factory cannot be null");
+        }
+        String prefix = buildPrefix(component);
+        registerFactory(prefix, factory);
+    }
+
+    /**
+     * Retrieves a workflow component runtime by prefix and config.
+     * The prefix should be in format "TYPE:domain" (e.g., "TASK:com.example.sendEmail")
+     * If not found in registry, attempts to create from factory.
+     *
+     * @param prefix The key prefix (TYPE:domain)
      * @param config The component configuration
-     * @return Optional containing the runtime if found
+     * @return Optional containing the runtime if found or created
      */
     public Optional<WorkflowComponentRuntime> get(String prefix, WorkflowComponentConfig config) {
         int configHash = calculateConfigHash(config);
         String fullKey = prefix + ":" + configHash;
-        return get(fullKey);
+
+        // First try to get from registry
+        Optional<WorkflowComponentRuntime> runtime = get(fullKey);
+        if (runtime.isPresent()) {
+            return runtime;
+        }
+
+        // If not found, try to create from factory
+        return createFromFactory(prefix, config);
     }
 
     /**
@@ -81,15 +119,25 @@ public class WorkflowComponentRegistry {
 
     /**
      * Retrieves a workflow component runtime by its components.
+     * If not found in registry, attempts to create from factory.
      *
      * @param component The component metadata
      * @param config The component configuration
-     * @return Optional containing the runtime if found
+     * @return Optional containing the runtime if found or created
      */
     public Optional<WorkflowComponentRuntime> get(WorkflowComponent component,
                                                   WorkflowComponentConfig config) {
         String key = buildRegistryKey(component, config);
-        return get(key);
+
+        // First try to get from registry
+        Optional<WorkflowComponentRuntime> runtime = get(key);
+        if (runtime.isPresent()) {
+            return runtime;
+        }
+
+        // If not found, try to create from factory
+        String prefix = buildPrefix(component);
+        return createFromFactory(prefix, config);
     }
 
     /**
@@ -160,6 +208,7 @@ public class WorkflowComponentRegistry {
      */
     public void clear() {
         registry.clear();
+        factoryRegistry.clear();
     }
 
     /**
@@ -169,6 +218,102 @@ public class WorkflowComponentRegistry {
      */
     public int size() {
         return registry.size();
+    }
+
+    /**
+     * Gets the number of registered factories.
+     *
+     * @return The count of registered factories
+     */
+    public int factoryCount() {
+        return factoryRegistry.size();
+    }
+
+    /**
+     * Checks if a factory is registered for the given prefix.
+     *
+     * @param prefix The key prefix (TYPE:domain)
+     * @return true if factory is registered, false otherwise
+     */
+    public boolean hasFactory(String prefix) {
+        return factoryRegistry.containsKey(prefix.toLowerCase());
+    }
+
+    /**
+     * Checks if a factory is registered for the given component.
+     *
+     * @param component The component metadata
+     * @return true if factory is registered, false otherwise
+     */
+    public boolean hasFactory(WorkflowComponent component) {
+        String prefix = buildPrefix(component);
+        return hasFactory(prefix);
+    }
+
+    /**
+     * Unregisters a factory by prefix.
+     *
+     * @param prefix The key prefix (TYPE:domain)
+     * @return true if the factory was removed, false otherwise
+     */
+    public boolean unregisterFactory(String prefix) {
+        return factoryRegistry.remove(prefix.toLowerCase()) != null;
+    }
+
+    /**
+     * Unregisters a factory by component.
+     *
+     * @param component The component metadata
+     * @return true if the factory was removed, false otherwise
+     */
+    public boolean unregisterFactory(WorkflowComponent component) {
+        String prefix = buildPrefix(component);
+        return unregisterFactory(prefix);
+    }
+
+    /**
+     * Clears all factory registrations.
+     */
+    public void clearFactories() {
+        factoryRegistry.clear();
+    }
+
+    /**
+     * Creates a component runtime from factory if available.
+     *
+     * @param prefix The component prefix
+     * @param config The component configuration
+     * @return Optional containing the created runtime if factory exists
+     */
+    private Optional<WorkflowComponentRuntime> createFromFactory(String prefix, WorkflowComponentConfig config) {
+        WorkflowComponentFactory factory = factoryRegistry.get(prefix.toLowerCase());
+        if (factory != null) {
+            try {
+                WorkflowComponentRuntime runtime = factory.create();
+                // Optionally register the created runtime for future use
+                int configHash = calculateConfigHash(config);
+                String key = prefix + ":" + configHash;
+                runtime.configure(config);
+                registry.put(key, runtime);
+                return Optional.of(runtime);
+            } catch (Exception e) {
+                // Log error if needed, but don't fail the request
+                return Optional.empty();
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Builds the prefix from component metadata.
+     *
+     * @param component The component metadata
+     * @return The prefix in format "TYPE:domain"
+     */
+    private String buildPrefix(WorkflowComponent component) {
+        WorkflowNodeType nodeType = component.getCompatible();
+        String domain = component.getDomain();
+        return String.format("%s:%s", nodeType.getName().toLowerCase(), domain.toLowerCase());
     }
 
     /**

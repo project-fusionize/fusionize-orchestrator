@@ -22,6 +22,10 @@ public class WorkflowOrchestrationService {
                 .toList();
     }
 
+    private void orchestrate(WorkflowNode workflowNode){
+
+    }
+
     private void setWorkflowNodeExecutionRuntime(WorkflowNodeExecution ne){
         Optional<WorkflowComponentRuntime> optionalWorkflowComponentRuntime =  workflowComponentRegistry.get(
                 ne.getWorkflowNode().getComponent(),
@@ -29,20 +33,7 @@ public class WorkflowOrchestrationService {
         if(optionalWorkflowComponentRuntime.isPresent()){
             ne.setRuntime(optionalWorkflowComponentRuntime.get());
         }else {
-            optionalWorkflowComponentRuntime =  workflowComponentRegistry.get(
-                    ne.getWorkflowNode().getComponent(), new WorkflowComponentConfig());
-            if(optionalWorkflowComponentRuntime.isPresent()){
-                try {
-                    WorkflowComponentRuntime cloned = optionalWorkflowComponentRuntime.get().clone();
-                    cloned.configure(ne.getWorkflowNode());
-                    workflowComponentRegistry.register(ne.getWorkflowNode().getComponent(),
-                            ne.getWorkflowNode().getComponentConfig(),cloned);
-                    ne.setRuntime(cloned);
-                } catch (CloneNotSupportedException e) {
-                    throw new RuntimeException(e);
-                }
-
-            }
+           //todo handle no component
         }
     }
 
