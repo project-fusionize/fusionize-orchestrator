@@ -1,6 +1,7 @@
 package dev.fusionize.workflow;
 
-import dev.fusionize.workflow.component.WorkflowComponentRuntime;
+import dev.fusionize.common.utility.KeyUtil;
+import dev.fusionize.workflow.component.runtime.ComponentRuntime;
 import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
@@ -9,15 +10,17 @@ import java.util.List;
 public class WorkflowNodeExecution {
     private List<WorkflowNodeExecution> children = new ArrayList<>();
     private String workflowNodeId;
+    private String workflowNodeExecutionId;
     private WorkflowNodeExecutionState state;
     private WorkflowContext stageContext;
     @Transient
     private WorkflowNode workflowNode;
     @Transient
-    private WorkflowComponentRuntime runtime;
+    private ComponentRuntime runtime;
 
     public static WorkflowNodeExecution of(WorkflowNode node, WorkflowContext context) {
         WorkflowNodeExecution execution = new WorkflowNodeExecution();
+        execution.workflowNodeExecutionId = KeyUtil.getTimestampId("NEXE");
         execution.workflowNodeId = node.getWorkflowNodeId();
         execution.state = WorkflowNodeExecutionState.IDLE;
         execution.stageContext = context;
@@ -31,6 +34,15 @@ public class WorkflowNodeExecution {
 
     public void setChildren(List<WorkflowNodeExecution> children) {
         this.children = children;
+    }
+
+
+    public String getWorkflowNodeExecutionId() {
+        return workflowNodeExecutionId;
+    }
+
+    public void setWorkflowNodeExecutionId(String workflowNodeExecutionId) {
+        this.workflowNodeExecutionId = workflowNodeExecutionId;
     }
 
     public String getWorkflowNodeId() {
@@ -65,11 +77,11 @@ public class WorkflowNodeExecution {
         this.workflowNode = workflowNode;
     }
 
-    public WorkflowComponentRuntime getRuntime() {
+    public ComponentRuntime getRuntime() {
         return runtime;
     }
 
-    public void setRuntime(WorkflowComponentRuntime runtime) {
+    public void setRuntime(ComponentRuntime runtime) {
         this.runtime = runtime;
     }
 }

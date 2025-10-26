@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum WorkflowExecutionStatus {
+    IDLE("IDLE"),
     IN_PROGRESS("IN_PROGRESS"),
     ERROR("ERROR"),
     SUCCESS("SUCCESS"),

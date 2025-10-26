@@ -1,5 +1,6 @@
 package dev.fusionize.workflow;
 
+import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.workflow.component.WorkflowComponentConfig;
 
 import java.util.ArrayList;
@@ -18,7 +19,11 @@ public class WorkflowNode {
     private WorkflowNode(Builder builder) {
         this.children = builder.children;
         this.type = builder.type;
-        this.workflowNodeId = builder.workflowNodeId;
+        if(builder.workflowNodeId != null) {
+            this.workflowNodeId = builder.workflowNodeId;
+        }else{
+            this.workflowNodeId = KeyUtil.getTimestampId("WNOD");
+        }
         this.component = builder.component;
         this.componentConfig = builder.componentConfig;
     }

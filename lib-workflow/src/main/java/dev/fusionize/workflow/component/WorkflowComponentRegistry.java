@@ -1,6 +1,7 @@
 package dev.fusionize.workflow.component;
 
 import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.runtime.ComponentRuntime;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.stream.Collectors;
 
 @Component
 public class WorkflowComponentRegistry {
-    private final ConcurrentHashMap<String, WorkflowComponentRuntime> registry = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ComponentRuntime> registry = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, WorkflowComponentFactory> factoryRegistry = new ConcurrentHashMap<>();
 
     /**
@@ -24,7 +25,7 @@ public class WorkflowComponentRegistry {
      */
     public String register(WorkflowComponent component,
                            WorkflowComponentConfig config,
-                           WorkflowComponentRuntime runtime) {
+                           ComponentRuntime runtime) {
         if (component == null || runtime == null) {
             throw new IllegalArgumentException("Component and runtime cannot be null");
         }
@@ -45,7 +46,7 @@ public class WorkflowComponentRegistry {
      */
     public String register(String prefix,
                            WorkflowComponentConfig config,
-                           WorkflowComponentRuntime runtime) {
+                           ComponentRuntime runtime) {
         if (prefix == null || runtime == null) {
             throw new IllegalArgumentException("Prefix and runtime cannot be null");
         }
@@ -93,12 +94,12 @@ public class WorkflowComponentRegistry {
      * @param config The component configuration
      * @return Optional containing the runtime if found or created
      */
-    public Optional<WorkflowComponentRuntime> get(String prefix, WorkflowComponentConfig config) {
+    public Optional<ComponentRuntime> get(String prefix, WorkflowComponentConfig config) {
         int configHash = calculateConfigHash(config);
         String fullKey = prefix + ":" + configHash;
 
         // First try to get from registry
-        Optional<WorkflowComponentRuntime> runtime = get(fullKey);
+        Optional<ComponentRuntime> runtime = get(fullKey);
         if (runtime.isPresent()) {
             return runtime;
         }
@@ -113,7 +114,7 @@ public class WorkflowComponentRegistry {
      * @param key The registry key
      * @return Optional containing the runtime if found
      */
-    public Optional<WorkflowComponentRuntime> get(String key) {
+    public Optional<ComponentRuntime> get(String key) {
         return Optional.ofNullable(registry.get(key.toLowerCase()));
     }
 
@@ -125,12 +126,12 @@ public class WorkflowComponentRegistry {
      * @param config The component configuration
      * @return Optional containing the runtime if found or created
      */
-    public Optional<WorkflowComponentRuntime> get(WorkflowComponent component,
-                                                  WorkflowComponentConfig config) {
+    public Optional<ComponentRuntime> get(WorkflowComponent component,
+                                          WorkflowComponentConfig config) {
         String key = buildRegistryKey(component, config);
 
         // First try to get from registry
-        Optional<WorkflowComponentRuntime> runtime = get(key);
+        Optional<ComponentRuntime> runtime = get(key);
         if (runtime.isPresent()) {
             return runtime;
         }
@@ -147,8 +148,8 @@ public class WorkflowComponentRegistry {
      * @param domain The component domain
      * @return List of matching runtimes
      */
-    public List<WorkflowComponentRuntime> findByTypeAndDomain(WorkflowNodeType nodeType,
-                                                              String domain) {
+    public List<ComponentRuntime> findByTypeAndDomain(WorkflowNodeType nodeType,
+                                                      String domain) {
         String prefix = nodeType.getName() + ":" + domain + ":";
         return registry.entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith(prefix))
@@ -162,7 +163,7 @@ public class WorkflowComponentRegistry {
      * @param nodeType The workflow node type
      * @return List of matching runtimes
      */
-    public List<WorkflowComponentRuntime> findByType(WorkflowNodeType nodeType) {
+    public List<ComponentRuntime> findByType(WorkflowNodeType nodeType) {
         String prefix = nodeType.getName() + ":";
         return registry.entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith(prefix))
@@ -285,11 +286,11 @@ public class WorkflowComponentRegistry {
      * @param config The component configuration
      * @return Optional containing the created runtime if factory exists
      */
-    private Optional<WorkflowComponentRuntime> createFromFactory(String prefix, WorkflowComponentConfig config) {
+    private Optional<ComponentRuntime> createFromFactory(String prefix, WorkflowComponentConfig config) {
         WorkflowComponentFactory factory = factoryRegistry.get(prefix.toLowerCase());
         if (factory != null) {
             try {
-                WorkflowComponentRuntime runtime = factory.create();
+                ComponentRuntime runtime = factory.create();
                 // Optionally register the created runtime for future use
                 int configHash = calculateConfigHash(config);
                 String key = prefix + ":" + configHash;

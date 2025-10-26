@@ -97,7 +97,11 @@ public class Workflow extends DomainEntity {
             workflow.load(super.build());
             workflow.setDescription(this.description);
             workflow.setVersion(this.version);
-            workflow.setWorkflowId(this.workflowId);
+            if(this.workflowId!=null){
+                workflow.setWorkflowId(this.workflowId);
+            }else{
+                workflow.setWorkflowId(KeyUtil.getTimestampId("WFLO"));
+            }
             workflow.setActive(this.active);
             workflow.setNodes(new ArrayList<>(this.nodes));
             return workflow;

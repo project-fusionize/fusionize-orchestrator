@@ -1,30 +1,55 @@
 package dev.fusionize.workflow;
 
+import dev.fusionize.common.test.TestMongoConfig;
+import dev.fusionize.common.test.TestMongoConversionConfig;
 import dev.fusionize.workflow.component.*;
 
-import org.junit.jupiter.api.BeforeEach;
+import dev.fusionize.workflow.component.runtime.ComponentEvent;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeStart;
+import dev.fusionize.workflow.component.runtime.event.ComponentActivateEventData;
+import dev.fusionize.workflow.component.runtime.event.ComponentTriggeredEventData;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Predicate;
 
+@DataMongoTest()
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = {
+        TestMongoConfig.class,
+        TestMongoConversionConfig.class,
+        WorkflowComponentRuntimeEngine.class,
+        WorkflowComponentRegistry.class,
+        WorkflowOrchestrationService.class
+})
+@ActiveProfiles("ut")
 class WorkflowOrchestrationServiceTest {
-    WorkflowOrchestrationService service;
+    @Autowired
     WorkflowComponentRegistry registry;
 
-    @BeforeEach
-    void setUp() {
-        registry = new WorkflowComponentRegistry();
-        service = new WorkflowOrchestrationService(registry);
-    }
+    @Autowired
+    WorkflowOrchestrationService service;
+
+    @Autowired
+    WorkflowComponentRuntimeEngine runtimeEngine;
+
+    @Autowired
+    ApplicationEventPublisher eventPublisher;
+
 
     @Test
     void orchestrate() throws InterruptedException {
         StringWriter writer = new StringWriter();
-        MockRecEmailComponent mockRecEmailComponent = new MockRecEmailComponent(writer);
+        MockRecEmailComponent mockRecEmailComponent = new MockRecEmailComponent(writer, eventPublisher);
         WorkflowComponentFactory emailTaskFactory = () -> mockRecEmailComponent;
 
         registry.registerFactory(WorkflowComponent.builder("test")
@@ -33,7 +58,6 @@ class WorkflowOrchestrationServiceTest {
                 .build(), emailTaskFactory);
         Workflow workflow = Workflow.builder("test")
                 .addNode(WorkflowNode.builder()
-                        .workflowNodeId("node-1")
                         .component("start:test.receivedEmail")
                         .componentConfig(WorkflowComponentConfig.builder().put("address", "a@b.com").build())
                         .type(WorkflowNodeType.START)
@@ -47,44 +71,46 @@ class WorkflowOrchestrationServiceTest {
         System.out.println(writer.toString());
     }
 
-    static final class MockSendEmailComponent implements WorkflowComponentRuntimeTask {
+//    static final class MockSendEmailComponent implements ComponentRuntimeTask {
+//        private final StringWriter writer;
+//        String address;
+//
+//        MockSendEmailComponent(StringWriter writer) {
+//            this.writer = writer;
+//        }
+//
+//        @Override
+//        public void run(WorkflowContext context, Predicate<WorkflowContext> onFinish) {
+//            System.out.println("sending email to " + address);
+//            System.out.println("BODY: " + context.getContext().get("outgoing_message"));
+//        }
+//
+//        @Override
+//        public void configure(WorkflowComponentConfig config) {
+//            this.address = config.getConfig().get("address").toString();
+//        }
+//
+//        @Override
+//        public boolean canActivate(WorkflowContext context) {
+//            return true;
+//        }
+//
+//        @Override
+//        public ComponentRuntime clone() throws CloneNotSupportedException {
+//            return (ComponentRuntime) super.clone();
+//        }
+//    }
+
+    static final class MockRecEmailComponent implements ComponentRuntimeStart {
         private final StringWriter writer;
-        String address;
-
-        MockSendEmailComponent(StringWriter writer) {
-            this.writer = writer;
-        }
-
-        @Override
-        public void run(WorkflowContext context, Predicate<WorkflowContext> onFinish) {
-            System.out.println("sending email to " + address);
-            System.out.println("BODY: " + context.getContext().get("outgoing_message"));
-        }
-
-        @Override
-        public void configure(WorkflowComponentConfig config) {
-            this.address = config.getConfig().get("address").toString();
-        }
-
-        @Override
-        public boolean canActivate(WorkflowContext context) {
-            return true;
-        }
-
-        @Override
-        public WorkflowComponentRuntime clone() throws CloneNotSupportedException {
-            return (WorkflowComponentRuntime) super.clone();
-        }
-    }
-
-    static final class MockRecEmailComponent implements WorkflowComponentRuntimeStart {
-        private final StringWriter writer;
+        private final ApplicationEventPublisher eventPublisher;
 
         String address;
         private List<String> inbox = new ArrayList<>();
 
-        MockRecEmailComponent(StringWriter writer) {
+        MockRecEmailComponent(StringWriter writer, ApplicationEventPublisher eventPublisher) {
             this.writer = writer;
+            this.eventPublisher = eventPublisher;
         }
 
         public void addToInbox(String email) {
@@ -100,25 +126,27 @@ class WorkflowOrchestrationServiceTest {
         }
 
         @Override
-        public boolean canActivate(WorkflowContext context) {
-            return true;
+        public void canActivate(ComponentEvent<ComponentActivateEventData> onActivate) {
+            try {
+                Thread.sleep(100);
+                onActivate.getData().setActivated(true);
+                eventPublisher.publishEvent(onActivate);
+            } catch (InterruptedException e) {
+                System.out.println(e.getMessage());
+
+            }
         }
 
         @Override
-        public WorkflowComponentRuntime clone() throws CloneNotSupportedException {
-            return (WorkflowComponentRuntime) super.clone();
-        }
-
-        @Override
-        public void start(Predicate<WorkflowContext> onTriggered) {
+        public void start(ComponentEvent<ComponentTriggeredEventData> onTriggered) {
             CompletableFuture.runAsync(()->{
                 while (true){
                     try {
                         Thread.sleep(100);
+                        WorkflowContext ctx = onTriggered.getData().getContext();
                         for(String email : inbox){
-                            WorkflowContext ctx = new WorkflowContext();
                             ctx.getContext().put("incoming_message", email);
-                            onTriggered.test(ctx);
+                            eventPublisher.publishEvent(onTriggered);
                         }
                         inbox.clear();
                     } catch (InterruptedException e) {
@@ -126,8 +154,8 @@ class WorkflowOrchestrationServiceTest {
 
                     }
                 }
-
             });
+
         }
     }
 }

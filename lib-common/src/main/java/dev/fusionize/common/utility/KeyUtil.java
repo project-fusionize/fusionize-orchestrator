@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.Random;
 import java.util.UUID;
 
+
 public class KeyUtil {
 
     public static String getNumericKey(long seed) {
@@ -54,8 +55,7 @@ public class KeyUtil {
         return DigestUtils.sha256Hex(sequence);
     }
     public static String getRandomHash() {
-        Date d = new Date();
-        return DigestUtils.sha256Hex(d.getTime() + getRandomAlphaNumericKey(8));
+        return DigestUtils.sha256Hex(getTimestampId(""));
     }
 
     public static String getLongHash(String sequence, int length) {
@@ -77,4 +77,10 @@ public class KeyUtil {
         String uuid = getUUID();
         return uuid.replaceAll("-","");
     }
+
+    public static String getTimestampId(String prefix) {
+        Date d = new Date();
+        return prefix + d.getTime() + getRandomAlphaNumericKey(8);
+    }
 }
+

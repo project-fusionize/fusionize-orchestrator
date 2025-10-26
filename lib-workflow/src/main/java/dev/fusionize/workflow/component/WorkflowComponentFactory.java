@@ -1,5 +1,7 @@
 package dev.fusionize.workflow.component;
 
+import dev.fusionize.workflow.component.runtime.ComponentRuntime;
+
 /**
  * Factory interface for creating WorkflowComponentRuntime instances.
  * This allows components to be created dynamically when configuration is not yet available.
@@ -11,5 +13,5 @@ public interface WorkflowComponentFactory {
      * 
      * @return A new instance of WorkflowComponentRuntime
      */
-    WorkflowComponentRuntime create();
+    ComponentRuntime create();
 }
