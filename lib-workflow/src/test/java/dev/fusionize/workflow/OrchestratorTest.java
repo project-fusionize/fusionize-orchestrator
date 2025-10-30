@@ -2,54 +2,98 @@ package dev.fusionize.workflow;
 
 import dev.fusionize.common.test.TestMongoConfig;
 import dev.fusionize.common.test.TestMongoConversionConfig;
+import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.workflow.component.*;
 
-import dev.fusionize.workflow.component.runtime.ComponentEvent;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeStart;
-import dev.fusionize.workflow.component.runtime.event.ComponentActivateEventData;
-import dev.fusionize.workflow.component.runtime.event.ComponentTriggeredEventData;
+import dev.fusionize.workflow.component.runtime.StartComponentRuntime;
+import dev.fusionize.workflow.events.Event;
+import dev.fusionize.workflow.events.EventPublisher;
+import dev.fusionize.workflow.events.EventStore;
+import dev.fusionize.workflow.events.RuntimeEvent;
+import dev.fusionize.workflow.events.runtime.ComponentActivatedEvent;
+import dev.fusionize.workflow.events.runtime.ComponentTriggeredEvent;
+import dev.fusionize.workflow.orchestrator.Orchestrator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+
+@Configuration
+@ComponentScan(basePackages = "dev.fusionize.workflow")
+@Import({
+        TestMongoConfig.class,
+        TestMongoConversionConfig.class
+})
+class TestConfig {
+    @Bean
+    public EventStore<Event> eventStore(){
+        return new EventStore<Event>() {
+            Map<String, Event> map = new HashMap<>();
+            @Override
+            public void save(Event event) {
+                map.put(event.getEventId(),event);
+            }
+
+            @Override
+            public Optional<Event> findByEventId(String eventId) {
+                return Optional.ofNullable(map.get(eventId));
+            }
+
+            @Override
+            public List<Event> findByCausationId(String causationId) {
+                return map.values().stream().filter(e-> causationId.equals(e.getCausationId())).toList();
+            }
+
+            @Override
+            public List<Event> findByCorrelationId(String correlationId) {
+                return map.values().stream().filter(e-> correlationId.equals(e.getCorrelationId())).toList();
+            }
+        };
+    }
+
+    @Bean
+    public EventPublisher<Event> eventPublisher(ApplicationEventPublisher eventPublisher) {
+        return eventPublisher::publishEvent;
+    }
+}
+
 
 @DataMongoTest()
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {
-        TestMongoConfig.class,
-        TestMongoConversionConfig.class,
-        WorkflowComponentRuntimeEngine.class,
-        WorkflowComponentRegistry.class,
-        WorkflowOrchestrationService.class
-})
+@ComponentScan(basePackages = "dev.fusionize.workflow")
+@ContextConfiguration(
+        classes = TestConfig.class)
 @ActiveProfiles("ut")
-class WorkflowOrchestrationServiceTest {
+class OrchestratorTest {
     @Autowired
     WorkflowComponentRegistry registry;
 
     @Autowired
-    WorkflowOrchestrationService service;
+    Orchestrator service;
 
     @Autowired
     WorkflowComponentRuntimeEngine runtimeEngine;
 
     @Autowired
-    ApplicationEventPublisher eventPublisher;
+    EventPublisher<Event> eventPublisher;
 
 
     @Test
     void orchestrate() throws InterruptedException {
         StringWriter writer = new StringWriter();
-        MockRecEmailComponent mockRecEmailComponent = new MockRecEmailComponent(writer, eventPublisher);
+        MockRecEmailComponentComponentRuntime mockRecEmailComponent = new MockRecEmailComponentComponentRuntime(writer, eventPublisher);
         WorkflowComponentFactory emailTaskFactory = () -> mockRecEmailComponent;
 
         registry.registerFactory(WorkflowComponent.builder("test")
@@ -101,16 +145,15 @@ class WorkflowOrchestrationServiceTest {
 //        }
 //    }
 
-    static final class MockRecEmailComponent implements ComponentRuntimeStart {
+    static final class MockRecEmailComponentComponentRuntime extends StartComponentRuntime {
         private final StringWriter writer;
-        private final ApplicationEventPublisher eventPublisher;
 
         String address;
         private List<String> inbox = new ArrayList<>();
 
-        MockRecEmailComponent(StringWriter writer, ApplicationEventPublisher eventPublisher) {
+        MockRecEmailComponentComponentRuntime(StringWriter writer, EventPublisher<Event> eventPublisher) {
+            super(eventPublisher);
             this.writer = writer;
-            this.eventPublisher = eventPublisher;
         }
 
         public void addToInbox(String email) {
@@ -126,27 +169,30 @@ class WorkflowOrchestrationServiceTest {
         }
 
         @Override
-        public void canActivate(ComponentEvent<ComponentActivateEventData> onActivate) {
-            try {
-                Thread.sleep(100);
-                onActivate.getData().setActivated(true);
-                eventPublisher.publishEvent(onActivate);
-            } catch (InterruptedException e) {
-                System.out.println(e.getMessage());
+        public void canActivate(ComponentActivatedEvent onActivate) {
+            CompletableFuture.runAsync(()->{
+                try {
+                    Thread.sleep(100);
+                    onActivate.setException(null);
+                    publish(onActivate);
+                } catch (InterruptedException e) {
+                    System.out.println(e.getMessage());
 
-            }
+                }
+            });
+
         }
 
         @Override
-        public void start(ComponentEvent<ComponentTriggeredEventData> onTriggered) {
+        public void start(ComponentTriggeredEvent onTriggered) {
             CompletableFuture.runAsync(()->{
                 while (true){
                     try {
                         Thread.sleep(100);
-                        WorkflowContext ctx = onTriggered.getData().getContext();
+                        WorkflowContext ctx = onTriggered.getContext();
                         for(String email : inbox){
                             ctx.getContext().put("incoming_message", email);
-                            eventPublisher.publishEvent(onTriggered);
+                            publish(onTriggered);
                         }
                         inbox.clear();
                     } catch (InterruptedException e) {

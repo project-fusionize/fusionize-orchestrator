@@ -1,213 +1,123 @@
 package dev.fusionize.workflow.component;
 
-import dev.fusionize.workflow.component.event.RuntimeEvent;
-import dev.fusionize.workflow.component.event.RuntimeEventData;
-import dev.fusionize.workflow.component.event.data.*;
+
+import dev.fusionize.workflow.component.exceptions.ComponentMissmatchException;
 import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
-import dev.fusionize.workflow.component.runtime.*;
-import dev.fusionize.workflow.component.runtime.event.ComponentActivateEventData;
-import dev.fusionize.workflow.component.runtime.event.ComponentFinishedEventData;
-import dev.fusionize.workflow.component.runtime.event.ComponentTriggeredEventData;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
+import dev.fusionize.workflow.component.runtime.ComponentRuntime;
+import dev.fusionize.workflow.component.runtime.StartComponentRuntime;
+import dev.fusionize.workflow.events.Event;
+import dev.fusionize.workflow.events.EventStore;
+import dev.fusionize.workflow.events.OrchestrationEvent;
+import dev.fusionize.workflow.events.orchestration.ActivateRequestEvent;
+import dev.fusionize.workflow.events.orchestration.ActivateResponseEvent;
+import dev.fusionize.workflow.events.orchestration.StartRequestEvent;
+import dev.fusionize.workflow.events.orchestration.StartResponseEvent;
+import dev.fusionize.workflow.events.runtime.ComponentActivatedEvent;
+import dev.fusionize.workflow.events.runtime.ComponentTriggeredEvent;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @Service
 public class WorkflowComponentRuntimeEngine {
     public static final String ERR_CODE_COMP_NOT_FOUND = "(wcre101) Runtime component not found";
-    private final ApplicationEventPublisher eventPublisher;
+    public static final String ERR_CODE_COMP_NOT_MATCH = "(wcre102) Runtime component type not match";
+
     private final WorkflowComponentRegistry workflowComponentRegistry;
+    private final EventStore<Event> eventStore;
 
-    //todo make actual repository
-    private final List<RuntimeEvent<?>> eventRepository = new ArrayList<>();
-
-    public WorkflowComponentRuntimeEngine(ApplicationEventPublisher eventPublisher,
-                                          WorkflowComponentRegistry workflowComponentRegistry) {
-        this.eventPublisher = eventPublisher;
+    public WorkflowComponentRuntimeEngine(WorkflowComponentRegistry workflowComponentRegistry,
+                                          EventStore<Event> eventStore) {
         this.workflowComponentRegistry = workflowComponentRegistry;
+        this.eventStore = eventStore;
     }
 
-
-//    private void executeStart(ComponentRuntime runtime, WorkflowContext context){
-//        if(runtime instanceof ComponentRuntimeStart startRuntime){
-//            startRuntime.start(context, (WorkflowContext start)->{
-//                System.out.println(start);
-//                return true;
-//            });
-//        }
-//    }
-//
-//    private void executeDecision(ComponentRuntime runtime, WorkflowContext context){
-//        if(runtime instanceof ComponentRuntimeDecision decisionRuntime){
-//            decisionRuntime.decide(context, (List<WorkflowNode> candidates)->{
-//                System.out.println(candidates);
-//                return true;
-//            });
-//        }
-//    }
-//
-//    private void executeTask(ComponentRuntime runtime, WorkflowContext context){
-//        if(runtime instanceof ComponentRuntimeTask taskRuntime){
-//            taskRuntime.run(context, (WorkflowContext finish)->{
-//                System.out.println(finish);
-//                return true;
-//            });
-//        }
-//    }
-//
-//    private void executeWait(ComponentRuntime runtime, WorkflowContext context){
-//        if(runtime instanceof ComponentRuntimeWait waitRuntime){
-//            waitRuntime.wait(context, (WorkflowContext resumed)->{
-//                System.out.println(resumed);
-//                return true;
-//            });
-//        }
-//    }
-//
-//    private void executeEnd(ComponentRuntime runtime, WorkflowContext context){
-//        if(runtime instanceof ComponentRuntimeEnd endRuntime){
-//            endRuntime.finish(context, (WorkflowExecutionStatus status)->{
-//                System.out.println(status);
-//                return true;
-//            });
-//        }
-//    }
-
-    @EventListener
-    public void handleComponentActivateEvent(ComponentEvent<ComponentActivateEventData> event) {
-        if(!shouldHandle(event, new ComponentActivateEventData().getEventTypeName())){
-            return;
-        }
-        String causationId =  event.getCausationId();
-        RuntimeEvent<?> runtimeActivationEvent = eventRepository.stream().filter(
-                e-> causationId.equals(e.getEventId())).findFirst().orElse(null);
-        RuntimeEvent<ActivateEventData> activateResponseEvent =
-                new RuntimeEvent<ActivateEventData>(this)
-                        .fromSource(this, runtimeActivationEvent, RuntimeEvent.Variant.RESPONSE, ActivateEventData.builder()
-                                .activate(event.getData().getActivated())
-                                .context(event.getData().getContext())
-                                .origin(RuntimeEventData.Origin.RUNTIME_ENGINE)
-                                .build());
-        activateResponseEvent.getData().setException(event.getData().getException());
-        eventPublisher.publishEvent(activateResponseEvent);
+    private Optional<ComponentRuntime> getRuntimeComponent(OrchestrationEvent orchestrationEvent) {
+        String component = orchestrationEvent.getComponent();
+        WorkflowComponentConfig componentConfig = orchestrationEvent.getOrchestrationEventContext()
+                .getNodeExecution().getWorkflowNode().getComponentConfig();
+        return workflowComponentRegistry.get(component, componentConfig);
     }
 
-    @EventListener
-    public void handleComponentFinishedEvent(ComponentEvent<ComponentFinishedEventData> event) {
-
-    }
-
-    @EventListener
-    public void handleComponentTriggeredEvent(ComponentEvent<ComponentTriggeredEventData> event) {
-        if(!shouldHandle(event, new ComponentTriggeredEventData().getEventTypeName())){
-            return;
-        }
-        String causationId =  event.getCausationId();
-        RuntimeEvent<?> runtimeEvent = eventRepository.stream().filter(
-                e-> causationId.equals(e.getEventId())).findFirst().orElse(null);
-        //todo fix: assumption of StartEventData is always true
-        RuntimeEvent<StartEventData> startEvent =
-                new RuntimeEvent<StartEventData>(this)
-                        .fromSource(this, runtimeEvent, RuntimeEvent.Variant.RESPONSE, StartEventData.builder()
-                                .context(event.getData().getContext())
-                                .origin(RuntimeEventData.Origin.RUNTIME_ENGINE)
-                                .build());
-        startEvent.getData().setException(event.getData().getException());
-        eventPublisher.publishEvent(startEvent);
-    }
-
-    @EventListener
-    public void handleActivateEvent(RuntimeEvent<ActivateEventData> event) {
-        eventRepository.add(event);
-        if(!shouldHandle(event, new ActivateEventData().getEventTypeName())){
-            return;
-        }
-        if(RuntimeEvent.Variant.REQUEST.equals(event.getVariant())){
-            Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  workflowComponentRegistry.get(
-                    event.getComponent(),
-                    event.ne.getWorkflowNode().getComponentConfig());
-            if(optionalWorkflowComponentRuntime.isEmpty()){
-                RuntimeEvent<ActivateEventData> activateResponseEvent =
-                        new RuntimeEvent<ActivateEventData>(this)
-                                .fromSource(this, event, RuntimeEvent.Variant.RESPONSE, ActivateEventData.builder()
-                                        .context(event.getData().getContext())
-                                        .origin(RuntimeEventData.Origin.RUNTIME_ENGINE)
-                                        .build());
-                activateResponseEvent.getData().setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
-                eventPublisher.publishEvent(activateResponseEvent);
-                return;
-            }
-
-            ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
-            runtime.canActivate(
-                    new ComponentEvent.Builder<ComponentActivateEventData>()
-                    .source(runtime).correlationId(event.getCorrelationId())
-                    .causationId(event.getEventId())
-                    .component(event.getComponent())
-                    .processed(false)
-                    .data(ComponentActivateEventData.builder()
-                            .context(event.getData().getContext()).build())
-                            .build());
+    public ActivateResponseEvent activateComponent(ActivateRequestEvent activateRequestEvent){
+        Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  getRuntimeComponent(activateRequestEvent);
+        if(optionalWorkflowComponentRuntime.isEmpty()){
+            ActivateResponseEvent responseEvent = ActivateResponseEvent.from(
+                    this, OrchestrationEvent.Origin.RUNTIME_ENGINE, activateRequestEvent);
+            responseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
+            return responseEvent;
         }
 
+        ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
+        runtime.canActivate(
+                ComponentActivatedEvent.builder(runtime)
+                        .correlationId(activateRequestEvent.getCorrelationId())
+                        .causationId(activateRequestEvent.getEventId())
+                        .component(activateRequestEvent.getComponent())
+                        .context(activateRequestEvent.getContext())
+                        .build()
+               );
+
+        return null;
     }
 
-    @EventListener
-    public void handleStartEvent(RuntimeEvent<StartEventData> event) {
-        eventRepository.add(event);
-        if(!shouldHandle(event, new StartEventData().getEventTypeName())){
-            return;
+    public ActivateResponseEvent onComponentActivated(ComponentActivatedEvent activatedEvent){
+        String causationId =  activatedEvent.getCausationId();
+        Optional<Event> requestEvent = this.eventStore.findByEventId(causationId);
+        if(requestEvent.isEmpty() || !(requestEvent.get() instanceof ActivateRequestEvent)){
+            //todo handle error
+            return null;
         }
-        if(RuntimeEvent.Variant.REQUEST.equals(event.getVariant())){
-            Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  workflowComponentRegistry.get(
-                    event.getComponent(),
-                    event.ne.getWorkflowNode().getComponentConfig());
-            if(optionalWorkflowComponentRuntime.isEmpty()){
-                RuntimeEvent<StartEventData> activateResponseEvent =
-                        new RuntimeEvent<StartEventData>(this)
-                                .fromSource(this, event, RuntimeEvent.Variant.RESPONSE, StartEventData.builder()
-                                        .context(event.getData().getContext())
-                                        .origin(RuntimeEventData.Origin.RUNTIME_ENGINE)
-                                        .build());
-                activateResponseEvent.getData().setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
-                eventPublisher.publishEvent(activateResponseEvent);
-                return;
-            }
 
-            ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
-            if(runtime instanceof ComponentRuntimeStart){
-                ((ComponentRuntimeStart) runtime).start(
-                        new ComponentEvent.Builder<ComponentTriggeredEventData>()
-                                .source(runtime).correlationId(event.getCorrelationId())
-                                .causationId(event.getEventId())
-                                .component(event.getComponent())
-                                .processed(false)
-                                .data(ComponentTriggeredEventData.builder().context(event.getData().getContext()).build()).build());
-            }
+        ActivateResponseEvent responseEvent = ActivateResponseEvent.from(
+                this, OrchestrationEvent.Origin.RUNTIME_ENGINE, (ActivateRequestEvent) requestEvent.get());
+        responseEvent.setContext(activatedEvent.getContext());
+        responseEvent.setException(activatedEvent.getException());
+
+        return responseEvent;
+    }
+
+    public StartResponseEvent startComponent(StartRequestEvent startRequestEvent) {
+        Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  getRuntimeComponent(startRequestEvent);
+        if(optionalWorkflowComponentRuntime.isEmpty()){
+            StartResponseEvent startResponseEvent = StartResponseEvent.from(
+                    this, OrchestrationEvent.Origin.RUNTIME_ENGINE, startRequestEvent);
+            startResponseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
+            return startResponseEvent;
         }
-    }
-
-    @EventListener
-    public void handleEndEvent(RuntimeEvent<EndEventData> event) {
-        if(!shouldHandle(event, new EndEventData().getEventTypeName())){
-            return;
+        ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
+        if(!(runtime instanceof StartComponentRuntime)){
+            StartResponseEvent startResponseEvent = StartResponseEvent.from(
+                    this, OrchestrationEvent.Origin.RUNTIME_ENGINE, startRequestEvent);
+            startResponseEvent.setException(new ComponentMissmatchException(ERR_CODE_COMP_NOT_MATCH));
+            return startResponseEvent;
         }
+        ((StartComponentRuntime) runtime).start(
+                ComponentTriggeredEvent.builder(runtime)
+                        .correlationId(startRequestEvent.getCorrelationId())
+                        .causationId(startRequestEvent.getEventId())
+                        .component(startRequestEvent.getComponent())
+                        .context(startRequestEvent.getContext())
+                        .build()
+        );
+        return null;
     }
 
+    public OrchestrationEvent onComponentTriggered(ComponentTriggeredEvent triggeredEvent) {
+        String causationId =  triggeredEvent.getCausationId();
+        Optional<Event> requestEvent = this.eventStore.findByEventId(causationId);
 
-    private boolean shouldHandle(RuntimeEvent re, String e){
-        return re!=null && !re.isProcessed() && !this.equals(re.getSource())
-                && re.getData().getEventTypeName().equals(e)
-                && RuntimeEventData.Origin.ORCHESTRATOR.equals(re.getData().getOrigin());
+        //todo fix: assumption of StartRequestEvent may not always true
+        if(requestEvent.isEmpty() || !(requestEvent.get() instanceof StartRequestEvent)){
+            //todo handle error
+            return null;
+        }
+        StartResponseEvent responseEvent = StartResponseEvent.from(
+                this, OrchestrationEvent.Origin.RUNTIME_ENGINE, (StartRequestEvent) requestEvent.get());
+        responseEvent.setContext(triggeredEvent.getContext());
+        responseEvent.setException(triggeredEvent.getException());
+
+        return responseEvent;
     }
 
-    private boolean shouldHandle(ComponentEvent ce, String e){
-        return ce!=null && !ce.isProcessed() && !this.equals(ce.getSource())
-                && ce.getData().getEventTypeName().equals(e)
-                && RuntimeEventData.Origin.COMPONENT.equals(ce.getData().getOrigin());
-    }
 }
