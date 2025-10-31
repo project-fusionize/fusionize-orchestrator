@@ -26,14 +26,17 @@ public class Orchestrator {
 
     public void orchestrate(Workflow workflow) {
         WorkflowExecution we = WorkflowExecution.of(workflow);
-        List<WorkflowNodeExecution> nodeExecutions = workflow.getNodes().stream()
-                .map(n -> WorkflowNodeExecution.of(n, new WorkflowContext()))
-                .peek(ne -> requestActivate(we, ne))
-                .toList();
+         workflow.getNodes().stream()
+                .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.empty()))
+                .forEach(ne -> requestActivate(we, ne));
     }
 
-    private void orchestrate(WorkflowNode workflowNode) {
-
+    private void proceed(WorkflowExecution we, WorkflowNodeExecution ne) {
+        List<WorkflowNodeExecution> nodeExecutions = ne.getWorkflowNode().getChildren().stream()
+                        .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.from(ne, n)))
+                        .peek(cne -> requestActivate(we, cne)).toList();
+        ne.getChildren().addAll(nodeExecutions);
+        we.getNodes().add(ne);
     }
 
     private void requestActivate(WorkflowExecution we, WorkflowNodeExecution ne) {
@@ -53,7 +56,7 @@ public class Orchestrator {
     public void onActivated(ActivateResponseEvent activateResponseEvent){
         if(activateResponseEvent.getException()!=null){
             //todo handle exception
-            log.error(activateResponseEvent.getException().getMessage(), activateResponseEvent.getException());
+            log.error("Error -> {}", activateResponseEvent.getException().getMessage(), activateResponseEvent.getException());
 
         }else {
             OrchestrationEventContext oc = activateResponseEvent.getOrchestrationEventContext();
@@ -66,6 +69,7 @@ public class Orchestrator {
             }
         }
     }
+
 
     private void requestStart(WorkflowExecution we, WorkflowNodeExecution ne) {
         StartRequestEvent startRequestEvent =
@@ -86,12 +90,16 @@ public class Orchestrator {
         if(startResponseEvent.getException()!=null){
             //todo handle exception
             log.error(startResponseEvent.getException().getMessage(), startResponseEvent.getException());
-        }else {
-            log.info(startResponseEvent.getContext().toString());
+            return;
         }
+        log.info(startResponseEvent.getContext().toString());
+        OrchestrationEventContext oc = startResponseEvent.getOrchestrationEventContext();
+        oc.getNodeExecution().setStageContext(startResponseEvent.getContext());
+        proceed(oc.getWorkflowExecution(), oc.getNodeExecution());
     }
 
     private void requestStartDecision(WorkflowExecution we, WorkflowNodeExecution ne) {
+        log.info("Not implemented yet");
 
     }
 

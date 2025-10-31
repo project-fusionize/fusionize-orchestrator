@@ -5,6 +5,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "workflow-execution")
@@ -13,7 +14,7 @@ public class WorkflowExecution {
     private String id;
     private String workflowExecutionId;
     private String workflowId;
-    private List<WorkflowNodeExecution> nodes;
+    private List<WorkflowNodeExecution> nodes = new ArrayList<>();
     private WorkflowExecutionStatus status;
     @Transient
     private Workflow workflow;

@@ -10,6 +10,7 @@ public class WorkflowNode {
     private List<WorkflowNode> children = new ArrayList<>();
     private WorkflowNodeType type;
     private String workflowNodeId;
+    private String workflowNodeKey;
     private String component;
     private WorkflowComponentConfig componentConfig;
 
@@ -24,6 +25,7 @@ public class WorkflowNode {
         }else{
             this.workflowNodeId = KeyUtil.getTimestampId("WNOD");
         }
+        this.workflowNodeKey = builder.workflowNodeKey;
         this.component = builder.component;
         this.componentConfig = builder.componentConfig;
     }
@@ -42,6 +44,14 @@ public class WorkflowNode {
 
     public void setType(WorkflowNodeType type) {
         this.type = type;
+    }
+
+    public String getWorkflowNodeKey() {
+        return workflowNodeKey;
+    }
+
+    public void setWorkflowNodeKey(String workflowNodeKey) {
+        this.workflowNodeKey = workflowNodeKey;
     }
 
     public String getWorkflowNodeId() {
@@ -76,6 +86,7 @@ public class WorkflowNode {
         private List<WorkflowNode> children = new ArrayList<>();
         private WorkflowNodeType type;
         private String workflowNodeId;
+        private String workflowNodeKey;
         private String component;
         private WorkflowComponentConfig componentConfig;
 
@@ -98,6 +109,11 @@ public class WorkflowNode {
 
         public Builder workflowNodeId(String workflowNodeId) {
             this.workflowNodeId = workflowNodeId;
+            return this;
+        }
+
+        public Builder workflowNodeKey(String workflowNodeKey) {
+            this.workflowNodeKey = workflowNodeKey;
             return this;
         }
 
