@@ -19,7 +19,7 @@ public class WorkflowContextFactory {
                     WorkflowDecision workflowDecision = new WorkflowDecision();
                     workflowDecision.setDecisionNode(nextNode.getWorkflowNodeKey());
                     Map<String,Boolean> options = new HashMap<>();
-                    nextNode.getChildren().forEach(cn -> options.put(cn.getWorkflowNodeKey(),null));
+                    nextNode.getChildren().forEach(cn -> options.put(cn.getWorkflowNodeKey(),false));
                     workflowDecision.setOptionNodes(options);
                     context.getDecisions().add(workflowDecision);
                     break;

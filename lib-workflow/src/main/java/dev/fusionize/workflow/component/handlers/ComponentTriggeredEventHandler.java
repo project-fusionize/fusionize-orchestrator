@@ -23,7 +23,7 @@ public class ComponentTriggeredEventHandler implements EventHandler<ComponentTri
 
     @Override
     public Event handle(ComponentTriggeredEvent event) {
-        return runtimeEngine.onComponentTriggered(event);
+        return runtimeEngine.onComponentEvent(event);
     }
 
     @Override

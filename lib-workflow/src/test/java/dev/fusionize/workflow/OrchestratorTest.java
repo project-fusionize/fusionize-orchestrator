@@ -180,6 +180,7 @@ class OrchestratorTest {
                         .type(WorkflowNodeType.START)
                         .addChild(
                                 WorkflowNode.builder()
+                                        .workflowNodeKey("emailDecision")
                                         .component("decision:test.emailDecision")
                                         .componentConfig(WorkflowComponentConfig.builder()
                                                 .put("routeMap", Map.of(
@@ -197,7 +198,7 @@ class OrchestratorTest {
                                                         .type(WorkflowNodeType.TASK)
                                                         .addChild(
                                                                 WorkflowNode.builder()
-                                                                        .component("task:test.endEmailWorkflow")
+                                                                        .component("end:test.endEmailWorkflow")
                                                                         .type(WorkflowNodeType.END)
                                                                         .build())
                                                         .build())
@@ -211,7 +212,7 @@ class OrchestratorTest {
                                                         .type(WorkflowNodeType.TASK)
                                                         .addChild(
                                                                 WorkflowNode.builder()
-                                                                        .component("task:test.endEmailWorkflow")
+                                                                        .component("end:test.endEmailWorkflow")
                                                                         .type(WorkflowNodeType.END)
                                                                         .build())
                                                         .build())
@@ -241,9 +242,19 @@ class OrchestratorTest {
                 "Receiving First Email\n" +
                 "MockRecEmailComponentRuntime handle email: test email route 1\n" +
                 "MockSendEmailDecisionComponent activated\n" +
+                "Decision made to route email: {outgoing1=true, outgoing2=false}\n" +
+                "MockSendEmailComponent activated\n" +
+                "sending email to outgoing1@email.com\n" +
+                "BODY: test email route 1\n" +
+                "MockEndEmailComponent activated\n" +
                 "Receiving Second Email\n" +
                 "MockRecEmailComponentRuntime handle email: test email route 2\n" +
-                "MockSendEmailDecisionComponent activated\n");
+                "MockSendEmailDecisionComponent activated\n" +
+                "Decision made to route email: {outgoing1=false, outgoing2=true}\n" +
+                "MockSendEmailComponent activated\n" +
+                "sending email to outgoing2@email.com\n" +
+                "BODY: test email route 2\n" +
+                "MockEndEmailComponent activated\n");
     }
 
     // --------------------------------------------------------------------------
@@ -306,11 +317,12 @@ class OrchestratorTest {
         @Override
         public void decide(ComponentFinishedEvent onDecision) {
             WorkflowDecision decision = onDecision.getContext().getDecisions().getLast();
-            String outgoingMessage = (String) onDecision.getContext().getData().get("outgoing_message");
+            String outgoingMessage = (String) onDecision.getContext().getData().get("email_message");
 
             // Determine which route(s) to follow based on message content
             List<String> messageRoute = routeMap.keySet().stream()
                     .filter(outgoingMessage::contains)
+                    .map(k -> routeMap.get(k))
                     .toList();
 
             // Update decision options accordingly
@@ -367,7 +379,7 @@ class OrchestratorTest {
 
         @Override
         public void canActivate(ComponentActivatedEvent onActivate) {
-            boolean hasMessage = onActivate.getContext().getData().containsKey("outgoing_message");
+            boolean hasMessage = onActivate.getContext().getData().containsKey("email_message");
             String worklog = hasMessage ? "MockSendEmailComponent activated" : "MockSendEmailComponent not activated";
             writer.append(worklog).append("\n");
             logger.info(worklog);
@@ -381,8 +393,8 @@ class OrchestratorTest {
             writer.append("sending email to ").append(address).append("\n");
             logger.info("sending email to {}", address);
 
-            writer.append("BODY: ").append(onFinish.getContext().getData().get("outgoing_message").toString()).append("\n");
-            logger.info("BODY: {}", onFinish.getContext().getData().get("outgoing_message"));
+            writer.append("BODY: ").append(onFinish.getContext().getData().get("email_message").toString()).append("\n");
+            logger.info("BODY: {}", onFinish.getContext().getData().get("email_message"));
 
             publish(onFinish);
         }
@@ -442,7 +454,7 @@ class OrchestratorTest {
                             logger.info(worklog);
 
                             WorkflowContext ctx = onTriggered.getContext();
-                            ctx.getData().put("incoming_message", email);
+                            ctx.getData().put("email_message", email);
 
                             // Trigger downstream workflow components
                             publish(onTriggered);

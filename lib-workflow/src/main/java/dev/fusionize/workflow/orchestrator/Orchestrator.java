@@ -5,14 +5,15 @@ import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
 import dev.fusionize.workflow.events.OrchestrationEventContext;
-import dev.fusionize.workflow.events.orchestration.ActivateRequestEvent;
-import dev.fusionize.workflow.events.orchestration.ActivateResponseEvent;
-import dev.fusionize.workflow.events.orchestration.StartRequestEvent;
-import dev.fusionize.workflow.events.orchestration.StartResponseEvent;
+import dev.fusionize.workflow.events.orchestration.ActivationRequestEvent;
+import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
+import dev.fusionize.workflow.events.orchestration.InvocationRequestEvent;
+import dev.fusionize.workflow.events.orchestration.InvocationResponseEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -28,20 +29,40 @@ public class Orchestrator {
         WorkflowExecution we = WorkflowExecution.of(workflow);
          workflow.getNodes().stream()
                 .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.empty()))
-                .forEach(ne -> requestActivate(we, ne));
+                .forEach(ne -> requestActivation(we, ne));
     }
 
     private void proceed(WorkflowExecution we, WorkflowNodeExecution ne) {
-        List<WorkflowNodeExecution> nodeExecutions = ne.getWorkflowNode().getChildren().stream()
+        List<WorkflowNodeExecution> nodeExecutions = filterChildren(ne).stream()
                         .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.from(ne, n)))
-                        .peek(cne -> requestActivate(we, cne)).toList();
+                        .peek(cne -> requestActivation(we, cne)).toList();
         ne.getChildren().addAll(nodeExecutions);
         we.getNodes().add(ne);
     }
 
-    private void requestActivate(WorkflowExecution we, WorkflowNodeExecution ne) {
-        ActivateRequestEvent activateRequestEvent =
-                ActivateRequestEvent.builder(this)
+    private List<WorkflowNode> filterChildren(WorkflowNodeExecution ne) {
+        List<WorkflowNode> allChildren = ne.getWorkflowNode().getChildren();
+        if(ne.getStageContext().getDecisions().isEmpty()){
+            return allChildren;
+        }
+        if(!WorkflowNodeType.DECISION.equals(ne.getWorkflowNode().getType())){
+            return allChildren;
+        }
+        WorkflowDecision lastDecision = ne.getStageContext().getDecisions().getLast();
+        if(lastDecision.getDecisionNode()==null
+                || ne.getWorkflowNode().getWorkflowNodeKey()==null){
+            return new ArrayList<>();
+        }
+        if(!lastDecision.getDecisionNode().equals(ne.getWorkflowNode().getWorkflowNodeKey())){
+            return new ArrayList<>();
+        }
+        return allChildren.stream().filter(n-> n.getWorkflowNodeKey()!=null)
+                        .filter(n-> lastDecision.getOptionNodes().get(n.getWorkflowNodeKey())).toList();
+    }
+
+    private void requestActivation(WorkflowExecution we, WorkflowNodeExecution ne) {
+        ActivationRequestEvent activationRequestEvent =
+                ActivationRequestEvent.builder(this)
                         .origin(OrchestrationEvent.Origin.ORCHESTRATOR)
                         .workflowExecutionId(we.getWorkflowExecutionId())
                         .workflowId(we.getWorkflowId())
@@ -50,30 +71,24 @@ public class Orchestrator {
                         .orchestrationEventContext(we, ne)
                         .component(ne.getWorkflowNode().getComponent())
                         .context(ne.getStageContext()).build();
-        eventPublisher.publish(activateRequestEvent);
+        eventPublisher.publish(activationRequestEvent);
     }
 
-    public void onActivated(ActivateResponseEvent activateResponseEvent){
-        if(activateResponseEvent.getException()!=null){
+    public void onActivated(ActivationResponseEvent activationResponseEvent){
+        if(activationResponseEvent.getException()!=null){
             //todo handle exception
-            log.error("Error -> {}", activateResponseEvent.getException().getMessage(), activateResponseEvent.getException());
+            log.error("Error -> {}", activationResponseEvent.getException().getMessage(), activationResponseEvent.getException());
 
         }else {
-            OrchestrationEventContext oc = activateResponseEvent.getOrchestrationEventContext();
-            switch (oc.getNodeExecution().getWorkflowNode().getType()) {
-                case START -> requestStart(oc.getWorkflowExecution(), oc.getNodeExecution());
-                case DECISION -> requestStartDecision(oc.getWorkflowExecution(), oc.getNodeExecution());
-                case TASK -> requestStartTask(oc.getWorkflowExecution(), oc.getNodeExecution());
-                case WAIT -> requestStartWait(oc.getWorkflowExecution(), oc.getNodeExecution());
-                case END -> requestEnd(oc.getWorkflowExecution(), oc.getNodeExecution());
-            }
+            OrchestrationEventContext oc = activationResponseEvent.getOrchestrationEventContext();
+            requestInvocation(oc.getWorkflowExecution(), oc.getNodeExecution());
         }
     }
 
 
-    private void requestStart(WorkflowExecution we, WorkflowNodeExecution ne) {
-        StartRequestEvent startRequestEvent =
-                StartRequestEvent.builder(this)
+    private void requestInvocation(WorkflowExecution we, WorkflowNodeExecution ne) {
+        InvocationRequestEvent invocationRequestEvent =
+                InvocationRequestEvent.builder(this)
                         .origin(OrchestrationEvent.Origin.ORCHESTRATOR)
                         .workflowExecutionId(we.getWorkflowExecutionId())
                         .workflowId(we.getWorkflowId())
@@ -83,36 +98,18 @@ public class Orchestrator {
                         .component(ne.getWorkflowNode().getComponent())
                         .context(ne.getStageContext())
                        .build();
-        eventPublisher.publish(startRequestEvent);
+        eventPublisher.publish(invocationRequestEvent);
     }
 
-    public void onStarted(StartResponseEvent startResponseEvent){
-        if(startResponseEvent.getException()!=null){
+    public void onInvoked(InvocationResponseEvent invocationResponseEvent){
+        if(invocationResponseEvent.getException()!=null){
             //todo handle exception
-            log.error(startResponseEvent.getException().getMessage(), startResponseEvent.getException());
+            log.error(invocationResponseEvent.getException().getMessage(), invocationResponseEvent.getException());
             return;
         }
-        log.info(startResponseEvent.getContext().toString());
-        OrchestrationEventContext oc = startResponseEvent.getOrchestrationEventContext();
-        oc.getNodeExecution().setStageContext(startResponseEvent.getContext());
+        log.info(invocationResponseEvent.getContext().toString());
+        OrchestrationEventContext oc = invocationResponseEvent.getOrchestrationEventContext();
+        oc.getNodeExecution().setStageContext(invocationResponseEvent.getContext());
         proceed(oc.getWorkflowExecution(), oc.getNodeExecution());
     }
-
-    private void requestStartDecision(WorkflowExecution we, WorkflowNodeExecution ne) {
-        log.info("Not implemented yet");
-
-    }
-
-    private void requestStartTask(WorkflowExecution we, WorkflowNodeExecution ne) {
-
-    }
-
-    private void requestStartWait(WorkflowExecution we, WorkflowNodeExecution ne) {
-
-    }
-
-    private void requestEnd(WorkflowExecution we, WorkflowNodeExecution ne) {
-
-    }
-
 }

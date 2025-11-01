@@ -2,13 +2,13 @@ package dev.fusionize.workflow.events.orchestration;
 
 import dev.fusionize.workflow.events.OrchestrationEvent;
 
-public class ActivateRequestEvent extends OrchestrationEvent {
-    public ActivateRequestEvent(Object source) {
+public class ActivationRequestEvent extends OrchestrationEvent {
+    public ActivationRequestEvent(Object source) {
         super(source);
     }
 
     public static Builder builder(Object source) {
-        return new Builder(ActivateRequestEvent.class, source);
+        return new Builder(ActivationRequestEvent.class, source);
     }
 
     public static class Builder extends OrchestrationEvent.Builder<Builder> {
@@ -23,8 +23,8 @@ public class ActivateRequestEvent extends OrchestrationEvent {
         }
 
         @Override
-        public ActivateRequestEvent build() {
-            ActivateRequestEvent event = new ActivateRequestEvent(source);
+        public ActivationRequestEvent build() {
+            ActivationRequestEvent event = new ActivationRequestEvent(source);
             super.load(event);
             return event;
         }

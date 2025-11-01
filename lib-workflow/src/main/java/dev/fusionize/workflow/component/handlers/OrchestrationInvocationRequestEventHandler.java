@@ -4,32 +4,32 @@ import dev.fusionize.workflow.component.WorkflowComponentRuntimeEngine;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventHandler;
 import dev.fusionize.workflow.events.OrchestrationEvent;
-import dev.fusionize.workflow.events.orchestration.StartRequestEvent;
+import dev.fusionize.workflow.events.orchestration.InvocationRequestEvent;
 import org.springframework.stereotype.Component;
 
 @Component
-public class OrchestrationStartRequestEventHandler  implements EventHandler<StartRequestEvent> {
+public class OrchestrationInvocationRequestEventHandler implements EventHandler<InvocationRequestEvent> {
     private final WorkflowComponentRuntimeEngine runtimeEngine;
 
-    public OrchestrationStartRequestEventHandler(WorkflowComponentRuntimeEngine runtimeEngine) {
+    public OrchestrationInvocationRequestEventHandler(WorkflowComponentRuntimeEngine runtimeEngine) {
         this.runtimeEngine = runtimeEngine;
     }
 
     @Override
-    public boolean shouldHandle(StartRequestEvent event) {
+    public boolean shouldHandle(InvocationRequestEvent event) {
         return event!=null && event.getProcessedDate()==null
-                && event.getEventClass().equals(StartRequestEvent.class)
+                && event.getEventClass().equals(InvocationRequestEvent.class)
                 && OrchestrationEvent.Origin.ORCHESTRATOR.equals(event.getOrigin());
     }
 
     @Override
-    public Event handle(StartRequestEvent event) {
-        return runtimeEngine.startComponent(event);
+    public Event handle(InvocationRequestEvent event) {
+        return runtimeEngine.invokeComponent(event);
     }
 
     @Override
-    public Class<StartRequestEvent> getEventType() {
-        return StartRequestEvent.class;
+    public Class<InvocationRequestEvent> getEventType() {
+        return InvocationRequestEvent.class;
     }
 }
 

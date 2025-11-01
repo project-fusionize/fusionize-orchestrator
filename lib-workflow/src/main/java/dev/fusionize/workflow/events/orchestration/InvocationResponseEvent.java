@@ -2,18 +2,18 @@ package dev.fusionize.workflow.events.orchestration;
 
 import dev.fusionize.workflow.events.OrchestrationEvent;
 
-public class ActivateResponseEvent extends OrchestrationEvent {
-    public ActivateResponseEvent(Object source) {
+public class InvocationResponseEvent extends OrchestrationEvent {
+    public InvocationResponseEvent(Object source) {
         super(source);
     }
 
     public static Builder builder(Object source) {
-        return new Builder(ActivateResponseEvent.class, source);
+        return new Builder(InvocationResponseEvent.class, source);
     }
 
-    public static ActivateResponseEvent from(Object source,
-                                             Origin origin,
-                                             ActivateRequestEvent requestEvent) {
+    public static InvocationResponseEvent from(Object source,
+                                               Origin origin,
+                                               InvocationRequestEvent requestEvent) {
         return builder(source).workflowId(requestEvent.getWorkflowId())
                 .causationId(requestEvent.getEventId())
                 .correlationId(requestEvent.getCorrelationId())
@@ -40,8 +40,8 @@ public class ActivateResponseEvent extends OrchestrationEvent {
         }
 
         @Override
-        public ActivateResponseEvent build() {
-            ActivateResponseEvent event = new ActivateResponseEvent(source);
+        public InvocationResponseEvent build() {
+            InvocationResponseEvent event = new InvocationResponseEvent(source);
             super.load(event);
             return event;
         }

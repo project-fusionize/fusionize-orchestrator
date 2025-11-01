@@ -3,34 +3,34 @@ package dev.fusionize.workflow.component.handlers;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventHandler;
 import dev.fusionize.workflow.events.OrchestrationEvent;
-import dev.fusionize.workflow.events.orchestration.StartResponseEvent;
+import dev.fusionize.workflow.events.orchestration.InvocationResponseEvent;
 import dev.fusionize.workflow.orchestrator.Orchestrator;
 import org.springframework.stereotype.Component;
 
 @Component
-public class OrchestrationStartResponseEventHandler implements EventHandler<StartResponseEvent> {
+public class OrchestrationInvocationResponseEventHandler implements EventHandler<InvocationResponseEvent> {
     private final Orchestrator orchestrator;
 
-    public OrchestrationStartResponseEventHandler(Orchestrator orchestrator) {
+    public OrchestrationInvocationResponseEventHandler(Orchestrator orchestrator) {
         this.orchestrator = orchestrator;
     }
 
 
     @Override
-    public boolean shouldHandle(StartResponseEvent event) {
+    public boolean shouldHandle(InvocationResponseEvent event) {
         return event!=null && event.getProcessedDate()==null
-                && event.getEventClass().equals(StartResponseEvent.class)
+                && event.getEventClass().equals(InvocationResponseEvent.class)
                 && OrchestrationEvent.Origin.RUNTIME_ENGINE.equals(event.getOrigin());
     }
 
     @Override
-    public Event handle(StartResponseEvent event) {
-        orchestrator.onStarted(event);
+    public Event handle(InvocationResponseEvent event) {
+        orchestrator.onInvoked(event);
         return null;
     }
 
     @Override
-    public Class<StartResponseEvent> getEventType() {
-        return StartResponseEvent.class;
+    public Class<InvocationResponseEvent> getEventType() {
+        return InvocationResponseEvent.class;
     }
 }

@@ -2,13 +2,13 @@ package dev.fusionize.workflow.events.orchestration;
 
 import dev.fusionize.workflow.events.OrchestrationEvent;
 
-public class EndRequestEvent extends OrchestrationEvent {
-    public EndRequestEvent(Object source) {
+public class TerminationResponseEvent extends OrchestrationEvent {
+    public TerminationResponseEvent(Object source) {
         super(source);
     }
 
     public static Builder builder(Object source) {
-        return new Builder(EndRequestEvent.class, source);
+        return new Builder(TerminationResponseEvent.class, source);
     }
 
     public static class Builder extends OrchestrationEvent.Builder<Builder> {
@@ -23,8 +23,8 @@ public class EndRequestEvent extends OrchestrationEvent {
         }
 
         @Override
-        public EndRequestEvent build() {
-            EndRequestEvent event = new EndRequestEvent(source);
+        public TerminationResponseEvent build() {
+            TerminationResponseEvent event = new TerminationResponseEvent(source);
             super.load(event);
             return event;
         }

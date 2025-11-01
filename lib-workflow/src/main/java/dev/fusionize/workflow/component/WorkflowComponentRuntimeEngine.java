@@ -1,18 +1,20 @@
 package dev.fusionize.workflow.component;
 
 
+import dev.fusionize.workflow.WorkflowNodeType;
 import dev.fusionize.workflow.component.exceptions.ComponentMissmatchException;
 import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
-import dev.fusionize.workflow.component.runtime.ComponentRuntime;
-import dev.fusionize.workflow.component.runtime.StartComponentRuntime;
+import dev.fusionize.workflow.component.runtime.*;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventStore;
 import dev.fusionize.workflow.events.OrchestrationEvent;
-import dev.fusionize.workflow.events.orchestration.ActivateRequestEvent;
-import dev.fusionize.workflow.events.orchestration.ActivateResponseEvent;
-import dev.fusionize.workflow.events.orchestration.StartRequestEvent;
-import dev.fusionize.workflow.events.orchestration.StartResponseEvent;
+import dev.fusionize.workflow.events.RuntimeEvent;
+import dev.fusionize.workflow.events.orchestration.ActivationRequestEvent;
+import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
+import dev.fusionize.workflow.events.orchestration.InvocationRequestEvent;
+import dev.fusionize.workflow.events.orchestration.InvocationResponseEvent;
 import dev.fusionize.workflow.events.runtime.ComponentActivatedEvent;
+import dev.fusionize.workflow.events.runtime.ComponentFinishedEvent;
 import dev.fusionize.workflow.events.runtime.ComponentTriggeredEvent;
 import org.springframework.stereotype.Service;
 
@@ -39,11 +41,11 @@ public class WorkflowComponentRuntimeEngine {
         return workflowComponentRegistry.get(component, componentConfig);
     }
 
-    public ActivateResponseEvent activateComponent(ActivateRequestEvent activateRequestEvent){
-        Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  getRuntimeComponent(activateRequestEvent);
+    public ActivationResponseEvent activateComponent(ActivationRequestEvent activationRequestEvent){
+        Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  getRuntimeComponent(activationRequestEvent);
         if(optionalWorkflowComponentRuntime.isEmpty()){
-            ActivateResponseEvent responseEvent = ActivateResponseEvent.from(
-                    this, OrchestrationEvent.Origin.RUNTIME_ENGINE, activateRequestEvent);
+            ActivationResponseEvent responseEvent = ActivationResponseEvent.from(
+                    this, OrchestrationEvent.Origin.RUNTIME_ENGINE, activationRequestEvent);
             responseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
             return responseEvent;
         }
@@ -51,71 +53,141 @@ public class WorkflowComponentRuntimeEngine {
         ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
         runtime.canActivate(
                 ComponentActivatedEvent.builder(runtime)
-                        .correlationId(activateRequestEvent.getCorrelationId())
-                        .causationId(activateRequestEvent.getEventId())
-                        .component(activateRequestEvent.getComponent())
-                        .context(activateRequestEvent.getContext())
+                        .correlationId(activationRequestEvent.getCorrelationId())
+                        .causationId(activationRequestEvent.getEventId())
+                        .component(activationRequestEvent.getComponent())
+                        .context(activationRequestEvent.getContext())
                         .build()
                );
 
         return null;
     }
 
-    public ActivateResponseEvent onComponentActivated(ComponentActivatedEvent activatedEvent){
+    public ActivationResponseEvent onComponentActivated(ComponentActivatedEvent activatedEvent){
         String causationId =  activatedEvent.getCausationId();
         Optional<Event> requestEvent = this.eventStore.findByEventId(causationId);
-        if(requestEvent.isEmpty() || !(requestEvent.get() instanceof ActivateRequestEvent)){
+        if(requestEvent.isEmpty() || !(requestEvent.get() instanceof ActivationRequestEvent)){
             //todo handle error
             return null;
         }
 
-        ActivateResponseEvent responseEvent = ActivateResponseEvent.from(
-                this, OrchestrationEvent.Origin.RUNTIME_ENGINE, (ActivateRequestEvent) requestEvent.get());
+        ActivationResponseEvent responseEvent = ActivationResponseEvent.from(
+                this, OrchestrationEvent.Origin.RUNTIME_ENGINE, (ActivationRequestEvent) requestEvent.get());
         responseEvent.setContext(activatedEvent.getContext());
         responseEvent.setException(activatedEvent.getException());
 
         return responseEvent;
     }
 
-    public StartResponseEvent startComponent(StartRequestEvent startRequestEvent) {
-        Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  getRuntimeComponent(startRequestEvent);
+    public InvocationResponseEvent invokeComponent(InvocationRequestEvent invocationRequestEvent) {
+        Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  getRuntimeComponent(invocationRequestEvent);
         if(optionalWorkflowComponentRuntime.isEmpty()){
-            StartResponseEvent startResponseEvent = StartResponseEvent.from(
-                    this, OrchestrationEvent.Origin.RUNTIME_ENGINE, startRequestEvent);
-            startResponseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
-            return startResponseEvent;
+            InvocationResponseEvent invocationResponseEvent = InvocationResponseEvent.from(
+                    this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
+            invocationResponseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
+            return invocationResponseEvent;
         }
         ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
-        if(!(runtime instanceof StartComponentRuntime)){
-            StartResponseEvent startResponseEvent = StartResponseEvent.from(
-                    this, OrchestrationEvent.Origin.RUNTIME_ENGINE, startRequestEvent);
-            startResponseEvent.setException(new ComponentMissmatchException(ERR_CODE_COMP_NOT_MATCH));
-            return startResponseEvent;
+        WorkflowNodeType nodeType = invocationRequestEvent.getOrchestrationEventContext()
+                .getNodeExecution().getWorkflowNode().getType();
+        switch (nodeType) {
+            case START -> {
+                if(!(runtime instanceof StartComponentRuntime)){
+                    InvocationResponseEvent invocationResponseEvent = InvocationResponseEvent.from(
+                            this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
+                    invocationResponseEvent.setException(new ComponentMissmatchException(ERR_CODE_COMP_NOT_MATCH));
+                    return invocationResponseEvent;
+                }
+                ((StartComponentRuntime) runtime).start(
+                        ComponentTriggeredEvent.builder(runtime)
+                                .correlationId(invocationRequestEvent.getCorrelationId())
+                                .causationId(invocationRequestEvent.getEventId())
+                                .component(invocationRequestEvent.getComponent())
+                                .context(invocationRequestEvent.getContext())
+                                .build()
+                );
+            }
+            case DECISION -> {
+                if(!(runtime instanceof DecisionComponentRuntime)){
+                    InvocationResponseEvent invocationResponseEvent = InvocationResponseEvent.from(
+                            this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
+                    invocationResponseEvent.setException(new ComponentMissmatchException(ERR_CODE_COMP_NOT_MATCH));
+                    return invocationResponseEvent;
+                }
+                ((DecisionComponentRuntime) runtime).decide(
+                        ComponentFinishedEvent.builder(runtime)
+                                .correlationId(invocationRequestEvent.getCorrelationId())
+                                .causationId(invocationRequestEvent.getEventId())
+                                .component(invocationRequestEvent.getComponent())
+                                .context(invocationRequestEvent.getContext())
+                                .build()
+                );
+            }
+            case TASK -> {
+                if(!(runtime instanceof TaskComponentRuntime)){
+                    InvocationResponseEvent invocationResponseEvent = InvocationResponseEvent.from(
+                            this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
+                    invocationResponseEvent.setException(new ComponentMissmatchException(ERR_CODE_COMP_NOT_MATCH));
+                    return invocationResponseEvent;
+                }
+                ((TaskComponentRuntime) runtime).run(
+                        ComponentFinishedEvent.builder(runtime)
+                                .correlationId(invocationRequestEvent.getCorrelationId())
+                                .causationId(invocationRequestEvent.getEventId())
+                                .component(invocationRequestEvent.getComponent())
+                                .context(invocationRequestEvent.getContext())
+                                .build()
+                );
+            }
+            case WAIT -> {
+                if(!(runtime instanceof WaitComponentRuntime)){
+                    InvocationResponseEvent invocationResponseEvent = InvocationResponseEvent.from(
+                            this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
+                    invocationResponseEvent.setException(new ComponentMissmatchException(ERR_CODE_COMP_NOT_MATCH));
+                    return invocationResponseEvent;
+                }
+                ((WaitComponentRuntime) runtime).wait(
+                        ComponentTriggeredEvent.builder(runtime)
+                                .correlationId(invocationRequestEvent.getCorrelationId())
+                                .causationId(invocationRequestEvent.getEventId())
+                                .component(invocationRequestEvent.getComponent())
+                                .context(invocationRequestEvent.getContext())
+                                .build()
+                );
+            }
+            case END -> {
+                if(!(runtime instanceof EndComponentRuntime)){
+                    InvocationResponseEvent invocationResponseEvent = InvocationResponseEvent.from(
+                            this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
+                    invocationResponseEvent.setException(new ComponentMissmatchException(ERR_CODE_COMP_NOT_MATCH));
+                    return invocationResponseEvent;
+                }
+                ((EndComponentRuntime) runtime).finish(
+                        ComponentFinishedEvent.builder(runtime)
+                                .correlationId(invocationRequestEvent.getCorrelationId())
+                                .causationId(invocationRequestEvent.getEventId())
+                                .component(invocationRequestEvent.getComponent())
+                                .context(invocationRequestEvent.getContext())
+                                .build()
+                );
+            }
         }
-        ((StartComponentRuntime) runtime).start(
-                ComponentTriggeredEvent.builder(runtime)
-                        .correlationId(startRequestEvent.getCorrelationId())
-                        .causationId(startRequestEvent.getEventId())
-                        .component(startRequestEvent.getComponent())
-                        .context(startRequestEvent.getContext())
-                        .build()
-        );
+
         return null;
     }
 
-    public OrchestrationEvent onComponentTriggered(ComponentTriggeredEvent triggeredEvent) {
-        String causationId =  triggeredEvent.getCausationId();
+    public OrchestrationEvent onComponentEvent(RuntimeEvent event) {
+        String causationId =  event.getCausationId();
         Optional<Event> requestEvent = this.eventStore.findByEventId(causationId);
 
-        //todo fix: assumption of StartRequestEvent may not always true
-        if(requestEvent.isEmpty() || !(requestEvent.get() instanceof StartRequestEvent)){
+        if(requestEvent.isEmpty() || !(requestEvent.get() instanceof InvocationRequestEvent)){
             //todo handle error
             return null;
         }
-        StartResponseEvent responseEvent = StartResponseEvent.from(
-                this, OrchestrationEvent.Origin.RUNTIME_ENGINE, (StartRequestEvent) requestEvent.get());
-        responseEvent.setContext(triggeredEvent.getContext());
-        responseEvent.setException(triggeredEvent.getException());
+        InvocationResponseEvent responseEvent = InvocationResponseEvent.from(
+                this, OrchestrationEvent.Origin.RUNTIME_ENGINE, (InvocationRequestEvent) requestEvent.get());
+        responseEvent.setContext(event.getContext());
+        responseEvent.setException(event.getException());
 
         return responseEvent;
     }
