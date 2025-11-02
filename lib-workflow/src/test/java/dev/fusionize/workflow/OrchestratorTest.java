@@ -7,6 +7,7 @@ import dev.fusionize.workflow.component.runtime.DecisionComponentRuntime;
 import dev.fusionize.workflow.component.runtime.EndComponentRuntime;
 import dev.fusionize.workflow.component.runtime.StartComponentRuntime;
 import dev.fusionize.workflow.component.runtime.TaskComponentRuntime;
+import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventListener;
 import dev.fusionize.workflow.events.EventPublisher;
@@ -32,12 +33,17 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.StringWriter;
+import java.net.URL;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * -----------------------------
@@ -122,7 +128,7 @@ class OrchestratorTest {
     @Autowired WorkflowRegistry workflowRegistry;
 
     @Test
-    void orchestrate() throws InterruptedException {
+    void orchestrate() throws InterruptedException, IOException {
         // Collect logs for debugging workflow behavior
         StringWriter writer = new StringWriter();
 
@@ -163,62 +169,11 @@ class OrchestratorTest {
                         .withCompatible(WorkflowNodeType.END)
                         .build(), emailEndStepFactory);
 
-        /**
-         * Build the workflow definition:
-         *
-         * Start(receivedIncomingEmail)
-         *   → Decision(emailDecision)
-         *       → route 1 → SendEmail(outgoing1) → End
-         *       → route 2 → SendEmail(outgoing2) → End
-         */
-        Workflow workflow = Workflow.builder("test")
-                .addNode(WorkflowNode.builder()
-                        .component("start:test.receivedIncomingEmail")
-                        .componentConfig(WorkflowComponentConfig.builder()
-                                .put("address", "incoming@email.com")
-                                .build())
-                        .type(WorkflowNodeType.START)
-                        .addChild(
-                                WorkflowNode.builder()
-                                        .workflowNodeKey("emailDecision")
-                                        .component("decision:test.emailDecision")
-                                        .componentConfig(WorkflowComponentConfig.builder()
-                                                .put("routeMap", Map.of(
-                                                        "route 1", "outgoing1",
-                                                        "route 2", "outgoing2"))
-                                                .build())
-                                        .type(WorkflowNodeType.DECISION)
-                                        .addChild(
-                                                WorkflowNode.builder()
-                                                        .workflowNodeKey("outgoing1")
-                                                        .component("task:test.sendEmail")
-                                                        .componentConfig(WorkflowComponentConfig.builder()
-                                                                .put("address", "outgoing1@email.com")
-                                                                .build())
-                                                        .type(WorkflowNodeType.TASK)
-                                                        .addChild(
-                                                                WorkflowNode.builder()
-                                                                        .component("end:test.endEmailWorkflow")
-                                                                        .type(WorkflowNodeType.END)
-                                                                        .build())
-                                                        .build())
-                                        .addChild(
-                                                WorkflowNode.builder()
-                                                        .workflowNodeKey("outgoing2")
-                                                        .component("task:test.sendEmail")
-                                                        .componentConfig(WorkflowComponentConfig.builder()
-                                                                .put("address", "outgoing2@email.com")
-                                                                .build())
-                                                        .type(WorkflowNodeType.TASK)
-                                                        .addChild(
-                                                                WorkflowNode.builder()
-                                                                        .component("end:test.endEmailWorkflow")
-                                                                        .type(WorkflowNodeType.END)
-                                                                        .build())
-                                                        .build())
-                                        .build())
-                ).build();
+        URL yamlUrl = this.getClass().getResource("/email-workflow.yml");
+        assertNotNull(yamlUrl);
+        String yml = Files.readString(new File(yamlUrl.getFile()).toPath());
 
+        Workflow workflow = new WorkflowDescriptor().fromYamlDescription(yml);
         workflow = workflowRegistry.register(workflow);
         // Start orchestrating the workflow
         service.orchestrate(workflow.getWorkflowId());

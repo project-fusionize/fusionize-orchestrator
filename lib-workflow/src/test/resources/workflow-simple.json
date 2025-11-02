@@ -1,0 +1,33 @@
+{
+  "kind": "Workflow",
+  "apiVersion": "v1",
+  "name": "Simple Workflow",
+  "domain": "test.simple",
+  "key": "simple-workflow-key",
+  "description": "A simple linear workflow",
+  "version": 1,
+  "active": true,
+  "nodes": {
+    "start": {
+      "type": "START",
+      "component": "start:test.start",
+      "componentConfig": {},
+      "next": ["task"]
+    },
+    "task": {
+      "type": "TASK",
+      "component": "task:test.task",
+      "componentConfig": {
+        "timeout": 5000
+      },
+      "next": ["end"]
+    },
+    "end": {
+      "type": "END",
+      "component": "end:test.end",
+      "componentConfig": {},
+      "next": []
+    }
+  }
+}
+
