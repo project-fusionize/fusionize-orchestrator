@@ -191,10 +191,10 @@ class OrchestratorTest {
         logger.info(worklog);
         inbox.add("test email route 2");
 
-        Thread.sleep(500);
+        Thread.sleep(1000);
         String output = writer.toString();
         logger.info("writer out ->\n {}",output);
-        assertEquals(output, "MockRecEmailComponentRuntime activated\n" +
+        String actual = "MockRecEmailComponentRuntime activated\n" +
                 "Receiving First Email\n" +
                 "MockRecEmailComponentRuntime handle email: test email route 1\n" +
                 "MockSendEmailDecisionComponent activated\n" +
@@ -210,7 +210,10 @@ class OrchestratorTest {
                 "MockSendEmailComponent activated\n" +
                 "sending email to outgoing2@email.com\n" +
                 "BODY: test email route 2\n" +
-                "MockEndEmailComponent activated\n");
+                "MockEndEmailComponent activated\n" +
+                "ComponentFinishedEvent finished\n" +
+                "ComponentFinishedEvent finished\n";
+        assertEquals(actual, output);
     }
 
     // --------------------------------------------------------------------------
@@ -245,7 +248,7 @@ class OrchestratorTest {
         public void finish(ComponentFinishedEvent onFinish) {
             CompletableFuture.runAsync(() -> {
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(700);
                     writer.append("ComponentFinishedEvent finished\n");
                     logger.info("ComponentFinishedEvent finished");
                     publish(onFinish);
