@@ -1,10 +1,9 @@
 package dev.fusionize.workflow.events.runtime;
 import dev.fusionize.workflow.events.RuntimeEvent;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+@Document(collection = "workflow-event")
 public class ComponentTriggeredEvent extends RuntimeEvent {
-    public ComponentTriggeredEvent(Object source) {
-        super(source);
-    }
 
     public static Builder builder(Object source) {
         return new Builder(ComponentTriggeredEvent.class, source);
@@ -22,7 +21,7 @@ public class ComponentTriggeredEvent extends RuntimeEvent {
         }
 
         public ComponentTriggeredEvent build() {
-            ComponentTriggeredEvent event = new ComponentTriggeredEvent(source);
+            ComponentTriggeredEvent event = new ComponentTriggeredEvent();
             super.load(event);
             return event;
         }

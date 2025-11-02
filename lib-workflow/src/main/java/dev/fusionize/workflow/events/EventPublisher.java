@@ -1,5 +1,15 @@
 package dev.fusionize.workflow.events;
 
-public interface EventPublisher<E extends Event> {
-    void publish(E event);
+
+public abstract class EventPublisher<E extends Event> {
+    private final EventStore<E> eventStore;
+
+    protected EventPublisher(EventStore<E> eventStore) {
+        this.eventStore = eventStore;
+    }
+
+    public void publish(E event) {
+        eventStore.save(event);
+    }
+
 }

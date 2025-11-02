@@ -1,11 +1,10 @@
 package dev.fusionize.workflow.events.orchestration;
 
 import dev.fusionize.workflow.events.OrchestrationEvent;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+@Document(collection = "workflow-event")
 public class TerminationRequestEvent extends OrchestrationEvent {
-    public TerminationRequestEvent(Object source) {
-        super(source);
-    }
 
     public static Builder builder(Object source) {
         return new Builder(TerminationRequestEvent.class, source);
@@ -24,7 +23,7 @@ public class TerminationRequestEvent extends OrchestrationEvent {
 
         @Override
         public TerminationRequestEvent build() {
-            TerminationRequestEvent event = new TerminationRequestEvent(source);
+            TerminationRequestEvent event = new TerminationRequestEvent();
             super.load(event);
             return event;
         }

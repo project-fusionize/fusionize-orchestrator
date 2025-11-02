@@ -1,7 +1,8 @@
 package dev.fusionize.workflow.events;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.time.ZonedDateTime;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class EventRouter {
+    public static Logger logger = LoggerFactory.getLogger(EventRouter.class);
     private final Map<Class<? extends Event>, List<EventHandler<? extends Event>>> handlersByType = new HashMap<>();
     private final EventPublisher<Event> eventPublisher;
     private final EventStore<Event> eventStore;
@@ -19,22 +21,21 @@ public class EventRouter {
     @Autowired
     public EventRouter(List<EventHandler<?>> handlers,
                        EventPublisher<Event> eventPublisher,
-                       EventStore<Event> eventStore) {
+                       EventStore<Event> eventStore, EventListener<Event> eventListener) {
         this.eventPublisher = eventPublisher;
         this.eventStore = eventStore;
         handlersByType.putAll(
                 handlers.stream()
                         .collect(Collectors.groupingBy(EventHandler::getEventType))
         );
+        eventListener.addListener(this::handleEvent);
     }
 
     @SuppressWarnings("unchecked")
-    @EventListener
-    public <E extends Event> void handleEvent(E event) throws EventHandlerNotFoundException {
-        eventStore.save(event);
+    public <E extends Event> void handleEvent(E event) {
         List<EventHandler<? extends Event>> handlers = handlersByType.get(event.getClass());
         if (handlers == null || handlers.isEmpty()) {
-            throw new EventHandlerNotFoundException();
+            logger.error("Event Handler Not Found Exception", new EventHandlerNotFoundException());
         }
 
         for (EventHandler<? extends Event> handler : handlers) {
@@ -50,8 +51,4 @@ public class EventRouter {
         }
     }
 
-    public <E extends Event> void publishEvent(E event) {
-        eventStore.save(event);
-        eventPublisher.publish(event);
-    }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class WorkflowNodeExecution {
     private List<WorkflowNodeExecution> children = new ArrayList<>();
@@ -15,8 +16,6 @@ public class WorkflowNodeExecution {
     private WorkflowContext stageContext;
     @Transient
     private WorkflowNode workflowNode;
-    @Transient
-    private ComponentRuntime runtime;
 
     public static WorkflowNodeExecution of(WorkflowNode node, WorkflowContext context) {
         WorkflowNodeExecution execution = new WorkflowNodeExecution();
@@ -26,6 +25,12 @@ public class WorkflowNodeExecution {
         execution.stageContext = context;
         execution.workflowNode = node;
         return execution;
+    }
+
+    public WorkflowNodeExecution findNode(String workflowNodeExecutionId) {
+        return children.stream().filter(n-> n.getWorkflowNodeExecutionId().equals(workflowNodeExecutionId)).findFirst().orElse(
+                children.stream().map(n->n.findNode(workflowNodeExecutionId)).filter(Objects::nonNull).findFirst().orElse(null)
+        );
     }
 
     public List<WorkflowNodeExecution> getChildren() {
@@ -75,13 +80,5 @@ public class WorkflowNodeExecution {
 
     public void setWorkflowNode(WorkflowNode workflowNode) {
         this.workflowNode = workflowNode;
-    }
-
-    public ComponentRuntime getRuntime() {
-        return runtime;
-    }
-
-    public void setRuntime(ComponentRuntime runtime) {
-        this.runtime = runtime;
     }
 }

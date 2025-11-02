@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Document(collection = "workflow-execution")
 public class WorkflowExecution {
@@ -27,6 +28,14 @@ public class WorkflowExecution {
         execution.workflowExecutionId = KeyUtil.getTimestampId("WEXE");
         return execution;
     }
+
+    public WorkflowNodeExecution findNode(String workflowNodeExecutionId) {
+        return nodes.stream().filter(n-> n.getWorkflowNodeExecutionId().equals(workflowNodeExecutionId)).findFirst().orElse(
+                nodes.stream().map(n->n.findNode(workflowNodeExecutionId)).filter(Objects::nonNull).findFirst().orElse(null)
+        );
+    }
+
+
 
     public String getId() {
         return id;

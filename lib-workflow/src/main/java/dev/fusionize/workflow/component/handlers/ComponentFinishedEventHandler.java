@@ -17,7 +17,7 @@ public class ComponentFinishedEventHandler implements EventHandler<ComponentFini
     @Override
     public boolean shouldHandle(ComponentFinishedEvent event) {
         return event!=null && event.getProcessedDate()==null
-                && event.getEventClass().equals(ComponentFinishedEvent.class);
+                && event.getEventClass().equals(ComponentFinishedEvent.class.getCanonicalName());
     }
 
     @Override

@@ -1,29 +1,37 @@
 package dev.fusionize.workflow.events;
 
 import dev.fusionize.common.utility.KeyUtil;
-import org.springframework.context.ApplicationEvent;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.ZonedDateTime;
 import java.util.Objects;
 
-public abstract class Event extends ApplicationEvent {
+@Document(collection = "workflow-event")
+public abstract class Event {
+    @Id
+    private String id;
+    @Indexed(unique = true)
     private String eventId;
+    @Indexed()
     private String correlationId;
+    @Indexed()
     private String causationId;
-    private Class<?> eventClass;
+    private String eventClass;
     private ZonedDateTime generatedDate;
     private ZonedDateTime processedDate;
-
-    protected Event(Object source) {
-        super(source);
-    }
+    @Transient
+    protected transient Object source;
 
     protected Event renew() {
         try {
             Event newEvent = this.getClass()
-                    .getDeclaredConstructor(Object.class)
-                    .newInstance(this.getSource());
+                    .getDeclaredConstructor()
+                    .newInstance();
 
+            newEvent.setSource(this.source);
             newEvent.setCorrelationId(this.correlationId);
             newEvent.setCausationId(this.causationId);
             newEvent.setEventClass(this.eventClass);
@@ -37,7 +45,7 @@ public abstract class Event extends ApplicationEvent {
     }
 
     public abstract static class Builder<T extends Builder<T>> {
-        protected final Class<?> eventClass;
+        protected final String eventClass;
         protected final Object source;
         protected String eventId;
         protected String correlationId;
@@ -46,7 +54,7 @@ public abstract class Event extends ApplicationEvent {
         protected ZonedDateTime processedDate;
 
         protected Builder(Class<?> eventClass, Object source) {
-            this.eventClass = eventClass;
+            this.eventClass = eventClass.getCanonicalName();
             this.source = source;
         }
 
@@ -83,6 +91,7 @@ public abstract class Event extends ApplicationEvent {
             if (source == null) {
                 throw new IllegalStateException("Source must be provided for an Event");
             }
+            event.setSource(source);
             event.setEventId(Objects.requireNonNullElseGet(eventId, Builder::generateEventId));
             event.setCorrelationId(Objects.requireNonNullElseGet(correlationId, KeyUtil::getUUID));
             event.setCausationId(Objects.requireNonNullElseGet(causationId, KeyUtil::getUUID));
@@ -120,11 +129,11 @@ public abstract class Event extends ApplicationEvent {
         this.causationId = causationId;
     }
 
-    public Class<?> getEventClass() {
+    public String getEventClass() {
         return eventClass;
     }
 
-    public void setEventClass(Class<?> eventClass) {
+    public void setEventClass(String eventClass) {
         this.eventClass = eventClass;
     }
 
@@ -142,5 +151,21 @@ public abstract class Event extends ApplicationEvent {
 
     public void setProcessedDate(ZonedDateTime processedDate) {
         this.processedDate = processedDate;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public Object getSource() {
+        return source;
+    }
+
+    public void setSource(Object source) {
+        this.source = source;
     }
 }

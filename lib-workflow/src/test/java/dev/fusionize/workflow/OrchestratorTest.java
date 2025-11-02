@@ -8,18 +8,21 @@ import dev.fusionize.workflow.component.runtime.EndComponentRuntime;
 import dev.fusionize.workflow.component.runtime.StartComponentRuntime;
 import dev.fusionize.workflow.component.runtime.TaskComponentRuntime;
 import dev.fusionize.workflow.events.Event;
+import dev.fusionize.workflow.events.EventListener;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.EventStore;
 import dev.fusionize.workflow.events.runtime.ComponentActivatedEvent;
 import dev.fusionize.workflow.events.runtime.ComponentFinishedEvent;
 import dev.fusionize.workflow.events.runtime.ComponentTriggeredEvent;
 import dev.fusionize.workflow.orchestrator.Orchestrator;
+import dev.fusionize.workflow.registry.WorkflowRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
+import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -40,8 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * -----------------------------
  * SPRING TEST CONFIGURATION
  * -----------------------------
- * This configuration defines a simple in-memory EventStore and EventPublisher
- * for testing workflow orchestration without needing MongoDB or messaging infrastructure.
+ * This configuration defines a simple in-memory EventPublisher
+ * for testing workflow orchestration without needing messaging infrastructure.
  */
 @Configuration
 @ComponentScan(basePackages = "dev.fusionize.workflow")
@@ -50,48 +53,44 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         TestMongoConversionConfig.class
 })
 class TestConfig {
-    /**
-     * In-memory event store mock.
-     * Used for storing published workflow events.
-     */
-    @Bean
-    public EventStore<Event> eventStore() {
-        return new EventStore<>() {
-            Map<String, Event> map = new HashMap<>();
 
-            @Override
-            public void save(Event event) {
-                map.put(event.getEventId(), event);
-            }
-
-            @Override
-            public Optional<Event> findByEventId(String eventId) {
-                return Optional.ofNullable(map.get(eventId));
-            }
-
-            @Override
-            public List<Event> findByCausationId(String causationId) {
-                return map.values().stream()
-                        .filter(e -> causationId.equals(e.getCausationId()))
-                        .toList();
-            }
-
-            @Override
-            public List<Event> findByCorrelationId(String correlationId) {
-                return map.values().stream()
-                        .filter(e -> correlationId.equals(e.getCorrelationId()))
-                        .toList();
-            }
-        };
+    static final class WorkflowApplicationEvent extends ApplicationEvent {
+        public final Event event;
+        public WorkflowApplicationEvent(Object source, Event event) {
+            super(source);
+            this.event = event;
+        }
     }
-
     /**
      * Simple adapter to use Spring's ApplicationEventPublisher
      * as the workflow's EventPublisher abstraction.
      */
     @Bean
-    public EventPublisher<Event> eventPublisher(ApplicationEventPublisher eventPublisher) {
-        return eventPublisher::publishEvent;
+    public EventPublisher<Event> eventPublisher(ApplicationEventPublisher eventPublisher, EventStore<Event> eventStore) {
+        return new EventPublisher<>(eventStore) {
+            @Override
+            public void publish(Event event) {
+                super.publish(event);
+                eventPublisher.publishEvent(new WorkflowApplicationEvent(event.getSource(), event));
+            }
+        };
+    }
+
+    @Bean
+    public EventListener<Event> eventListener() {
+        return new EventListener<Event>() {
+            final List<EventCallback<Event>> callbacks = new ArrayList<>();
+            @Override
+            public void addListener(EventCallback<Event> callback) {
+                callbacks.add(callback);
+            }
+
+            @org.springframework.context.event.EventListener()
+            public void onEvent(WorkflowApplicationEvent workflowApplicationEvent){
+                callbacks.forEach(c -> c.onEvent(workflowApplicationEvent.event));
+
+            }
+        };
     }
 }
 
@@ -116,10 +115,11 @@ class TestConfig {
 class OrchestratorTest {
     public static Logger logger = LoggerFactory.getLogger(OrchestratorTest.class);
 
-    @Autowired WorkflowComponentRegistry registry;
+    @Autowired WorkflowComponentRegistry componentRegistry;
     @Autowired Orchestrator service;
     @Autowired WorkflowComponentRuntimeEngine runtimeEngine;
     @Autowired EventPublisher<Event> eventPublisher;
+    @Autowired WorkflowRegistry workflowRegistry;
 
     @Test
     void orchestrate() throws InterruptedException {
@@ -139,25 +139,25 @@ class OrchestratorTest {
          * Register all mock components with the registry.
          * Each component represents a runtime handler for a specific workflow node type.
          */
-        registry.registerFactory(
+        componentRegistry.registerFactory(
                 WorkflowComponent.builder("test")
                         .withDomain("receivedIncomingEmail")
                         .withCompatible(WorkflowNodeType.START)
                         .build(), emailRecStartFactory);
 
-        registry.registerFactory(
+        componentRegistry.registerFactory(
                 WorkflowComponent.builder("test")
                         .withDomain("emailDecision")
                         .withCompatible(WorkflowNodeType.DECISION)
                         .build(), emailDecisionFactory);
 
-        registry.registerFactory(
+        componentRegistry.registerFactory(
                 WorkflowComponent.builder("test")
                         .withDomain("sendEmail")
                         .withCompatible(WorkflowNodeType.TASK)
                         .build(), emailSendTaskFactory);
 
-        registry.registerFactory(
+        componentRegistry.registerFactory(
                 WorkflowComponent.builder("test")
                         .withDomain("endEmailWorkflow")
                         .withCompatible(WorkflowNodeType.END)
@@ -219,8 +219,9 @@ class OrchestratorTest {
                                         .build())
                 ).build();
 
+        workflow = workflowRegistry.register(workflow);
         // Start orchestrating the workflow
-        service.orchestrate(workflow);
+        service.orchestrate(workflow.getWorkflowId());
 
         // Simulate asynchronous email arrivals
         Thread.sleep(200);
@@ -295,6 +296,10 @@ class OrchestratorTest {
                     publish(onFinish);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                }
+            }).whenComplete((result, throwable) -> {
+                if (throwable != null) {
+                    logger.error(throwable.getMessage(), throwable);
                 }
             });
         }
@@ -433,6 +438,10 @@ class OrchestratorTest {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
+            }).whenComplete((result, throwable) -> {
+                if (throwable != null) {
+                    logger.error(throwable.getMessage(), throwable);
+                }
             });
         }
 
@@ -467,6 +476,10 @@ class OrchestratorTest {
                     } catch (Exception e) {
                         logger.error("Error processing email", e);
                     }
+                }
+            }).whenComplete((result, throwable) -> {
+                if (throwable != null) {
+                    logger.error(throwable.getMessage(), throwable);
                 }
             });
         }

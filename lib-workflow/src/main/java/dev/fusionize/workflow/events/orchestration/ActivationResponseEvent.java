@@ -1,11 +1,10 @@
 package dev.fusionize.workflow.events.orchestration;
 
 import dev.fusionize.workflow.events.OrchestrationEvent;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+@Document(collection = "workflow-event")
 public class ActivationResponseEvent extends OrchestrationEvent {
-    public ActivationResponseEvent(Object source) {
-        super(source);
-    }
 
     public static Builder builder(Object source) {
         return new Builder(ActivationResponseEvent.class, source);
@@ -41,7 +40,7 @@ public class ActivationResponseEvent extends OrchestrationEvent {
 
         @Override
         public ActivationResponseEvent build() {
-            ActivationResponseEvent event = new ActivationResponseEvent(source);
+            ActivationResponseEvent event = new ActivationResponseEvent();
             super.load(event);
             return event;
         }

@@ -17,7 +17,7 @@ public class ComponentActivateEventHandler implements EventHandler<ComponentActi
     @Override
     public boolean shouldHandle(ComponentActivatedEvent event) {
         return event!=null && event.getProcessedDate()==null
-                && event.getEventClass().equals(ComponentActivatedEvent.class);
+                && event.getEventClass().equals(ComponentActivatedEvent.class.getCanonicalName());
     }
 
     @Override

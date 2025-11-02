@@ -17,7 +17,7 @@ public class ComponentTriggeredEventHandler implements EventHandler<ComponentTri
     @Override
     public boolean shouldHandle(ComponentTriggeredEvent event) {
         return event!=null && event.getProcessedDate()==null
-                && event.getEventClass().equals(ComponentTriggeredEvent.class);
+                && event.getEventClass().equals(ComponentTriggeredEvent.class.getCanonicalName());
 
     }
 

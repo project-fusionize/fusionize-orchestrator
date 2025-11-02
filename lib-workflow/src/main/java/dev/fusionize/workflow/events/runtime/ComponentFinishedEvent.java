@@ -1,11 +1,10 @@
 package dev.fusionize.workflow.events.runtime;
 
 import dev.fusionize.workflow.events.RuntimeEvent;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+@Document(collection = "workflow-event")
 public class ComponentFinishedEvent extends RuntimeEvent {
-    public ComponentFinishedEvent(Object source) {
-        super(source);
-    }
 
     public static Builder builder(Object source) {
         return new Builder(ComponentFinishedEvent.class, source);
@@ -23,7 +22,7 @@ public class ComponentFinishedEvent extends RuntimeEvent {
         }
 
         public ComponentFinishedEvent build() {
-            ComponentFinishedEvent event = new ComponentFinishedEvent(source);
+            ComponentFinishedEvent event = new ComponentFinishedEvent();
             super.load(event);
             return event;
         }

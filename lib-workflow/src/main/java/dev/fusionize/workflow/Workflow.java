@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Document(collection = "workflow")
 public class Workflow extends DomainEntity {
@@ -19,6 +20,12 @@ public class Workflow extends DomainEntity {
     private int version;
     private boolean active = true;
     private List<WorkflowNode> nodes = new ArrayList<>();
+
+    public WorkflowNode findNode(String workflowNodeId) {
+        return nodes.stream().filter(n-> n.getWorkflowNodeId().equals(workflowNodeId)).findFirst().orElse(
+                nodes.stream().map(n->n.findNode(workflowNodeId)).filter(Objects::nonNull).findFirst().orElse(null)
+        );
+    }
 
     public static Builder builder(String parentDomain) {
         return new Builder(parentDomain);

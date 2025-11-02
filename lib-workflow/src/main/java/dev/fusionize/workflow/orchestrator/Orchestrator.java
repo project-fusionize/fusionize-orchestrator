@@ -9,6 +9,8 @@ import dev.fusionize.workflow.events.orchestration.ActivationRequestEvent;
 import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
 import dev.fusionize.workflow.events.orchestration.InvocationRequestEvent;
 import dev.fusionize.workflow.events.orchestration.InvocationResponseEvent;
+import dev.fusionize.workflow.registry.WorkflowExecutionRegistry;
+import dev.fusionize.workflow.registry.WorkflowRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -20,44 +22,57 @@ import java.util.List;
 public class Orchestrator {
     private static final Logger log = LoggerFactory.getLogger(Orchestrator.class);
     private final EventPublisher<Event> eventPublisher;
+    private final WorkflowRegistry workflowRegistry;
+    private final WorkflowExecutionRegistry workflowExecutionRegistry;
 
-    public Orchestrator(EventPublisher<Event> publisher) {
+    public Orchestrator(EventPublisher<Event> publisher,
+                        WorkflowRegistry workflowRegistry,
+                        WorkflowExecutionRegistry workflowExecutionRegistry) {
         this.eventPublisher = publisher;
+        this.workflowRegistry = workflowRegistry;
+        this.workflowExecutionRegistry = workflowExecutionRegistry;
     }
 
-    public void orchestrate(Workflow workflow) {
+    public void orchestrate(String workflowId) {
+        Workflow workflow = workflowRegistry.getWorkflow(workflowId);
         WorkflowExecution we = WorkflowExecution.of(workflow);
-         workflow.getNodes().stream()
+        //todo check and re-use idle execution
+        List<WorkflowNodeExecution> nodes = workflow.getNodes().stream()
                 .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.empty()))
-                .forEach(ne -> requestActivation(we, ne));
+                .peek(ne -> we.getNodes().add(ne)).toList();
+        workflowExecutionRegistry.register(we);
+        nodes.forEach(ne -> requestActivation(we, ne));
+
     }
 
     private void proceed(WorkflowExecution we, WorkflowNodeExecution ne) {
         List<WorkflowNodeExecution> nodeExecutions = filterChildren(ne).stream()
-                        .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.from(ne, n)))
-                        .peek(cne -> requestActivation(we, cne)).toList();
+                .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.from(ne, n)))
+                .toList();
         ne.getChildren().addAll(nodeExecutions);
         we.getNodes().add(ne);
+        workflowExecutionRegistry.register(we);
+        nodeExecutions.forEach(cne -> requestActivation(we, cne));
     }
 
     private List<WorkflowNode> filterChildren(WorkflowNodeExecution ne) {
         List<WorkflowNode> allChildren = ne.getWorkflowNode().getChildren();
-        if(ne.getStageContext().getDecisions().isEmpty()){
+        if (ne.getStageContext().getDecisions().isEmpty()) {
             return allChildren;
         }
-        if(!WorkflowNodeType.DECISION.equals(ne.getWorkflowNode().getType())){
+        if (!WorkflowNodeType.DECISION.equals(ne.getWorkflowNode().getType())) {
             return allChildren;
         }
         WorkflowDecision lastDecision = ne.getStageContext().getDecisions().getLast();
-        if(lastDecision.getDecisionNode()==null
-                || ne.getWorkflowNode().getWorkflowNodeKey()==null){
+        if (lastDecision.getDecisionNode() == null
+                || ne.getWorkflowNode().getWorkflowNodeKey() == null) {
             return new ArrayList<>();
         }
-        if(!lastDecision.getDecisionNode().equals(ne.getWorkflowNode().getWorkflowNodeKey())){
+        if (!lastDecision.getDecisionNode().equals(ne.getWorkflowNode().getWorkflowNodeKey())) {
             return new ArrayList<>();
         }
-        return allChildren.stream().filter(n-> n.getWorkflowNodeKey()!=null)
-                        .filter(n-> lastDecision.getOptionNodes().get(n.getWorkflowNodeKey())).toList();
+        return allChildren.stream().filter(n -> n.getWorkflowNodeKey() != null)
+                .filter(n -> lastDecision.getOptionNodes().get(n.getWorkflowNodeKey())).toList();
     }
 
     private void requestActivation(WorkflowExecution we, WorkflowNodeExecution ne) {
@@ -74,12 +89,12 @@ public class Orchestrator {
         eventPublisher.publish(activationRequestEvent);
     }
 
-    public void onActivated(ActivationResponseEvent activationResponseEvent){
-        if(activationResponseEvent.getException()!=null){
+    public void onActivated(ActivationResponseEvent activationResponseEvent) {
+        if (activationResponseEvent.getException() != null) {
             //todo handle exception
             log.error("Error -> {}", activationResponseEvent.getException().getMessage(), activationResponseEvent.getException());
 
-        }else {
+        } else {
             OrchestrationEventContext oc = activationResponseEvent.getOrchestrationEventContext();
             requestInvocation(oc.getWorkflowExecution(), oc.getNodeExecution());
         }
@@ -97,12 +112,12 @@ public class Orchestrator {
                         .orchestrationEventContext(we, ne)
                         .component(ne.getWorkflowNode().getComponent())
                         .context(ne.getStageContext())
-                       .build();
+                        .build();
         eventPublisher.publish(invocationRequestEvent);
     }
 
-    public void onInvoked(InvocationResponseEvent invocationResponseEvent){
-        if(invocationResponseEvent.getException()!=null){
+    public void onInvoked(InvocationResponseEvent invocationResponseEvent) {
+        if (invocationResponseEvent.getException() != null) {
             //todo handle exception
             log.error(invocationResponseEvent.getException().getMessage(), invocationResponseEvent.getException());
             return;

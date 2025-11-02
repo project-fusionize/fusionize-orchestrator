@@ -5,6 +5,7 @@ import dev.fusionize.workflow.component.WorkflowComponentConfig;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class WorkflowNode {
     private List<WorkflowNode> children = new ArrayList<>();
@@ -14,8 +15,14 @@ public class WorkflowNode {
     private String component;
     private WorkflowComponentConfig componentConfig;
 
-    public WorkflowNode() {
+    public WorkflowNode(){}
+
+    public WorkflowNode findNode(String workflowNodeId) {
+        return children.stream().filter(n-> n.getWorkflowNodeId().equals(workflowNodeId)).findFirst().orElse(
+                children.stream().map(n->n.findNode(workflowNodeId)).filter(Objects::nonNull).findFirst().orElse(null)
+        );
     }
+
 
     private WorkflowNode(Builder builder) {
         this.children = builder.children;

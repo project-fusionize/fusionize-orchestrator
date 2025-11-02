@@ -1,7 +1,10 @@
 package dev.fusionize.workflow.events;
 
+import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowExecution;
 import dev.fusionize.workflow.WorkflowNodeExecution;
+import dev.fusionize.workflow.registry.WorkflowExecutionRegistry;
+import dev.fusionize.workflow.registry.WorkflowRegistry;
 import org.springframework.data.annotation.Transient;
 
 import java.util.HashMap;
@@ -15,10 +18,6 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
     private Origin origin;
     @Transient
     private OrchestrationEventContext orchestrationEventContext;
-
-    protected OrchestrationEvent(Object source) {
-        super(source);
-    }
 
     public enum Origin {
         RUNTIME_ENGINE("RUNTIME_ENGINE"),
@@ -105,6 +104,20 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
 
     }
 
+    public void ensureOrchestrationEventContext(
+            WorkflowExecutionRegistry workflowExecutionRegistry,
+            WorkflowRegistry workflowRegistry
+    ) {
+        if (orchestrationEventContext == null) {
+            Workflow workflow = workflowRegistry.getWorkflow(workflowId);
+            WorkflowExecution workflowExecution = workflowExecutionRegistry.getWorkflowExecution(workflowExecutionId);
+            workflowExecution.setWorkflow(workflow);
+            WorkflowNodeExecution workflowNodeExecution = workflowExecution.findNode(workflowNodeExecutionId);
+            workflowNodeExecution.setWorkflowNode(workflow.findNode(workflowNodeId));
+            this.orchestrationEventContext = new OrchestrationEventContext(workflowExecution, workflowNodeExecution);
+
+        }
+    }
     public String getWorkflowId() {
         return workflowId;
     }

@@ -6,10 +6,6 @@ public abstract class RuntimeEvent extends Event {
     private String component;
     private Exception exception;
 
-    protected RuntimeEvent(Object source) {
-        super(source);
-    }
-
     @Override
     public RuntimeEvent renew() {
         RuntimeEvent renewed = (RuntimeEvent) super.renew();
