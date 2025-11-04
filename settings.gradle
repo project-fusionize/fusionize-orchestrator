@@ -6,4 +6,6 @@ include 'lib-project'
 include 'lib-common-test'
 include 'lib-common'
 include 'lib-workflow'
+include 'lib-script-engine'
+include 'lib-spring-boot-starter'
 

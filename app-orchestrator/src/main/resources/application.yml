@@ -1,0 +1,45 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: fusionize-orchestrator
+  security:
+    oauth2:
+      client:
+        registration:
+          fusionize-client-credentials:
+            client-id: fusionize-orchestrator
+            client-secret: fusionize-secret
+            authorization-grant-type: client_credentials
+            scope: openid
+            provider: fusionize
+          fusionize-password:
+            client-id: fusionize-orchestrator
+            client-secret: fusionize-secret
+            authorization-grant-type: password
+            scope: openid
+            provider: fusionize
+        provider:
+          fusionize:
+            token-uri: http://localhost:8080/realms/fuz/protocol/openid-connect/token
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/fuz
+  data:
+    mongodb:
+      uri: mongodb://fusionize:fusionize@localhost:27017/fuzdb
+  rabbitmq:
+    host: localhost
+    # virtual-host: /
+    username: fusionize
+    password: fusionize
+    port: 5672
+    stomp:
+      port: 61613
+
+fusionize:
+  worker:
+    orchestrator-url: http://localhost:8081
+    worker-oidc-client-id: fusionize-workers
+    worker-oidc-client-secret: fusionize-secret

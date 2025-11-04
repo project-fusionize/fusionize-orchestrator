@@ -14,7 +14,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-    public static final String URL_SOCKET_BASE = "/socket/"+ Application.VERSION;
+    public static final String URL_SOCKET_BASE = "/ws/"+ Application.VERSION;
     public static final String URL_NODE_TOPIC_BASE = "/topic/"+ Application.VERSION + ".node";
     private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
