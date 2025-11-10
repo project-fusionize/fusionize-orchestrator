@@ -1,16 +1,21 @@
 package dev.fusionize.worker;
 
-import dev.fusionize.worker.component.RuntimeComponentValidator;
+import dev.fusionize.worker.component.RuntimeComponentRegistrar;
 import dev.fusionize.worker.component.annotations.RuntimeComponentDefinition;
 import dev.fusionize.worker.oidc.OidcTokenClient;
 import dev.fusionize.worker.stomp.WorkerStompSessionHandler;
+import dev.fusionize.workflow.Workflow;
+import dev.fusionize.workflow.component.WorkflowComponent;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeRegistry;
+import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventListener;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.EventStore;
+import dev.fusionize.workflow.orchestrator.Orchestrator;
 import dev.fusionize.workflow.registry.WorkflowComponentRepoRegistry;
-import dev.fusionize.workflow.repo.WorkflowComponentRepository;
+import dev.fusionize.workflow.registry.WorkflowRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationRunner;
@@ -22,6 +27,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;
@@ -29,6 +35,9 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
+import java.io.File;
+import java.net.URL;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,8 +82,8 @@ public class WorkerAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public RuntimeComponentValidator runtimeComponentValidator(WorkflowComponentRepoRegistry registry) {
-        return new RuntimeComponentValidator(registry);
+    public RuntimeComponentRegistrar runtimeComponentRegistrar(WorkflowComponentRepoRegistry registry) {
+        return new RuntimeComponentRegistrar(registry);
     }
 
     static final class WorkflowApplicationEvent extends ApplicationEvent {
@@ -114,6 +123,7 @@ public class WorkerAutoConfiguration {
     }
 
     @Bean
+    @Order(1)
     public ApplicationRunner connectStompClient(OidcTokenClient oidcTokenClient,
                                                 WebSocketStompClient stompClient,
                                                 StompSessionHandler sessionHandler) {
@@ -135,15 +145,35 @@ public class WorkerAutoConfiguration {
     }
 
     @Bean
-    public ApplicationRunner registerWorkflowComponents(List<ComponentRuntimeFactory> factories,
-                                                        RuntimeComponentValidator validator) {
-        return args -> {
+    @Order(2)
+    public ApplicationRunner registerWorkflowComponents(List<ComponentRuntimeFactory<?>> factories,
+                                                        ComponentRuntimeRegistry componentRegistry,
+                                                        RuntimeComponentRegistrar registrar) {
+        return args ->
             factories.forEach(f-> {
-                boolean validFactory = validator.isValidComponentFactory(f.getClass());
-                boolean validAnnotation = validator.isValidComponentDefinition(f.getClass().getAnnotation(RuntimeComponentDefinition.class));
-                logger.info("rt Factory: {} factory: {} validation:{}", f.getClass().getSimpleName(), validFactory, validAnnotation);
-
+                boolean validFactory = registrar.isValidComponentFactory(f.getClass());
+                RuntimeComponentDefinition definition = f.getClass().getAnnotation(RuntimeComponentDefinition.class);
+                boolean validAnnotation = registrar.isValidComponentDefinition(definition);
+                if(validFactory && validAnnotation) {
+                    WorkflowComponent component = registrar.registerComponent(definition);
+                    componentRegistry.registerFactory(component, f);
+                    logger.info("Registered Factory: {} {}", f.getClass().getSimpleName(), component.getComponentId());
+                }
             });
+    }
+
+    @Bean
+    @Order(3)
+    public ApplicationRunner registerWorkflows(Orchestrator service,
+                                               WorkflowRegistry workflowRegistry) {
+        return args -> {
+            URL yamlUrl = this.getClass().getResource("/test-workflow.yml");
+            String yml = Files.readString(new File(yamlUrl.getFile()).toPath());
+
+            Workflow workflow = new WorkflowDescriptor().fromYamlDescription(yml);
+            workflow = workflowRegistry.register(workflow);
+            // Start orchestrating the workflow
+            service.orchestrate(workflow.getWorkflowId());
         };
     }
 

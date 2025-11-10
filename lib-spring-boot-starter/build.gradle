@@ -14,6 +14,7 @@ dependencyManagement {
 
 dependencies {
     implementation project(':lib-common')
+    implementation project(':lib-user')
     implementation project(':lib-workflow')
     implementation project(':lib-workflow-orchestration')
 

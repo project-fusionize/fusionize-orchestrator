@@ -45,7 +45,7 @@ public class ComponentRuntimeEngine {
         if(optionalWorkflowComponentRuntime.isEmpty()){
             ActivationResponseEvent responseEvent = ActivationResponseEvent.from(
                     this, OrchestrationEvent.Origin.RUNTIME_ENGINE, activationRequestEvent);
-            responseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
+            responseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND + " " + activationRequestEvent.getComponent()));
             return responseEvent;
         }
 

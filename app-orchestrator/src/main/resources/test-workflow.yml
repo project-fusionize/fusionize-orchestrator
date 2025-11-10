@@ -1,0 +1,20 @@
+kind: Workflow
+apiVersion: v1
+name: Test Email Workflow
+domain: test.emailWorkflow
+key: test-email-workflow-key
+description: A test workflow for email processing
+version: 1
+active: true
+nodes:
+  start:
+    type: START
+    component: start:dev.fusionize.orchestrator.components.MyCustomComponentRecEmail
+    componentConfig:
+      address: incoming@email.com
+    next: [end]
+
+  end:
+    type: END
+    component: end:dev.fusionize.orchestrator.components.MyCustomComponentEnd
+    next: []

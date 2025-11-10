@@ -142,10 +142,14 @@ class OrchestratorTest {
         List<String> inbox = new CopyOnWriteArrayList<>();
 
         // Define factories for workflow runtime components
-        ComponentRuntimeFactory emailRecStartFactory = () -> new MockRecEmailComponentRuntime(writer, eventPublisher, inbox);
-        ComponentRuntimeFactory emailSendTaskFactory = () -> new MockSendEmailComponent(writer, eventPublisher);
-        ComponentRuntimeFactory emailDecisionFactory = () -> new MockEmailDecisionComponent(writer, eventPublisher);
-        ComponentRuntimeFactory emailEndStepFactory = () -> new MockEndEmailComponent(writer, eventPublisher);
+        ComponentRuntimeFactory<MockRecEmailComponentRuntime> emailRecStartFactory =
+                () -> new MockRecEmailComponentRuntime(writer, eventPublisher, inbox);
+        ComponentRuntimeFactory<MockSendEmailComponent> emailSendTaskFactory =
+                () -> new MockSendEmailComponent(writer, eventPublisher);
+        ComponentRuntimeFactory<MockEmailDecisionComponent> emailDecisionFactory =
+                () -> new MockEmailDecisionComponent(writer, eventPublisher);
+        ComponentRuntimeFactory<MockEndEmailComponent> emailEndStepFactory =
+                () -> new MockEndEmailComponent(writer, eventPublisher);
 
         /**
          * Register all mock components with the registry.

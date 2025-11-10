@@ -47,7 +47,11 @@ public class WorkflowComponent extends DomainEntity {
         public WorkflowComponent build() {
             WorkflowComponent component = new WorkflowComponent();
             component.load(super.build());
-            component.setComponentId(this.componentId);
+            if(componentId == null) {
+                component.setComponentId(KeyUtil.getTimestampId("COMP"));
+            }else {
+                component.setComponentId(this.componentId);
+            }
             component.setDescription(this.description);
             component.setCompatible(this.compatible);
             return component;

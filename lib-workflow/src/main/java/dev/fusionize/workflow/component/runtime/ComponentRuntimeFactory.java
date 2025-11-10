@@ -5,11 +5,11 @@ package dev.fusionize.workflow.component.runtime;
  * This allows components to be created dynamically when configuration is not yet available.
  */
 @FunctionalInterface
-public interface ComponentRuntimeFactory {
+public interface ComponentRuntimeFactory<T extends ComponentRuntime> {
     /**
      * Creates a new WorkflowComponentRuntime instance.
      * 
      * @return A new instance of WorkflowComponentRuntime
      */
-    ComponentRuntime create();
+    T create();
 }
