@@ -1,7 +1,7 @@
-package dev.fusionize.workflow.component;
+package dev.fusionize.workflow.component.runtime;
 
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.component.runtime.ComponentRuntime;
+import dev.fusionize.workflow.component.WorkflowComponent;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -11,9 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Component
-public class WorkflowComponentRegistry {
+public class ComponentRuntimeRegistry {
     private final ConcurrentHashMap<String, ComponentRuntime> registry = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, WorkflowComponentFactory> factoryRegistry = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ComponentRuntimeFactory> factoryRegistry = new ConcurrentHashMap<>();
 
     /**
      * Registers a workflow component runtime with the registry.
@@ -24,7 +24,7 @@ public class WorkflowComponentRegistry {
      * @return The registration key (format: TYPE:domain:configHash)
      */
     public String register(WorkflowComponent component,
-                           WorkflowComponentConfig config,
+                           ComponentRuntimeConfig config,
                            ComponentRuntime runtime) {
         if (component == null || runtime == null) {
             throw new IllegalArgumentException("Component and runtime cannot be null");
@@ -45,7 +45,7 @@ public class WorkflowComponentRegistry {
      * @return The registration key (format: TYPE:domain:configHash)
      */
     public String register(String prefix,
-                           WorkflowComponentConfig config,
+                           ComponentRuntimeConfig config,
                            ComponentRuntime runtime) {
         if (prefix == null || runtime == null) {
             throw new IllegalArgumentException("Prefix and runtime cannot be null");
@@ -64,7 +64,7 @@ public class WorkflowComponentRegistry {
      * @param prefix The key prefix (TYPE:domain)
      * @param factory The factory for creating component instances
      */
-    public void registerFactory(String prefix, WorkflowComponentFactory factory) {
+    public void registerFactory(String prefix, ComponentRuntimeFactory factory) {
         if (prefix == null || factory == null) {
             throw new IllegalArgumentException("Prefix and factory cannot be null");
         }
@@ -77,7 +77,7 @@ public class WorkflowComponentRegistry {
      * @param component The component metadata
      * @param factory The factory for creating component instances
      */
-    public void registerFactory(WorkflowComponent component, WorkflowComponentFactory factory) {
+    public void registerFactory(WorkflowComponent component, ComponentRuntimeFactory factory) {
         if (component == null || factory == null) {
             throw new IllegalArgumentException("Component and factory cannot be null");
         }
@@ -94,7 +94,7 @@ public class WorkflowComponentRegistry {
      * @param config The component configuration
      * @return Optional containing the runtime if found or created
      */
-    public Optional<ComponentRuntime> get(String prefix, WorkflowComponentConfig config) {
+    public Optional<ComponentRuntime> get(String prefix, ComponentRuntimeConfig config) {
         int configHash = calculateConfigHash(config);
         String fullKey = prefix + ":" + configHash;
 
@@ -127,7 +127,7 @@ public class WorkflowComponentRegistry {
      * @return Optional containing the runtime if found or created
      */
     public Optional<ComponentRuntime> get(WorkflowComponent component,
-                                          WorkflowComponentConfig config) {
+                                          ComponentRuntimeConfig config) {
         String key = buildRegistryKey(component, config);
 
         // First try to get from registry
@@ -188,7 +188,7 @@ public class WorkflowComponentRegistry {
      * @param config The component configuration
      * @return true if the component was removed, false otherwise
      */
-    public boolean unregister(WorkflowComponent component, WorkflowComponentConfig config) {
+    public boolean unregister(WorkflowComponent component, ComponentRuntimeConfig config) {
         String key = buildRegistryKey(component, config);
         return unregister(key);
     }
@@ -286,8 +286,8 @@ public class WorkflowComponentRegistry {
      * @param config The component configuration
      * @return Optional containing the created runtime if factory exists
      */
-    private Optional<ComponentRuntime> createFromFactory(String prefix, WorkflowComponentConfig config) {
-        WorkflowComponentFactory factory = factoryRegistry.get(prefix.toLowerCase());
+    private Optional<ComponentRuntime> createFromFactory(String prefix, ComponentRuntimeConfig config) {
+        ComponentRuntimeFactory factory = factoryRegistry.get(prefix.toLowerCase());
         if (factory != null) {
             try {
                 ComponentRuntime runtime = factory.create();
@@ -321,7 +321,7 @@ public class WorkflowComponentRegistry {
      * Builds the registry key in format: TYPE:domain:configHash
      * Example: task:com.example.sendEmail:1234123
      */
-    private String buildRegistryKey(WorkflowComponent component, WorkflowComponentConfig config) {
+    private String buildRegistryKey(WorkflowComponent component, ComponentRuntimeConfig config) {
         WorkflowNodeType nodeType = component.getCompatible();
         String domain = component.getDomain();
         int configHash = calculateConfigHash(config);
@@ -335,7 +335,7 @@ public class WorkflowComponentRegistry {
     /**
      * Calculates hash code for the configuration.
      */
-    private int calculateConfigHash(WorkflowComponentConfig config) {
+    private int calculateConfigHash(ComponentRuntimeConfig config) {
         if (config == null || config.getConfig() == null) {
             return 0;
         }

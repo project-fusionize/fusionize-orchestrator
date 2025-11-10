@@ -9,8 +9,8 @@ import dev.fusionize.workflow.events.orchestration.ActivationRequestEvent;
 import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
 import dev.fusionize.workflow.events.orchestration.InvocationRequestEvent;
 import dev.fusionize.workflow.events.orchestration.InvocationResponseEvent;
-import dev.fusionize.workflow.registry.WorkflowExecutionRegistry;
-import dev.fusionize.workflow.registry.WorkflowRegistry;
+import dev.fusionize.workflow.registry.WorkflowExecutionRepoRegistry;
+import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -22,12 +22,12 @@ import java.util.List;
 public class Orchestrator {
     private static final Logger log = LoggerFactory.getLogger(Orchestrator.class);
     private final EventPublisher<Event> eventPublisher;
-    private final WorkflowRegistry workflowRegistry;
-    private final WorkflowExecutionRegistry workflowExecutionRegistry;
+    private final WorkflowRepoRegistry workflowRegistry;
+    private final WorkflowExecutionRepoRegistry workflowExecutionRegistry;
 
     public Orchestrator(EventPublisher<Event> publisher,
-                        WorkflowRegistry workflowRegistry,
-                        WorkflowExecutionRegistry workflowExecutionRegistry) {
+                        WorkflowRepoRegistry workflowRegistry,
+                        WorkflowExecutionRepoRegistry workflowExecutionRegistry) {
         this.eventPublisher = publisher;
         this.workflowRegistry = workflowRegistry;
         this.workflowExecutionRegistry = workflowExecutionRegistry;

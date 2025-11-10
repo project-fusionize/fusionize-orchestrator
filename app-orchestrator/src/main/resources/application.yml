@@ -43,3 +43,4 @@ fusionize:
     orchestrator-url: http://localhost:8081
     worker-oidc-client-id: fusionize-workers
     worker-oidc-client-secret: fusionize-secret
+    orchestrator-mongo: mongodb://fusionize:fusionize@localhost:27017/fuzdb?authSource=admin

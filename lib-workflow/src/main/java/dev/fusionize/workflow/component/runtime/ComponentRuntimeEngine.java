@@ -1,10 +1,9 @@
-package dev.fusionize.workflow.component;
+package dev.fusionize.workflow.component.runtime;
 
 
 import dev.fusionize.workflow.WorkflowNodeType;
 import dev.fusionize.workflow.component.exceptions.ComponentMissmatchException;
 import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
-import dev.fusionize.workflow.component.runtime.*;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventStore;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -21,24 +20,24 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
-public class WorkflowComponentRuntimeEngine {
+public class ComponentRuntimeEngine {
     public static final String ERR_CODE_COMP_NOT_FOUND = "(wcre101) Runtime component not found";
     public static final String ERR_CODE_COMP_NOT_MATCH = "(wcre102) Runtime component type not match";
 
-    private final WorkflowComponentRegistry workflowComponentRegistry;
+    private final ComponentRuntimeRegistry componentRuntimeRegistry;
     private final EventStore<Event> eventStore;
 
-    public WorkflowComponentRuntimeEngine(WorkflowComponentRegistry workflowComponentRegistry,
-                                          EventStore<Event> eventStore) {
-        this.workflowComponentRegistry = workflowComponentRegistry;
+    public ComponentRuntimeEngine(ComponentRuntimeRegistry componentRuntimeRegistry,
+                                  EventStore<Event> eventStore) {
+        this.componentRuntimeRegistry = componentRuntimeRegistry;
         this.eventStore = eventStore;
     }
 
     private Optional<ComponentRuntime> getRuntimeComponent(OrchestrationEvent orchestrationEvent) {
         String component = orchestrationEvent.getComponent();
-        WorkflowComponentConfig componentConfig = orchestrationEvent.getOrchestrationEventContext()
+        ComponentRuntimeConfig componentConfig = orchestrationEvent.getOrchestrationEventContext()
                 .getNodeExecution().getWorkflowNode().getComponentConfig();
-        return workflowComponentRegistry.get(component, componentConfig);
+        return componentRuntimeRegistry.get(component, componentConfig);
     }
 
     public ActivationResponseEvent activateComponent(ActivationRequestEvent activationRequestEvent){

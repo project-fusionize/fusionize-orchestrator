@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 @ConfigurationProperties(prefix = "fusionize.worker")
 public class WorkerProperties {
     private String orchestratorUrl;
+    private String orchestratorMongo;
     private String workerOidcClientId;
     private String workerOidcClientSecret;
 
@@ -21,6 +22,14 @@ public class WorkerProperties {
 
     public String getWorkerOidcClientId() {
         return workerOidcClientId;
+    }
+
+    public String getOrchestratorMongo() {
+        return orchestratorMongo;
+    }
+
+    public void setOrchestratorMongo(String orchestratorMongo) {
+        this.orchestratorMongo = orchestratorMongo;
     }
 
     public void setWorkerOidcClientId(String workerOidcClientId) {

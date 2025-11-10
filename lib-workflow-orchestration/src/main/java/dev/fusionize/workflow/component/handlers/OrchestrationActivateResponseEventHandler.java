@@ -5,18 +5,18 @@ import dev.fusionize.workflow.events.EventHandler;
 import dev.fusionize.workflow.events.OrchestrationEvent;
 import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
 import dev.fusionize.workflow.orchestrator.Orchestrator;
-import dev.fusionize.workflow.registry.WorkflowExecutionRegistry;
-import dev.fusionize.workflow.registry.WorkflowRegistry;
+import dev.fusionize.workflow.registry.WorkflowExecutionRepoRegistry;
+import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import org.springframework.stereotype.Component;
 
 @Component
 public class OrchestrationActivateResponseEventHandler implements EventHandler<ActivationResponseEvent> {
     private final Orchestrator orchestrator;
-    private final WorkflowRegistry workflowRegistry;
-    private final WorkflowExecutionRegistry workflowExecutionRegistry;
+    private final WorkflowRepoRegistry workflowRegistry;
+    private final WorkflowExecutionRepoRegistry workflowExecutionRegistry;
     public OrchestrationActivateResponseEventHandler(Orchestrator orchestrator,
-                                                     WorkflowRegistry workflowRegistry,
-                                                     WorkflowExecutionRegistry workflowExecutionRegistry) {
+                                                     WorkflowRepoRegistry workflowRegistry,
+                                                     WorkflowExecutionRepoRegistry workflowExecutionRegistry) {
         this.orchestrator = orchestrator;
         this.workflowRegistry = workflowRegistry;
         this.workflowExecutionRegistry = workflowExecutionRegistry;

@@ -14,6 +14,8 @@ dependencyManagement {
 
 dependencies {
     implementation project(':lib-common')
+    implementation project(':lib-workflow')
+    implementation project(':lib-workflow-orchestration')
 
     implementation 'org.slf4j:slf4j-api'
     runtimeOnly 'ch.qos.logback:logback-classic'
@@ -23,6 +25,9 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation "org.springframework.data:spring-data-mongodb"
+    implementation 'org.mongodb:mongodb-driver-sync'
+
 
     testImplementation project(':lib-common-test')
 }

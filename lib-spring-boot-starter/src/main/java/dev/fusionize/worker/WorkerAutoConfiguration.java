@@ -1,14 +1,26 @@
 package dev.fusionize.worker;
 
+import dev.fusionize.worker.component.RuntimeComponentValidator;
+import dev.fusionize.worker.component.annotations.RuntimeComponentDefinition;
 import dev.fusionize.worker.oidc.OidcTokenClient;
 import dev.fusionize.worker.stomp.WorkerStompSessionHandler;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
+import dev.fusionize.workflow.events.Event;
+import dev.fusionize.workflow.events.EventListener;
+import dev.fusionize.workflow.events.EventPublisher;
+import dev.fusionize.workflow.events.EventStore;
+import dev.fusionize.workflow.registry.WorkflowComponentRepoRegistry;
+import dev.fusionize.workflow.repo.WorkflowComponentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -17,9 +29,13 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 @ConditionalOnClass(Worker.class)
 @EnableConfigurationProperties(WorkerProperties.class)
+@ComponentScan(basePackages = "dev.fusionize.workflow")
 public class WorkerAutoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(WorkerAutoConfiguration.class);
 
@@ -31,7 +47,7 @@ public class WorkerAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public Worker greeter() {
+    public Worker worker() {
         return new Worker();
     }
 
@@ -56,6 +72,48 @@ public class WorkerAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean
+    public RuntimeComponentValidator runtimeComponentValidator(WorkflowComponentRepoRegistry registry) {
+        return new RuntimeComponentValidator(registry);
+    }
+
+    static final class WorkflowApplicationEvent extends ApplicationEvent {
+        public final Event event;
+        public WorkflowApplicationEvent(Object source, Event event) {
+            super(source);
+            this.event = event;
+        }
+    }
+
+    @Bean
+    public EventPublisher<Event> eventPublisher(ApplicationEventPublisher eventPublisher, EventStore<Event> eventStore) {
+        return new EventPublisher<>(eventStore) {
+            @Override
+            public void publish(Event event) {
+                super.publish(event);
+                eventPublisher.publishEvent(new WorkflowApplicationEvent(event.getSource(), event));
+            }
+        };
+    }
+
+    @Bean
+    public EventListener<Event> eventListener() {
+        return new EventListener<Event>() {
+            final List<EventCallback<Event>> callbacks = new ArrayList<>();
+            @Override
+            public void addListener(EventCallback<Event> callback) {
+                callbacks.add(callback);
+            }
+
+            @org.springframework.context.event.EventListener()
+            public void onEvent(WorkflowApplicationEvent workflowApplicationEvent){
+                callbacks.forEach(c -> c.onEvent(workflowApplicationEvent.event));
+
+            }
+        };
+    }
+
+    @Bean
     public ApplicationRunner connectStompClient(OidcTokenClient oidcTokenClient,
                                                 WebSocketStompClient stompClient,
                                                 StompSessionHandler sessionHandler) {
@@ -73,6 +131,19 @@ public class WorkerAutoConfiguration {
             } catch (Exception e) {
                 logger.error("Failed to connect to WebSocket STOMP server", e);
             }
+        };
+    }
+
+    @Bean
+    public ApplicationRunner registerWorkflowComponents(List<ComponentRuntimeFactory> factories,
+                                                        RuntimeComponentValidator validator) {
+        return args -> {
+            factories.forEach(f-> {
+                boolean validFactory = validator.isValidComponentFactory(f.getClass());
+                boolean validAnnotation = validator.isValidComponentDefinition(f.getClass().getAnnotation(RuntimeComponentDefinition.class));
+                logger.info("rt Factory: {} factory: {} validation:{}", f.getClass().getSimpleName(), validFactory, validAnnotation);
+
+            });
         };
     }
 

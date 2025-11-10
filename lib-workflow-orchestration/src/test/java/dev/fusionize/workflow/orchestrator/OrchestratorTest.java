@@ -1,12 +1,13 @@
-package dev.fusionize.workflow;
+package dev.fusionize.workflow.orchestrator;
 
 import dev.fusionize.common.test.TestMongoConfig;
 import dev.fusionize.common.test.TestMongoConversionConfig;
+import dev.fusionize.workflow.Workflow;
+import dev.fusionize.workflow.WorkflowContext;
+import dev.fusionize.workflow.WorkflowDecision;
+import dev.fusionize.workflow.WorkflowNodeType;
 import dev.fusionize.workflow.component.*;
-import dev.fusionize.workflow.component.runtime.DecisionComponentRuntime;
-import dev.fusionize.workflow.component.runtime.EndComponentRuntime;
-import dev.fusionize.workflow.component.runtime.StartComponentRuntime;
-import dev.fusionize.workflow.component.runtime.TaskComponentRuntime;
+import dev.fusionize.workflow.component.runtime.*;
 import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventListener;
@@ -15,8 +16,7 @@ import dev.fusionize.workflow.events.EventStore;
 import dev.fusionize.workflow.events.runtime.ComponentActivatedEvent;
 import dev.fusionize.workflow.events.runtime.ComponentFinishedEvent;
 import dev.fusionize.workflow.events.runtime.ComponentTriggeredEvent;
-import dev.fusionize.workflow.orchestrator.Orchestrator;
-import dev.fusionize.workflow.registry.WorkflowRegistry;
+import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -38,7 +38,10 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -121,11 +124,14 @@ class TestConfig {
 class OrchestratorTest {
     public static Logger logger = LoggerFactory.getLogger(OrchestratorTest.class);
 
-    @Autowired WorkflowComponentRegistry componentRegistry;
+    @Autowired
+    ComponentRuntimeRegistry componentRegistry;
     @Autowired Orchestrator service;
-    @Autowired WorkflowComponentRuntimeEngine runtimeEngine;
+    @Autowired
+    ComponentRuntimeEngine componentRuntimeEngine;
     @Autowired EventPublisher<Event> eventPublisher;
-    @Autowired WorkflowRegistry workflowRegistry;
+    @Autowired
+    WorkflowRepoRegistry workflowRegistry;
 
     @Test
     void orchestrate() throws InterruptedException, IOException {
@@ -136,10 +142,10 @@ class OrchestratorTest {
         List<String> inbox = new CopyOnWriteArrayList<>();
 
         // Define factories for workflow runtime components
-        WorkflowComponentFactory emailRecStartFactory = () -> new MockRecEmailComponentRuntime(writer, eventPublisher, inbox);
-        WorkflowComponentFactory emailSendTaskFactory = () -> new MockSendEmailComponent(writer, eventPublisher);
-        WorkflowComponentFactory emailDecisionFactory = () -> new MockEmailDecisionComponent(writer, eventPublisher);
-        WorkflowComponentFactory emailEndStepFactory = () -> new MockEndEmailComponent(writer, eventPublisher);
+        ComponentRuntimeFactory emailRecStartFactory = () -> new MockRecEmailComponentRuntime(writer, eventPublisher, inbox);
+        ComponentRuntimeFactory emailSendTaskFactory = () -> new MockSendEmailComponent(writer, eventPublisher);
+        ComponentRuntimeFactory emailDecisionFactory = () -> new MockEmailDecisionComponent(writer, eventPublisher);
+        ComponentRuntimeFactory emailEndStepFactory = () -> new MockEndEmailComponent(writer, eventPublisher);
 
         /**
          * Register all mock components with the registry.
@@ -234,7 +240,7 @@ class OrchestratorTest {
         }
 
         @Override
-        public void configure(WorkflowComponentConfig config) {}
+        public void configure(ComponentRuntimeConfig config) {}
 
         @Override
         public void canActivate(ComponentActivatedEvent onActivate) {
@@ -299,7 +305,7 @@ class OrchestratorTest {
         }
 
         @Override
-        public void configure(WorkflowComponentConfig config) {
+        public void configure(ComponentRuntimeConfig config) {
             if (config.getConfig().containsKey("routeMap")) {
                 routeMap = (Map<String, String>) config.getConfig().get("routeMap");
             }
@@ -336,7 +342,7 @@ class OrchestratorTest {
         }
 
         @Override
-        public void configure(WorkflowComponentConfig config) {
+        public void configure(ComponentRuntimeConfig config) {
             this.address = config.getConfig().get("address").toString();
         }
 
@@ -380,7 +386,7 @@ class OrchestratorTest {
         }
 
         @Override
-        public void configure(WorkflowComponentConfig config) {
+        public void configure(ComponentRuntimeConfig config) {
             this.address = config.getConfig().get("address").toString();
         }
 

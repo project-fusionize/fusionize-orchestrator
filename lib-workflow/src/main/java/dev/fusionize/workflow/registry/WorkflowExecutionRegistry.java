@@ -1,22 +1,8 @@
 package dev.fusionize.workflow.registry;
 
 import dev.fusionize.workflow.WorkflowExecution;
-import dev.fusionize.workflow.repo.WorkflowExecutionRepository;
-import org.springframework.stereotype.Component;
 
-@Component
-public class WorkflowExecutionRegistry {
-    private final WorkflowExecutionRepository repository;
-
-    public WorkflowExecutionRegistry(WorkflowExecutionRepository repository) {
-        this.repository = repository;
-    }
-
-    public WorkflowExecution getWorkflowExecution(String workflowExecutionId) {
-        return repository.findByWorkflowExecutionId(workflowExecutionId).orElse(null);
-    }
-
-    public WorkflowExecution register(WorkflowExecution workflowExecution) {
-        return repository.save(workflowExecution);
-    }
+public interface WorkflowExecutionRegistry {
+    WorkflowExecution getWorkflowExecution(String workflowExecutionId);
+    WorkflowExecution register(WorkflowExecution workflowExecution);
 }

@@ -1,16 +1,16 @@
-package dev.fusionize.workflow.component;
+package dev.fusionize.workflow.component.runtime;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WorkflowComponentConfig {
+public class ComponentRuntimeConfig {
     private ConcurrentHashMap<String, Object> config = new ConcurrentHashMap<>();
 
-    public WorkflowComponentConfig() {
+    public ComponentRuntimeConfig() {
     }
 
-    private WorkflowComponentConfig(Builder builder) {
+    private ComponentRuntimeConfig(Builder builder) {
         this.config = builder.config;
     }
 
@@ -30,7 +30,7 @@ public class WorkflowComponentConfig {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        WorkflowComponentConfig that = (WorkflowComponentConfig) o;
+        ComponentRuntimeConfig that = (ComponentRuntimeConfig) o;
         return Objects.equals(config, that.config);
     }
 
@@ -85,8 +85,8 @@ public class WorkflowComponentConfig {
             return this;
         }
 
-        public WorkflowComponentConfig build() {
-            return new WorkflowComponentConfig(this);
+        public ComponentRuntimeConfig build() {
+            return new ComponentRuntimeConfig(this);
         }
     }
 }

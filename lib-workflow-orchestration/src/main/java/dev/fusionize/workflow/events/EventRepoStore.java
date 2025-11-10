@@ -10,12 +10,12 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-public class EventStoreImp implements EventStore<Event> {
-    public static Logger logger = LoggerFactory.getLogger(EventStoreImp.class);
+public class EventRepoStore implements EventStore<Event> {
+    public static Logger logger = LoggerFactory.getLogger(EventRepoStore.class);
 
     private final EventRepository eventRepository;
 
-    public EventStoreImp(EventRepository eventRepository) {
+    public EventRepoStore(EventRepository eventRepository) {
         this.eventRepository = eventRepository;
     }
 

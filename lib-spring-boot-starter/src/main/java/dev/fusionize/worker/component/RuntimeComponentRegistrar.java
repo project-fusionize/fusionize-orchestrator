@@ -1,9 +1,11 @@
 package dev.fusionize.worker.component;
 
 import dev.fusionize.worker.component.annotations.EnableRuntimeComponents;
-import dev.fusionize.worker.component.annotations.RuntimeComponent;
+import dev.fusionize.worker.component.annotations.RuntimeComponentDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +22,9 @@ import java.util.List;
 
 @Configuration
 public class RuntimeComponentRegistrar implements ImportBeanDefinitionRegistrar {
+    private BeanFactory beanFactory;
     private static final Logger logger = LoggerFactory.getLogger(RuntimeComponentRegistrar.class);
+
 
     @Override
     public void registerBeanDefinitions(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
@@ -31,12 +35,8 @@ public class RuntimeComponentRegistrar implements ImportBeanDefinitionRegistrar 
         if (attributes == null) {
             return;
         }
-
-        List<String> basePackages = new ArrayList<>();
-
-        // Get base packages from annotation
         String[] packageNames = attributes.getStringArray("basePackages");
-        basePackages.addAll(Arrays.asList(packageNames));
+        List<String> basePackages = new ArrayList<>(Arrays.asList(packageNames));
 
         // Get base packages from basePackageClasses
         Class<?>[] basePackageClasses = attributes.getClassArray("basePackageClasses");
@@ -52,25 +52,29 @@ public class RuntimeComponentRegistrar implements ImportBeanDefinitionRegistrar 
         // Scan for @RuntimeComponent annotations
         ClassPathScanningCandidateComponentProvider scanner =
                 new ClassPathScanningCandidateComponentProvider(false);
-        scanner.addIncludeFilter(new AnnotationTypeFilter(RuntimeComponent.class));
+        scanner.addIncludeFilter(new AnnotationTypeFilter(RuntimeComponentDefinition.class));
 
         for (String basePackage : basePackages) {
             scanner.findCandidateComponents(basePackage).forEach(beanDefinition -> {
                 String beanName;
-
-                // Extract custom bean name from @RuntimeComponent value if present
                 try {
+
+                    // Extract custom bean name from @RuntimeComponent value if present
                     Class<?> beanClass = Class.forName(beanDefinition.getBeanClassName());
-                    RuntimeComponent annotation = beanClass.getAnnotation(RuntimeComponent.class);
-                    if (annotation != null && StringUtils.hasText(annotation.value())) {
-                        beanName = annotation.value();
+                    RuntimeComponentDefinition componentDefinition = beanClass.getAnnotation(RuntimeComponentDefinition.class);
+                    if (componentDefinition != null && StringUtils.hasText(componentDefinition.value())) {
+                        beanName = componentDefinition.value();
                     } else {
                         // Generate default bean name
                         beanName = generateBeanName(beanClass);
                     }
+
                 } catch (ClassNotFoundException e) {
-                    throw new RuntimeException("Cannot load class: " + beanDefinition.getBeanClassName(), e);
+                    logger.error("Registration Error for RuntimeComponentFactory: {} -> {}", beanDefinition.getBeanClassName(),
+                            "Cannot load class: " + beanDefinition.getBeanClassName());
+                    return;
                 }
+
 
                 if (!registry.containsBeanDefinition(beanName)) {
                     logger.info("Register bean: {}", beanName);

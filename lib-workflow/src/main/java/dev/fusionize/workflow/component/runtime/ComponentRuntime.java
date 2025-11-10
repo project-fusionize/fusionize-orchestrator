@@ -1,6 +1,5 @@
 package dev.fusionize.workflow.component.runtime;
 
-import dev.fusionize.workflow.component.WorkflowComponentConfig;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.RuntimeEvent;
@@ -13,7 +12,7 @@ public abstract class ComponentRuntime {
         this.publisher = publisher;
     }
 
-    public abstract void configure(WorkflowComponentConfig config);
+    public abstract void configure(ComponentRuntimeConfig config);
     public abstract void canActivate(ComponentActivatedEvent onActivate);
     public final void publish(RuntimeEvent event) {
         publisher.publish(event.renew());

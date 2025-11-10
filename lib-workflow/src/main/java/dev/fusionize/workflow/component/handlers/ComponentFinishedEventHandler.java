@@ -1,6 +1,6 @@
 package dev.fusionize.workflow.component.handlers;
 
-import dev.fusionize.workflow.component.WorkflowComponentRuntimeEngine;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventHandler;
 import dev.fusionize.workflow.events.runtime.ComponentFinishedEvent;
@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ComponentFinishedEventHandler implements EventHandler<ComponentFinishedEvent> {
-    private final WorkflowComponentRuntimeEngine runtimeEngine;
+    private final ComponentRuntimeEngine componentRuntimeEngine;
 
-    public ComponentFinishedEventHandler(WorkflowComponentRuntimeEngine runtimeEngine) {
-        this.runtimeEngine = runtimeEngine;
+    public ComponentFinishedEventHandler(ComponentRuntimeEngine componentRuntimeEngine) {
+        this.componentRuntimeEngine = componentRuntimeEngine;
     }
 
     @Override
@@ -22,7 +22,7 @@ public class ComponentFinishedEventHandler implements EventHandler<ComponentFini
 
     @Override
     public Event handle(ComponentFinishedEvent event) {
-        return runtimeEngine.onComponentEvent(event);
+        return componentRuntimeEngine.onComponentEvent(event);
     }
 
     @Override

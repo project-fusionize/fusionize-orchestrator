@@ -1,6 +1,6 @@
 package dev.fusionize.workflow.component.handlers;
 
-import dev.fusionize.workflow.component.WorkflowComponentRuntimeEngine;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventHandler;
 import dev.fusionize.workflow.events.runtime.ComponentTriggeredEvent;
@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ComponentTriggeredEventHandler implements EventHandler<ComponentTriggeredEvent> {
-    private final WorkflowComponentRuntimeEngine runtimeEngine;
+    private final ComponentRuntimeEngine componentRuntimeEngine;
 
-    public ComponentTriggeredEventHandler(WorkflowComponentRuntimeEngine runtimeEngine) {
-        this.runtimeEngine = runtimeEngine;
+    public ComponentTriggeredEventHandler(ComponentRuntimeEngine componentRuntimeEngine) {
+        this.componentRuntimeEngine = componentRuntimeEngine;
     }
 
     @Override
@@ -23,7 +23,7 @@ public class ComponentTriggeredEventHandler implements EventHandler<ComponentTri
 
     @Override
     public Event handle(ComponentTriggeredEvent event) {
-        return runtimeEngine.onComponentEvent(event);
+        return componentRuntimeEngine.onComponentEvent(event);
     }
 
     @Override
