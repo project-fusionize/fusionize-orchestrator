@@ -33,7 +33,7 @@ public class MyCustomComponentEnd extends EndComponentRuntime {
     public void finish(ComponentFinishedEvent onFinish) {
         CompletableFuture.runAsync(() -> {
             try {
-                Thread.sleep(700);
+                Thread.sleep(10000);
                 logger.info("ComponentFinishedEvent finished");
                 publish(onFinish);
             } catch (InterruptedException e) {

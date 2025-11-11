@@ -30,14 +30,6 @@ public class RuntimeComponentRegistrar {
                 .withName(runtimeComponentDefinition.name())
                 .withDomain(domain)
                 .build();
-        WorkflowComponent workflowComponent = componentRegistry.getWorkflowComponentByDomain(newWorkflowComponent.getDomain());
-        if(workflowComponent==null){
-            return componentRegistry.register(newWorkflowComponent);
-        }else {
-            workflowComponent.setName(runtimeComponentDefinition.name());
-            workflowComponent.setDescription(runtimeComponentDefinition.description());
-            workflowComponent.setCompatible(runtimeComponentDefinition.compatible());
-            return componentRegistry.register(workflowComponent);
-        }
+        return componentRegistry.register(newWorkflowComponent);
     }
 }

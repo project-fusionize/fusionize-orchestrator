@@ -31,6 +31,16 @@ public class Workflow extends DomainEntity {
         return new Builder(parentDomain);
     }
 
+    public void mergeFrom(Workflow other) {
+        if (other == null) return;
+        if (other.getName() != null) this.setName(other.getName());
+        if (other.getDomain() != null) this.setDomain(other.getDomain());
+        if (other.getDescription() != null) this.setDescription(other.getDescription());
+        if (other.getVersion() != 0) this.setVersion(other.getVersion());
+        if (other.getNodes() != null && !other.getNodes().isEmpty()) this.setNodes(other.getNodes());
+        this.setActive(other.isActive());
+    }
+
     public static class Builder extends DomainEntity.Builder<Builder> {
         private String workflowId;
         private String description;

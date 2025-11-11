@@ -44,7 +44,7 @@ import java.util.List;
 @Configuration
 @ConditionalOnClass(Worker.class)
 @EnableConfigurationProperties(WorkerProperties.class)
-@ComponentScan(basePackages = "dev.fusionize.workflow")
+@ComponentScan(basePackages = {"dev.fusionize.workflow","dev.fusionize.worker"})
 public class WorkerAutoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(WorkerAutoConfiguration.class);
 
@@ -173,6 +173,7 @@ public class WorkerAutoConfiguration {
             Workflow workflow = new WorkflowDescriptor().fromYamlDescription(yml);
             workflow = workflowRegistry.register(workflow);
             // Start orchestrating the workflow
+            logger.info("service.orchestrate {}",workflow.getWorkflowId());
             service.orchestrate(workflow.getWorkflowId());
         };
     }

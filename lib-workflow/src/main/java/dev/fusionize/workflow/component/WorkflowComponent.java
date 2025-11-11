@@ -20,6 +20,13 @@ public class WorkflowComponent extends DomainEntity {
         return new Builder(parentDomain);
     }
 
+    public void mergeFrom(WorkflowComponent other) {
+        if (other == null) return;
+        if (other.getName() != null) this.setName(other.getName());
+        if (other.getDescription() != null) this.setDescription(other.getDescription());
+        if (other.getCompatible() != null) this.setCompatible(other.getCompatible());
+    }
+
     public static class Builder extends DomainEntity.Builder<Builder> {
         private String componentId;
         private String description;

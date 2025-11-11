@@ -2,23 +2,14 @@ package dev.fusionize.worker;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
-import org.bson.BsonReader;
-import org.bson.BsonWriter;
-import org.bson.UuidRepresentation;
-import org.bson.codecs.Codec;
-import org.bson.codecs.DecoderContext;
-import org.bson.codecs.EncoderContext;
-import org.bson.codecs.configuration.CodecRegistries;
-import org.bson.codecs.configuration.CodecRegistry;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
@@ -42,17 +33,12 @@ public class WorkerMongoAutoConfiguration extends AbstractMongoClientConfigurati
         this.connectionString = new ConnectionString(workerProperties.getOrchestratorMongo());
     }
 
-    @Bean
-    @ConditionalOnMissingBean(name = "workerMongoTemplate")
-    public MongoTemplate workerMongoTemplate() {
-        return new MongoTemplate(mongoClient(), getDatabaseName());
-    }
-
     @Override
-    protected void configureClientSettings(MongoClientSettings.Builder builder) {
-        // Register the ZonedDateTime codec at the driver level
-        builder.applyConnectionString(connectionString)
-                .uuidRepresentation(UuidRepresentation.STANDARD);
+    public MongoClient mongoClient() {
+        final MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
+                .applyConnectionString(connectionString)
+                .build();
+        return MongoClients.create(mongoClientSettings);
     }
 
     @Override
@@ -63,5 +49,27 @@ public class WorkerMongoAutoConfiguration extends AbstractMongoClientConfigurati
     @Override
     protected boolean autoIndexCreation() {
         return true;
+    }
+
+    @Override
+    public MongoCustomConversions customConversions() {
+        List<Converter<?, ?>> converters = new ArrayList<>();
+        converters.add(new ZonedDateTimeReadConverter());
+        converters.add(new ZonedDateTimeWriteConverter());
+        return new MongoCustomConversions(converters);
+    }
+
+    public static class ZonedDateTimeReadConverter implements Converter<Date, ZonedDateTime> {
+        @Override
+        public ZonedDateTime convert(Date date) {
+            return date.toInstant().atZone(ZoneOffset.UTC);
+        }
+    }
+
+    public static class ZonedDateTimeWriteConverter implements Converter<ZonedDateTime, Date> {
+        @Override
+        public Date convert(ZonedDateTime zonedDateTime) {
+            return Date.from(zonedDateTime.toInstant());
+        }
     }
 }

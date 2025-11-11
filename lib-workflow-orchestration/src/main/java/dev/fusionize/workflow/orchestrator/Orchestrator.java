@@ -46,13 +46,36 @@ public class Orchestrator {
     }
 
     private void proceed(WorkflowExecution we, WorkflowNodeExecution ne) {
+        WorkflowNodeExecution originalExecutionNode = ne;
+        ne.setState(WorkflowNodeExecutionState.DONE);
         List<WorkflowNodeExecution> nodeExecutions = filterChildren(ne).stream()
-                .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.from(ne, n)))
+                .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.from(originalExecutionNode, n)))
                 .toList();
+
+        if(ne.getWorkflowNode().getType().equals(WorkflowNodeType.START)){
+            we = we.renew();
+            we.setStatus(WorkflowExecutionStatus.IN_PROGRESS);
+
+            ne = we.getNodes().stream().filter(n -> n.getWorkflowNodeId().equals(originalExecutionNode.getWorkflowNodeId()))
+                    .findFirst().orElse(ne.renew());
+            ne.setState(WorkflowNodeExecutionState.DONE);
+        }
+
+        if(ne.getWorkflowNode().getType().equals(WorkflowNodeType.END)){
+            we.setStatus(WorkflowExecutionStatus.SUCCESS);
+        }
+
         ne.getChildren().addAll(nodeExecutions);
-        we.getNodes().add(ne);
+
+        WorkflowNodeExecution finalNe = ne;
+        if(we.getWorkflow().getNodes().stream().anyMatch(n-> n.getWorkflowNodeId().equals(finalNe.getWorkflowNodeId()))) {
+            we.getNodes().removeIf(cne-> cne.getWorkflowNodeExecutionId().equals(finalNe.getWorkflowNodeExecutionId()));
+            we.getNodes().add(ne);
+        }
+
         workflowExecutionRegistry.register(we);
-        nodeExecutions.forEach(cne -> requestActivation(we, cne));
+        WorkflowExecution finalWorkflowExecution = we;
+        nodeExecutions.forEach(cne -> requestActivation(finalWorkflowExecution, cne));
     }
 
     private List<WorkflowNode> filterChildren(WorkflowNodeExecution ne) {

@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface WorkflowRepository extends MongoRepository<Workflow, String> {
     Workflow save(Workflow workflow);
     Optional<Workflow> findByWorkflowId(String id);
+    Optional<Workflow> findByDomain(String id);
+
 }
