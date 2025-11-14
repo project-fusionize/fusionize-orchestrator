@@ -4,11 +4,10 @@ import dev.fusionize.worker.component.RuntimeComponentRegistrar;
 import dev.fusionize.worker.component.annotations.RuntimeComponentDefinition;
 import dev.fusionize.worker.oidc.OidcTokenClient;
 import dev.fusionize.worker.stomp.WorkerStompSessionHandler;
-import dev.fusionize.workflow.Workflow;
+import dev.fusionize.worker.workflow.WorkflowLoader;
 import dev.fusionize.workflow.component.WorkflowComponent;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeRegistry;
-import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventListener;
 import dev.fusionize.workflow.events.EventPublisher;
@@ -35,9 +34,6 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
-import java.io.File;
-import java.net.URL;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -132,7 +128,7 @@ public class WorkerAutoConfiguration {
             logger.info("Connecting to WebSocket STOMP server at {}", url);
             try {
                 String clientToken = oidcTokenClient.getClientCredentialsToken(
-                        workerProperties.getWorkerOidcClientId(), workerProperties.getWorkerOidcClientSecret(), null, null
+                        workerProperties.getOidcClientId(), workerProperties.getOidcClientSecret(), null, null
                 );
                 WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
                 headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + clientToken);
@@ -167,14 +163,12 @@ public class WorkerAutoConfiguration {
     public ApplicationRunner registerWorkflows(Orchestrator service,
                                                WorkflowRegistry workflowRegistry) {
         return args -> {
-            URL yamlUrl = this.getClass().getResource("/test-workflow.yml");
-            String yml = Files.readString(new File(yamlUrl.getFile()).toPath());
+            new WorkflowLoader().loadWorkflows(workerProperties.getWorkflowDefinitionsRoot()).forEach(workflow -> {
+                workflow = workflowRegistry.register(workflow);
+                logger.info("service.orchestrate {}",workflow.getWorkflowId());
+                service.orchestrate(workflow.getWorkflowId());
+            });
 
-            Workflow workflow = new WorkflowDescriptor().fromYamlDescription(yml);
-            workflow = workflowRegistry.register(workflow);
-            // Start orchestrating the workflow
-            logger.info("service.orchestrate {}",workflow.getWorkflowId());
-            service.orchestrate(workflow.getWorkflowId());
         };
     }
 

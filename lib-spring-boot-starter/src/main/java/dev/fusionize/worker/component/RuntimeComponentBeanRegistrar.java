@@ -21,7 +21,6 @@ import java.util.List;
 
 @Configuration
 public class RuntimeComponentBeanRegistrar implements ImportBeanDefinitionRegistrar {
-    private BeanFactory beanFactory;
     private static final Logger logger = LoggerFactory.getLogger(RuntimeComponentBeanRegistrar.class);
 
 

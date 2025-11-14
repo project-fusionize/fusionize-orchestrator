@@ -18,6 +18,9 @@ dependencies {
     implementation project(':lib-workflow')
     implementation project(':lib-workflow-orchestration')
 
+    implementation 'commons-io:commons-io:2.20.0'
+
+
     implementation 'org.slf4j:slf4j-api'
     runtimeOnly 'ch.qos.logback:logback-classic'
     implementation 'org.springframework:spring-websocket'

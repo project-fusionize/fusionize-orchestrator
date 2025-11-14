@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 @Component
 public class ComponentRuntimeRegistry {
     private final ConcurrentHashMap<String, ComponentRuntime> registry = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, ComponentRuntimeFactory> factoryRegistry = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ComponentRuntimeFactory<?>> factoryRegistry = new ConcurrentHashMap<>();
 
     /**
      * Registers a workflow component runtime with the registry.
@@ -64,7 +64,7 @@ public class ComponentRuntimeRegistry {
      * @param prefix The key prefix (TYPE:domain)
      * @param factory The factory for creating component instances
      */
-    public void registerFactory(String prefix, ComponentRuntimeFactory factory) {
+    public void registerFactory(String prefix, ComponentRuntimeFactory<?> factory) {
         if (prefix == null || factory == null) {
             throw new IllegalArgumentException("Prefix and factory cannot be null");
         }
@@ -77,7 +77,7 @@ public class ComponentRuntimeRegistry {
      * @param component The component metadata
      * @param factory The factory for creating component instances
      */
-    public void registerFactory(WorkflowComponent component, ComponentRuntimeFactory factory) {
+    public void registerFactory(WorkflowComponent component, ComponentRuntimeFactory<?> factory) {
         if (component == null || factory == null) {
             throw new IllegalArgumentException("Component and factory cannot be null");
         }
