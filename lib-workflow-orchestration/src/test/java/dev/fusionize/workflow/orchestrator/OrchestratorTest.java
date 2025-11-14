@@ -6,16 +6,18 @@ import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowContext;
 import dev.fusionize.workflow.WorkflowDecision;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.component.*;
-import dev.fusionize.workflow.component.runtime.*;
+import dev.fusionize.workflow.component.WorkflowComponent;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeRegistry;
+import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
+import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventListener;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.EventStore;
-import dev.fusionize.workflow.events.runtime.ComponentActivatedEvent;
-import dev.fusionize.workflow.events.runtime.ComponentFinishedEvent;
-import dev.fusionize.workflow.events.runtime.ComponentTriggeredEvent;
 import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +44,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -143,13 +144,13 @@ class OrchestratorTest {
 
         // Define factories for workflow runtime components
         ComponentRuntimeFactory<MockRecEmailComponentRuntime> emailRecStartFactory =
-                () -> new MockRecEmailComponentRuntime(writer, eventPublisher, inbox);
+                () -> new MockRecEmailComponentRuntime(writer, inbox);
         ComponentRuntimeFactory<MockSendEmailComponent> emailSendTaskFactory =
-                () -> new MockSendEmailComponent(writer, eventPublisher);
+                () -> new MockSendEmailComponent(writer);
         ComponentRuntimeFactory<MockEmailDecisionComponent> emailDecisionFactory =
-                () -> new MockEmailDecisionComponent(writer, eventPublisher);
+                () -> new MockEmailDecisionComponent(writer);
         ComponentRuntimeFactory<MockEndEmailComponent> emailEndStepFactory =
-                () -> new MockEndEmailComponent(writer, eventPublisher);
+                () -> new MockEndEmailComponent(writer);
 
         /**
          * Register all mock components with the registry.
@@ -206,7 +207,7 @@ class OrchestratorTest {
         logger.info("writer out ->\n {}",output);
         String actual = "MockRecEmailComponentRuntime activated\n" +
                 "Receiving First Email\n" +
-                "MockRecEmailComponentRuntime handle email: test email route 1\n" +
+                "MockRecEmailComponentRuntime handle email: test email route 1 from incoming@email.com\n" +
                 "MockSendEmailDecisionComponent activated\n" +
                 "Decision made to route email: {outgoing1=true, outgoing2=false}\n" +
                 "MockSendEmailComponent activated\n" +
@@ -214,7 +215,7 @@ class OrchestratorTest {
                 "BODY: test email route 1\n" +
                 "MockEndEmailComponent activated\n" +
                 "Receiving Second Email\n" +
-                "MockRecEmailComponentRuntime handle email: test email route 2\n" +
+                "MockRecEmailComponentRuntime handle email: test email route 2 from incoming@email.com\n" +
                 "MockSendEmailDecisionComponent activated\n" +
                 "Decision made to route email: {outgoing1=false, outgoing2=true}\n" +
                 "MockSendEmailComponent activated\n" +
@@ -234,12 +235,11 @@ class OrchestratorTest {
      * Simulates the END component of the workflow.
      * Logs its activation and publishes completion asynchronously.
      */
-    static final class MockEndEmailComponent extends EndComponentRuntime {
+    static final class MockEndEmailComponent implements ComponentRuntime {
         private static final Logger logger = LoggerFactory.getLogger(MockEndEmailComponent.class);
         private final StringWriter writer;
 
-        MockEndEmailComponent(StringWriter writer, EventPublisher<Event> eventPublisher) {
-            super(eventPublisher);
+        MockEndEmailComponent(StringWriter writer) {
             this.writer = writer;
         }
 
@@ -247,50 +247,68 @@ class OrchestratorTest {
         public void configure(ComponentRuntimeConfig config) {}
 
         @Override
-        public void canActivate(ComponentActivatedEvent onActivate) {
+        public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
             writer.append("MockEndEmailComponent activated\n");
             logger.info("MockEndEmailComponent activated");
-            onActivate.setException(null);
-            publish(onActivate);
+            emitter.success(workflowContext);
         }
 
         @Override
-        public void finish(ComponentFinishedEvent onFinish) {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    Thread.sleep(700);
-                    writer.append("ComponentFinishedEvent finished\n");
-                    logger.info("ComponentFinishedEvent finished");
-                    publish(onFinish);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }).whenComplete((result, throwable) -> {
-                if (throwable != null) {
-                    logger.error(throwable.getMessage(), throwable);
-                }
-            });
+        public void run(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+            try {
+                Thread.sleep(700);
+                writer.append("ComponentFinishedEvent finished\n");
+                logger.info("ComponentFinishedEvent finished");
+                emitter.success(workflowContext);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
+
+
     }
 
     /**
      * Decision component that chooses between two email routes
      * based on the email content.
      */
-    static final class MockEmailDecisionComponent extends DecisionComponentRuntime {
+    static final class MockEmailDecisionComponent implements ComponentRuntime {
         private static final Logger logger = LoggerFactory.getLogger(MockEmailDecisionComponent.class);
         private final StringWriter writer;
         private Map<String, String> routeMap = new HashMap<>();
 
-        MockEmailDecisionComponent(StringWriter writer, EventPublisher<Event> eventPublisher) {
-            super(eventPublisher);
+        MockEmailDecisionComponent(StringWriter writer) {
             this.writer = writer;
         }
 
         @Override
-        public void decide(ComponentFinishedEvent onDecision) {
-            WorkflowDecision decision = onDecision.getContext().getDecisions().getLast();
-            String outgoingMessage = (String) onDecision.getContext().getData().get("email_message");
+        public void configure(ComponentRuntimeConfig config) {
+            if (config.getConfig().containsKey("routeMap")) {
+                routeMap = (Map<String, String>) config.getConfig().get("routeMap");
+            }
+        }
+
+        @Override
+        public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+            String worklog;
+            if (!routeMap.isEmpty() && !workflowContext.getDecisions().isEmpty()) {
+                worklog = "MockSendEmailDecisionComponent activated";
+                writer.append(worklog).append("\n");
+                logger.info(worklog);
+                emitter.success(workflowContext);
+            } else {
+                worklog = "MockSendEmailDecisionComponent not activated";
+                writer.append(worklog).append("\n");
+                logger.info(worklog);
+                emitter.failure(new Exception("No route map found"));
+            }
+
+        }
+
+        @Override
+        public void run(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+            WorkflowDecision decision = workflowContext.getDecisions().getLast();
+            String outgoingMessage = (String) workflowContext.getData().get("email_message");
 
             // Determine which route(s) to follow based on message content
             List<String> messageRoute = routeMap.keySet().stream()
@@ -305,43 +323,22 @@ class OrchestratorTest {
 
             writer.append("Decision made to route email: ").append(decision.getOptionNodes().toString()).append("\n");
             logger.info("Decision made: {}", decision.getOptionNodes());
-            publish(onDecision);
+            emitter.success(workflowContext);
         }
 
-        @Override
-        public void configure(ComponentRuntimeConfig config) {
-            if (config.getConfig().containsKey("routeMap")) {
-                routeMap = (Map<String, String>) config.getConfig().get("routeMap");
-            }
-        }
 
-        @Override
-        public void canActivate(ComponentActivatedEvent onActivate) {
-            String worklog;
-            if (!routeMap.isEmpty() && !onActivate.getContext().getDecisions().isEmpty()) {
-                worklog = "MockSendEmailDecisionComponent activated";
-                onActivate.setException(null);
-            } else {
-                worklog = "MockSendEmailDecisionComponent not activated";
-                onActivate.setException(new Exception("No email to send"));
-            }
-            writer.append(worklog).append("\n");
-            logger.info(worklog);
-            publish(onActivate);
-        }
     }
 
     /**
      * Task component that sends emails.
      * Reads the target address from config and logs the email body.
      */
-    static final class MockSendEmailComponent extends TaskComponentRuntime {
+    static final class MockSendEmailComponent implements ComponentRuntime {
         private static final Logger logger = LoggerFactory.getLogger(MockSendEmailComponent.class);
         private final StringWriter writer;
         private String address;
 
-        MockSendEmailComponent(StringWriter writer, EventPublisher<Event> eventPublisher) {
-            super(eventPublisher);
+        MockSendEmailComponent(StringWriter writer) {
             this.writer = writer;
         }
 
@@ -351,40 +348,42 @@ class OrchestratorTest {
         }
 
         @Override
-        public void canActivate(ComponentActivatedEvent onActivate) {
-            boolean hasMessage = onActivate.getContext().getData().containsKey("email_message");
+        public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+            boolean hasMessage = workflowContext.getData().containsKey("email_message");
             String worklog = hasMessage ? "MockSendEmailComponent activated" : "MockSendEmailComponent not activated";
             writer.append(worklog).append("\n");
             logger.info(worklog);
-
-            onActivate.setException(hasMessage ? null : new Exception("No email to send"));
-            publish(onActivate);
+            if(hasMessage){
+                emitter.success(workflowContext);
+            }else {
+                emitter.failure(new Exception("No email to send"));
+            }
         }
 
         @Override
-        public void run(ComponentFinishedEvent onFinish) {
+        public void run(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
             writer.append("sending email to ").append(address).append("\n");
             logger.info("sending email to {}", address);
 
-            writer.append("BODY: ").append(onFinish.getContext().getData().get("email_message").toString()).append("\n");
-            logger.info("BODY: {}", onFinish.getContext().getData().get("email_message"));
+            writer.append("BODY: ").append(workflowContext.getData().get("email_message").toString()).append("\n");
+            logger.info("BODY: {}", workflowContext.getData().get("email_message"));
 
-            publish(onFinish);
+            emitter.success(workflowContext);
         }
+
     }
 
     /**
      * Start component that continuously polls an inbox list for new emails.
      * When an email arrives, it triggers the workflow chain.
      */
-    static final class MockRecEmailComponentRuntime extends StartComponentRuntime {
+    static final class MockRecEmailComponentRuntime implements ComponentRuntime {
         private static final Logger logger = LoggerFactory.getLogger(MockRecEmailComponentRuntime.class);
         private final StringWriter writer;
         private final List<String> inbox;
         private String address;
 
-        MockRecEmailComponentRuntime(StringWriter writer, EventPublisher<Event> eventPublisher, List<String> inbox) {
-            super(eventPublisher);
+        MockRecEmailComponentRuntime(StringWriter writer, List<String> inbox) {
             this.writer = writer;
             this.inbox = inbox;
         }
@@ -395,61 +394,45 @@ class OrchestratorTest {
         }
 
         @Override
-        public void canActivate(ComponentActivatedEvent onActivate) {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    Thread.sleep(100);
-                    writer.append("MockRecEmailComponentRuntime activated\n");
-                    logger.info("MockRecEmailComponentRuntime activated");
-                    onActivate.setException(null);
-                    publish(onActivate);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }).whenComplete((result, throwable) -> {
-                if (throwable != null) {
-                    logger.error(throwable.getMessage(), throwable);
-                }
-            });
+        public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+            try {
+                Thread.sleep(100);
+                writer.append("MockRecEmailComponentRuntime activated\n");
+                logger.info("MockRecEmailComponentRuntime activated");
+                emitter.success(workflowContext);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         @Override
-        public void start(ComponentTriggeredEvent onTriggered) {
-            // Continuously check inbox asynchronously
-            CompletableFuture.runAsync(() -> {
-                while (true) {
-                    try {
-                        Thread.sleep(100);
-                        logger.info("inbox size: {}", inbox.size());
+        public void run(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+            while (true) {
+                try {
+                    Thread.sleep(100);
+                    logger.info("inbox size: {}", inbox.size());
 
-                        if (!inbox.isEmpty()) {
-                            // Remove the first email and process it
-                            String email = inbox.remove(0);
+                    if (!inbox.isEmpty()) {
+                        // Remove the first email and process it
+                        String email = inbox.removeFirst();
 
-                            String worklog = "MockRecEmailComponentRuntime handle email: " + email;
-                            writer.append(worklog).append("\n");
-                            logger.info(worklog);
+                        String worklog = "MockRecEmailComponentRuntime handle email: " + email + " from " + address;
+                        writer.append(worklog).append("\n");
+                        logger.info(worklog);
 
-                            WorkflowContext ctx = onTriggered.getContext();
-                            ctx.getData().put("email_message", email);
-
-                            // Trigger downstream workflow components
-                            publish(onTriggered);
-                        }
-
-                    } catch (InterruptedException e) {
-                        logger.error(e.getMessage());
-                        Thread.currentThread().interrupt();
-                        break;
-                    } catch (Exception e) {
-                        logger.error("Error processing email", e);
+                        workflowContext.getData().put("email_message", email);
+                        emitter.success(workflowContext);
                     }
+
+                } catch (InterruptedException e) {
+                    logger.error(e.getMessage());
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    logger.error("Error processing email", e);
                 }
-            }).whenComplete((result, throwable) -> {
-                if (throwable != null) {
-                    logger.error(throwable.getMessage(), throwable);
-                }
-            });
+            }
         }
+
     }
 }

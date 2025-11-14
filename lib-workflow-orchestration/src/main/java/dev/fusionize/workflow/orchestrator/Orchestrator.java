@@ -4,7 +4,6 @@ import dev.fusionize.workflow.*;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
-import dev.fusionize.workflow.events.OrchestrationEventContext;
 import dev.fusionize.workflow.events.orchestration.ActivationRequestEvent;
 import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
 import dev.fusionize.workflow.events.orchestration.InvocationRequestEvent;
@@ -20,6 +19,7 @@ import java.util.List;
 
 @Component
 public class Orchestrator {
+
     private static final Logger log = LoggerFactory.getLogger(Orchestrator.class);
     private final EventPublisher<Event> eventPublisher;
     private final WorkflowRepoRegistry workflowRegistry;
@@ -118,8 +118,8 @@ public class Orchestrator {
             log.error("Error -> {}", activationResponseEvent.getException().getMessage(), activationResponseEvent.getException());
 
         } else {
-            OrchestrationEventContext oc = activationResponseEvent.getOrchestrationEventContext();
-            requestInvocation(oc.getWorkflowExecution(), oc.getNodeExecution());
+            OrchestrationEvent.EventContext oc = activationResponseEvent.getOrchestrationEventContext();
+            requestInvocation(oc.workflowExecution(), oc.nodeExecution());
         }
     }
 
@@ -146,8 +146,8 @@ public class Orchestrator {
             return;
         }
         log.info(invocationResponseEvent.getContext().toString());
-        OrchestrationEventContext oc = invocationResponseEvent.getOrchestrationEventContext();
-        oc.getNodeExecution().setStageContext(invocationResponseEvent.getContext());
-        proceed(oc.getWorkflowExecution(), oc.getNodeExecution());
+        OrchestrationEvent.EventContext oc = invocationResponseEvent.getOrchestrationEventContext();
+        oc.nodeExecution().setStageContext(invocationResponseEvent.getContext());
+        proceed(oc.workflowExecution(), oc.nodeExecution());
     }
 }

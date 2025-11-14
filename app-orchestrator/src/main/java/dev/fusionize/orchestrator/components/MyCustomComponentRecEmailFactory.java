@@ -4,8 +4,6 @@ import dev.fusionize.orchestrator.EmailBoxService;
 import dev.fusionize.worker.component.annotations.RuntimeComponentDefinition;
 import dev.fusionize.workflow.WorkflowNodeType;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
-import dev.fusionize.workflow.events.Event;
-import dev.fusionize.workflow.events.EventPublisher;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,18 +14,15 @@ import org.springframework.stereotype.Component;
         compatible = WorkflowNodeType.START
 )
 public class MyCustomComponentRecEmailFactory implements ComponentRuntimeFactory<MyCustomComponentRecEmail> {
-    private final EventPublisher<Event> eventPublisher;
     private final EmailBoxService emailBoxService;
 
-    public MyCustomComponentRecEmailFactory(EventPublisher<Event> eventPublisher,
-                                            EmailBoxService emailBoxService) {
-        this.eventPublisher = eventPublisher;
+    public MyCustomComponentRecEmailFactory(EmailBoxService emailBoxService) {
         this.emailBoxService = emailBoxService;
     }
 
     @Override
     public MyCustomComponentRecEmail create() {
-        return new MyCustomComponentRecEmail(eventPublisher, emailBoxService);
+        return new MyCustomComponentRecEmail(emailBoxService);
     }
 
 }

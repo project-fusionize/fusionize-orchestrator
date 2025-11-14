@@ -11,13 +11,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 public abstract class OrchestrationEvent extends RuntimeEvent {
+    public record EventContext(WorkflowExecution workflowExecution, WorkflowNodeExecution nodeExecution){}
+
     private String workflowId;
     private String workflowExecutionId;
     private String workflowNodeId;
     private String workflowNodeExecutionId;
     private Origin origin;
     @Transient
-    private OrchestrationEventContext orchestrationEventContext;
+    private EventContext orchestrationEventContext;
 
     public enum Origin {
         RUNTIME_ENGINE("RUNTIME_ENGINE"),
@@ -50,7 +52,7 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
         private String workflowNodeId;
         private String workflowNodeExecutionId;
         private Origin origin;
-        private OrchestrationEventContext orchestrationEventContext;
+        private EventContext orchestrationEventContext;
 
         protected Builder(Class<?> eventClass, Object source) {
             super(eventClass, source);
@@ -83,11 +85,11 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
 
         public T orchestrationEventContext(WorkflowExecution workflowExecution,
                                                  WorkflowNodeExecution nodeExecution) {
-            this.orchestrationEventContext = new OrchestrationEventContext(workflowExecution, nodeExecution);
+            this.orchestrationEventContext = new EventContext(workflowExecution, nodeExecution);
             return self();
         }
 
-        public T orchestrationEventContext(OrchestrationEventContext orchestrationEventContext) {
+        public T orchestrationEventContext(EventContext orchestrationEventContext) {
             this.orchestrationEventContext = orchestrationEventContext;
             return self();
         }
@@ -114,7 +116,7 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
             workflowExecution.setWorkflow(workflow);
             WorkflowNodeExecution workflowNodeExecution = workflowExecution.findNode(workflowNodeExecutionId);
             workflowNodeExecution.setWorkflowNode(workflow.findNode(workflowNodeId));
-            this.orchestrationEventContext = new OrchestrationEventContext(workflowExecution, workflowNodeExecution);
+            this.orchestrationEventContext = new EventContext(workflowExecution, workflowNodeExecution);
 
         }
     }
@@ -158,11 +160,11 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
         this.origin = origin;
     }
 
-    public OrchestrationEventContext getOrchestrationEventContext() {
+    public EventContext getOrchestrationEventContext() {
         return orchestrationEventContext;
     }
 
-    public void setOrchestrationEventContext(OrchestrationEventContext orchestrationEventContext) {
+    public void setOrchestrationEventContext(EventContext orchestrationEventContext) {
         this.orchestrationEventContext = orchestrationEventContext;
     }
 }

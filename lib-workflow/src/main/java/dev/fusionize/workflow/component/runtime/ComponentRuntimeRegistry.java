@@ -2,6 +2,7 @@ package dev.fusionize.workflow.component.runtime;
 
 import dev.fusionize.workflow.WorkflowNodeType;
 import dev.fusionize.workflow.component.WorkflowComponent;
+import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -287,7 +288,7 @@ public class ComponentRuntimeRegistry {
      * @return Optional containing the created runtime if factory exists
      */
     private Optional<ComponentRuntime> createFromFactory(String prefix, ComponentRuntimeConfig config) {
-        ComponentRuntimeFactory factory = factoryRegistry.get(prefix.toLowerCase());
+        ComponentRuntimeFactory<?> factory = factoryRegistry.get(prefix.toLowerCase());
         if (factory != null) {
             try {
                 ComponentRuntime runtime = factory.create();
