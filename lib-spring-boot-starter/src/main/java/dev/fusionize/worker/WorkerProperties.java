@@ -8,8 +8,10 @@ import java.net.URISyntaxException;
 @ConfigurationProperties(prefix = "fusionize.worker")
 public class WorkerProperties {
     private String orchestratorUrl;
-    private String workerOidcClientId;
-    private String workerOidcClientSecret;
+    private String orchestratorMongo;
+    private String oidcClientId;
+    private String oidcClientSecret;
+    private String workflowDefinitionsRoot = "workflows";
 
     public String getOrchestratorUrl() {
         return orchestratorUrl;
@@ -19,20 +21,36 @@ public class WorkerProperties {
         this.orchestratorUrl = orchestratorUrl;
     }
 
-    public String getWorkerOidcClientId() {
-        return workerOidcClientId;
+    public String getOidcClientId() {
+        return oidcClientId;
     }
 
-    public void setWorkerOidcClientId(String workerOidcClientId) {
-        this.workerOidcClientId = workerOidcClientId;
+    public String getOrchestratorMongo() {
+        return orchestratorMongo;
     }
 
-    public String getWorkerOidcClientSecret() {
-        return workerOidcClientSecret;
+    public void setOrchestratorMongo(String orchestratorMongo) {
+        this.orchestratorMongo = orchestratorMongo;
     }
 
-    public void setWorkerOidcClientSecret(String workerOidcClientSecret) {
-        this.workerOidcClientSecret = workerOidcClientSecret;
+    public void setOidcClientId(String oidcClientId) {
+        this.oidcClientId = oidcClientId;
+    }
+
+    public String getOidcClientSecret() {
+        return oidcClientSecret;
+    }
+
+    public void setOidcClientSecret(String oidcClientSecret) {
+        this.oidcClientSecret = oidcClientSecret;
+    }
+
+    public String getWorkflowDefinitionsRoot() {
+        return workflowDefinitionsRoot;
+    }
+
+    public void setWorkflowDefinitionsRoot(String workflowDefinitionsRoot) {
+        this.workflowDefinitionsRoot = workflowDefinitionsRoot;
     }
 
     public static String toWebSocketUrl(String httpUrl) {

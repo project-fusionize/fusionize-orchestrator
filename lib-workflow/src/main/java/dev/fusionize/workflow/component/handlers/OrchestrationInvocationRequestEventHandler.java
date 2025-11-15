@@ -1,6 +1,6 @@
 package dev.fusionize.workflow.component.handlers;
 
-import dev.fusionize.workflow.component.WorkflowComponentRuntimeEngine;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventHandler;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -11,13 +11,13 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class OrchestrationInvocationRequestEventHandler implements EventHandler<InvocationRequestEvent> {
-    private final WorkflowComponentRuntimeEngine runtimeEngine;
+    private final ComponentRuntimeEngine componentRuntimeEngine;
     private final WorkflowRegistry workflowRegistry;
     private final WorkflowExecutionRegistry workflowExecutionRegistry;
-    public OrchestrationInvocationRequestEventHandler(WorkflowComponentRuntimeEngine runtimeEngine,
+    public OrchestrationInvocationRequestEventHandler(ComponentRuntimeEngine componentRuntimeEngine,
                                                       WorkflowRegistry workflowRegistry,
                                                       WorkflowExecutionRegistry workflowExecutionRegistry) {
-        this.runtimeEngine = runtimeEngine;
+        this.componentRuntimeEngine = componentRuntimeEngine;
         this.workflowRegistry = workflowRegistry;
         this.workflowExecutionRegistry = workflowExecutionRegistry;
     }
@@ -32,7 +32,7 @@ public class OrchestrationInvocationRequestEventHandler implements EventHandler<
     @Override
     public Event handle(InvocationRequestEvent event) {
         event.ensureOrchestrationEventContext(workflowExecutionRegistry, workflowRegistry);
-        return runtimeEngine.invokeComponent(event);
+        return componentRuntimeEngine.invokeComponent(event);
     }
 
     @Override

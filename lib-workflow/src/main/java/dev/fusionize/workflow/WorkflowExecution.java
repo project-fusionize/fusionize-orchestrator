@@ -30,12 +30,32 @@ public class WorkflowExecution {
     }
 
     public WorkflowNodeExecution findNode(String workflowNodeExecutionId) {
-        return nodes.stream().filter(n-> n.getWorkflowNodeExecutionId().equals(workflowNodeExecutionId)).findFirst().orElse(
-                nodes.stream().map(n->n.findNode(workflowNodeExecutionId)).filter(Objects::nonNull).findFirst().orElse(null)
-        );
+        return nodes.stream()
+                .filter(n -> n.getWorkflowNodeExecutionId().equals(workflowNodeExecutionId))
+                .findFirst()
+                .orElseGet(() -> nodes.stream()
+                        .map(n -> n.findNode(workflowNodeExecutionId))
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElse(null));
     }
 
+    public WorkflowExecution renew() {
+        WorkflowExecution clone = new WorkflowExecution();
+        clone.id = null;
+        clone.workflowExecutionId = KeyUtil.getTimestampId("WEXE");
+        clone.workflowId = this.workflowId;
+        clone.status = WorkflowExecutionStatus.IDLE;
+        clone.workflow = this.workflow;
 
+        List<WorkflowNodeExecution> renewedNodes = new ArrayList<>();
+        for (WorkflowNodeExecution node : this.nodes) {
+            renewedNodes.add(node.renew());
+        }
+        clone.nodes = renewedNodes;
+
+        return clone;
+    }
 
     public String getId() {
         return id;

@@ -1,1 +1,2 @@
 dev.fusionize.worker.WorkerAutoConfiguration
+dev.fusionize.worker.WorkerMongoAutoConfiguration

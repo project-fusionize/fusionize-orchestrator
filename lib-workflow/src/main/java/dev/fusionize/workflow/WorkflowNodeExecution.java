@@ -1,7 +1,6 @@
 package dev.fusionize.workflow;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.component.runtime.ComponentRuntime;
 import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
@@ -28,9 +27,32 @@ public class WorkflowNodeExecution {
     }
 
     public WorkflowNodeExecution findNode(String workflowNodeExecutionId) {
-        return children.stream().filter(n-> n.getWorkflowNodeExecutionId().equals(workflowNodeExecutionId)).findFirst().orElse(
-                children.stream().map(n->n.findNode(workflowNodeExecutionId)).filter(Objects::nonNull).findFirst().orElse(null)
-        );
+        return children.stream()
+                .filter(n -> n.getWorkflowNodeExecutionId().equals(workflowNodeExecutionId))
+                .findFirst()
+                .orElseGet(() -> children.stream()
+                        .map(n -> n.findNode(workflowNodeExecutionId))
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElse(null));
+    }
+
+
+    public WorkflowNodeExecution renew() {
+        WorkflowNodeExecution clone = new WorkflowNodeExecution();
+        clone.workflowNodeExecutionId = KeyUtil.getTimestampId("NEXE"); // new ID
+        clone.workflowNodeId = this.workflowNodeId;
+        clone.state = WorkflowNodeExecutionState.IDLE;
+        clone.stageContext = this.stageContext != null ? this.stageContext.renew() : null;
+        clone.workflowNode = this.workflowNode;
+
+        List<WorkflowNodeExecution> renewedChildren = new ArrayList<>();
+        for (WorkflowNodeExecution child : this.children) {
+            renewedChildren.add(child.renew());
+        }
+        clone.children = renewedChildren;
+
+        return clone;
     }
 
     public List<WorkflowNodeExecution> getChildren() {
@@ -40,7 +62,6 @@ public class WorkflowNodeExecution {
     public void setChildren(List<WorkflowNodeExecution> children) {
         this.children = children;
     }
-
 
     public String getWorkflowNodeExecutionId() {
         return workflowNodeExecutionId;

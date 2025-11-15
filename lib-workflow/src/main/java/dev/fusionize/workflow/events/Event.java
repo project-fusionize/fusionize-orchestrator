@@ -6,7 +6,7 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.Objects;
 
 @Document(collection = "workflow-event")
@@ -20,10 +20,10 @@ public abstract class Event {
     @Indexed()
     private String causationId;
     private String eventClass;
-    private ZonedDateTime generatedDate;
-    private ZonedDateTime processedDate;
+    private Date generatedDate;
+    private Date processedDate;
     @Transient
-    protected transient Object source;
+    private String source;
 
     protected Event renew() {
         try {
@@ -36,7 +36,7 @@ public abstract class Event {
             newEvent.setCausationId(this.causationId);
             newEvent.setEventClass(this.eventClass);
             newEvent.setProcessedDate(null);
-            newEvent.setGeneratedDate(ZonedDateTime.now());
+            newEvent.setGeneratedDate(new Date());
             newEvent.setEventId(Builder.generateEventId());
             return newEvent;
         } catch (Exception ignore) {
@@ -50,8 +50,8 @@ public abstract class Event {
         protected String eventId;
         protected String correlationId;
         protected String causationId;
-        protected ZonedDateTime generatedDate;
-        protected ZonedDateTime processedDate;
+        protected Date generatedDate;
+        protected Date processedDate;
 
         protected Builder(Class<?> eventClass, Object source) {
             this.eventClass = eventClass.getCanonicalName();
@@ -73,12 +73,12 @@ public abstract class Event {
             return self();
         }
 
-        public T generatedAt(ZonedDateTime dateTime) {
+        public T generatedAt(Date dateTime) {
             this.generatedDate = dateTime;
             return self();
         }
 
-        public T processedAt(ZonedDateTime dateTime) {
+        public T processedAt(Date dateTime) {
             this.processedDate = dateTime;
             return self();
         }
@@ -91,11 +91,11 @@ public abstract class Event {
             if (source == null) {
                 throw new IllegalStateException("Source must be provided for an Event");
             }
-            event.setSource(source);
+            event.setSource(source.getClass().getCanonicalName());
             event.setEventId(Objects.requireNonNullElseGet(eventId, Builder::generateEventId));
             event.setCorrelationId(Objects.requireNonNullElseGet(correlationId, KeyUtil::getUUID));
             event.setCausationId(Objects.requireNonNullElseGet(causationId, KeyUtil::getUUID));
-            event.setGeneratedDate(Objects.requireNonNullElseGet(generatedDate, ZonedDateTime::now));
+            event.setGeneratedDate(Objects.requireNonNullElseGet(generatedDate, Date::new));
             event.setEventClass(eventClass);
             event.setGeneratedDate(generatedDate);
             event.setProcessedDate(processedDate);
@@ -137,19 +137,19 @@ public abstract class Event {
         this.eventClass = eventClass;
     }
 
-    public ZonedDateTime getGeneratedDate() {
+    public Date getGeneratedDate() {
         return generatedDate;
     }
 
-    public void setGeneratedDate(ZonedDateTime generatedDate) {
+    public void setGeneratedDate(Date generatedDate) {
         this.generatedDate = generatedDate;
     }
 
-    public ZonedDateTime getProcessedDate() {
+    public Date getProcessedDate() {
         return processedDate;
     }
 
-    public void setProcessedDate(ZonedDateTime processedDate) {
+    public void setProcessedDate(Date processedDate) {
         this.processedDate = processedDate;
     }
 
@@ -161,11 +161,11 @@ public abstract class Event {
         this.id = id;
     }
 
-    public Object getSource() {
+    public String getSource() {
         return source;
     }
 
-    public void setSource(Object source) {
+    public void setSource(String source) {
         this.source = source;
     }
 }

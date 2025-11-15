@@ -1,13 +1,13 @@
 package dev.fusionize.worker.component.annotations;
 
-import dev.fusionize.worker.component.RuntimeComponentRegistrar;
+import dev.fusionize.worker.component.RuntimeComponentBeanRegistrar;
 import org.springframework.context.annotation.Import;
 import java.lang.annotation.*;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Import(RuntimeComponentRegistrar.class)
+@Import(RuntimeComponentBeanRegistrar.class)
 public @interface EnableRuntimeComponents {
     /**
      * Base packages to scan for @RuntimeComponent annotations.

@@ -2,7 +2,7 @@ package dev.fusionize.workflow.descriptor;
 
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.component.WorkflowComponentConfig;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -125,7 +125,7 @@ class WorkflowNodeTransformerTest {
                 .type(WorkflowNodeType.DECISION)
                 .component("decision:test.emailDecision")
                 .workflowNodeKey("decisionNode")
-                .componentConfig(WorkflowComponentConfig.builder()
+                .componentConfig(ComponentRuntimeConfig.builder()
                         .put("routeMap", Map.of("route1", "node1", "route2", "node2"))
                         .put("defaultRoute", "node1")
                         .build())

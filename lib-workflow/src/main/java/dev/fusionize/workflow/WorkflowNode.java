@@ -1,7 +1,7 @@
 package dev.fusionize.workflow;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.component.WorkflowComponentConfig;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,7 @@ public class WorkflowNode {
     private String workflowNodeId;
     private String workflowNodeKey;
     private String component;
-    private WorkflowComponentConfig componentConfig;
+    private ComponentRuntimeConfig componentConfig;
 
     public WorkflowNode(){}
 
@@ -77,11 +77,11 @@ public class WorkflowNode {
         this.component = component;
     }
 
-    public WorkflowComponentConfig getComponentConfig() {
+    public ComponentRuntimeConfig getComponentConfig() {
         return componentConfig;
     }
 
-    public void setComponentConfig(WorkflowComponentConfig componentConfig) {
+    public void setComponentConfig(ComponentRuntimeConfig componentConfig) {
         this.componentConfig = componentConfig;
     }
 
@@ -95,7 +95,7 @@ public class WorkflowNode {
         private String workflowNodeId;
         private String workflowNodeKey;
         private String component;
-        private WorkflowComponentConfig componentConfig;
+        private ComponentRuntimeConfig componentConfig;
 
         public Builder children(List<WorkflowNode> children) {
             this.children = children != null ? new ArrayList<>(children) : new ArrayList<>();
@@ -129,7 +129,7 @@ public class WorkflowNode {
             return this;
         }
 
-        public Builder componentConfig(WorkflowComponentConfig componentConfig) {
+        public Builder componentConfig(ComponentRuntimeConfig componentConfig) {
             this.componentConfig = componentConfig;
             return this;
         }

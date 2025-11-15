@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +42,7 @@ public class EventRouter {
             EventHandler<E> typedHandler = (EventHandler<E>) handler;
             if (typedHandler.shouldHandle(event)) {
                 Event outgoing = typedHandler.handle(event);
-                event.setProcessedDate(ZonedDateTime.now());
+                event.setProcessedDate(new Date());
                 eventStore.save(event);
                 if(outgoing != null) {
                     eventPublisher.publish(outgoing);
