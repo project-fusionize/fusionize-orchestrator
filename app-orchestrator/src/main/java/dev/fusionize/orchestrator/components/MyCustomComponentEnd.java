@@ -1,6 +1,6 @@
 package dev.fusionize.orchestrator.components;
 
-import dev.fusionize.workflow.WorkflowContext;
+import dev.fusionize.workflow.context.WorkflowContext;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;

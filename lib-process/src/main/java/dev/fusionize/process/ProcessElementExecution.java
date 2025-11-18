@@ -1,7 +1,7 @@
 package dev.fusionize.process;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.WorkflowContext;
+import dev.fusionize.workflow.context.WorkflowContext;
 import org.flowable.bpmn.model.FlowElement;
 import org.springframework.data.annotation.Transient;
 

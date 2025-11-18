@@ -1,4 +1,4 @@
-package dev.fusionize.workflow;
+package dev.fusionize.workflow.context;
 
 import java.util.HashMap;
 import java.util.Map;

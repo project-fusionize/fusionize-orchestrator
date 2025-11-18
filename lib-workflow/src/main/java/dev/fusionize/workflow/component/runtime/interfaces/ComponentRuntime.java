@@ -1,6 +1,6 @@
 package dev.fusionize.workflow.component.runtime.interfaces;
 
-import dev.fusionize.workflow.WorkflowContext;
+import dev.fusionize.workflow.context.WorkflowContext;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 
 public interface ComponentRuntime {

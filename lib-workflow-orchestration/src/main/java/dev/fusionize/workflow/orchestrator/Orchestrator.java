@@ -4,6 +4,10 @@ import dev.fusionize.workflow.*;
 import dev.fusionize.workflow.component.local.LocalComponentBundle;
 import dev.fusionize.workflow.component.local.LocalComponentRuntime;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
+import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.WorkflowContextFactory;
+import dev.fusionize.workflow.context.WorkflowContextUtility;
+import dev.fusionize.workflow.context.WorkflowDecision;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -94,7 +98,8 @@ public class Orchestrator {
         if (!WorkflowNodeType.DECISION.equals(ne.getWorkflowNode().getType())) {
             return allChildren;
         }
-        WorkflowDecision lastDecision = ne.getStageContext().getDecisions().getLast();
+        WorkflowDecision lastDecision = WorkflowContextUtility.getLatestDecisionForNode(ne.getStageContext(),
+                ne.getWorkflowNode().getWorkflowNodeKey());
         if (lastDecision.getDecisionNode() == null
                 || ne.getWorkflowNode().getWorkflowNodeKey() == null) {
             return new ArrayList<>();

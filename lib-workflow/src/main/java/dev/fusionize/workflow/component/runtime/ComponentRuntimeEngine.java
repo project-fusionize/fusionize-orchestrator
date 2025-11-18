@@ -1,7 +1,7 @@
 package dev.fusionize.workflow.component.runtime;
 
 
-import dev.fusionize.workflow.WorkflowContext;
+import dev.fusionize.workflow.context.WorkflowContext;
 import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
