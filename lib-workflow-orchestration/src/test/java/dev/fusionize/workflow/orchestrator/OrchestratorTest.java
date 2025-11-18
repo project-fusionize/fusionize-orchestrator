@@ -7,6 +7,8 @@ import dev.fusionize.workflow.WorkflowContext;
 import dev.fusionize.workflow.WorkflowDecision;
 import dev.fusionize.workflow.WorkflowNodeType;
 import dev.fusionize.workflow.component.WorkflowComponent;
+import dev.fusionize.workflow.component.local.LocalComponentBundle;
+import dev.fusionize.workflow.component.local.LocalComponentRuntime;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
@@ -63,6 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
         TestMongoConversionConfig.class
 })
 class TestConfig {
+    public static Logger logger = LoggerFactory.getLogger(TestConfig.class);
 
     static final class WorkflowApplicationEvent extends ApplicationEvent {
         public final Event event;
@@ -101,6 +104,42 @@ class TestConfig {
 
             }
         };
+    }
+
+    @Bean
+    public List<LocalComponentBundle<? extends LocalComponentRuntime>> bundles(){
+        return List.of(
+                new LocalComponentBundle<LocalComponentRuntime>(
+                        ()-> new LocalComponentRuntime() {
+                            int delay;
+                            @Override
+                            public void configure(ComponentRuntimeConfig config) {
+                                delay = config.getConfig().containsKey("delay") ? Integer.parseInt(
+                                        config.getConfig().get("delay").toString()
+                                ):  5 * 1000;
+                            }
+
+                            @Override
+                            public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+                                emitter.success(workflowContext);
+                            }
+
+                            @Override
+                            public void run(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+                                try {
+                                    logger.info("Waiting for {} seconds", delay);
+                                    Thread.sleep(delay);
+                                    workflowContext.getData().put("delayFromWait", delay);
+                                    emitter.success(workflowContext);
+                                } catch (InterruptedException e) {
+                                    emitter.failure(e);
+                                }
+
+                            }
+                        },
+                        "Wait4FewSeconds"
+                )
+        );
     }
 }
 
@@ -205,7 +244,7 @@ class OrchestratorTest {
         Thread.sleep(1000);
         String output = writer.toString();
         logger.info("writer out ->\n {}",output);
-        String actual = "MockRecEmailComponentRuntime activated\n" +
+        String expected = "MockRecEmailComponentRuntime activated\n" +
                 "Receiving First Email\n" +
                 "MockRecEmailComponentRuntime handle email: test email route 1 from incoming@email.com\n" +
                 "MockSendEmailDecisionComponent activated\n" +
@@ -213,18 +252,18 @@ class OrchestratorTest {
                 "MockSendEmailComponent activated\n" +
                 "sending email to outgoing1@email.com\n" +
                 "BODY: test email route 1\n" +
-                "MockEndEmailComponent activated\n" +
                 "Receiving Second Email\n" +
                 "MockRecEmailComponentRuntime handle email: test email route 2 from incoming@email.com\n" +
                 "MockSendEmailDecisionComponent activated\n" +
+                "MockEndEmailComponent activated\n" +
                 "Decision made to route email: {outgoing1=false, outgoing2=true}\n" +
                 "MockSendEmailComponent activated\n" +
                 "sending email to outgoing2@email.com\n" +
                 "BODY: test email route 2\n" +
+                "ComponentFinishedEvent finished after 500\n" +
                 "MockEndEmailComponent activated\n" +
-                "ComponentFinishedEvent finished\n" +
-                "ComponentFinishedEvent finished\n";
-        assertEquals(actual, output);
+                "ComponentFinishedEvent finished after 500\n";
+        assertEquals(expected, output);
     }
 
     // --------------------------------------------------------------------------
@@ -256,9 +295,10 @@ class OrchestratorTest {
         @Override
         public void run(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
             try {
-                Thread.sleep(700);
-                writer.append("ComponentFinishedEvent finished\n");
-                logger.info("ComponentFinishedEvent finished");
+                Thread.sleep(200);
+                String delayFromLocalComponent = workflowContext.getData().get("delayFromWait").toString();
+                writer.append("ComponentFinishedEvent finished after ").append(delayFromLocalComponent).append("\n");
+                logger.info("ComponentFinishedEvent finished after {}", delayFromLocalComponent);
                 emitter.success(workflowContext);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

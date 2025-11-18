@@ -1,6 +1,9 @@
 package dev.fusionize.workflow.orchestrator;
 
 import dev.fusionize.workflow.*;
+import dev.fusionize.workflow.component.local.LocalComponentBundle;
+import dev.fusionize.workflow.component.local.LocalComponentRuntime;
+import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -16,6 +19,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class Orchestrator {
@@ -24,13 +29,16 @@ public class Orchestrator {
     private final EventPublisher<Event> eventPublisher;
     private final WorkflowRepoRegistry workflowRegistry;
     private final WorkflowExecutionRepoRegistry workflowExecutionRegistry;
+    private final List<LocalComponentBundle<? extends LocalComponentRuntime>> localComponentBundles;
 
     public Orchestrator(EventPublisher<Event> publisher,
                         WorkflowRepoRegistry workflowRegistry,
-                        WorkflowExecutionRepoRegistry workflowExecutionRegistry) {
+                        WorkflowExecutionRepoRegistry workflowExecutionRegistry,
+                        List<LocalComponentBundle<? extends LocalComponentRuntime>> localComponentBundles) {
         this.eventPublisher = publisher;
         this.workflowRegistry = workflowRegistry;
         this.workflowExecutionRegistry = workflowExecutionRegistry;
+        this.localComponentBundles = localComponentBundles;
     }
 
     public void orchestrate(String workflowId) {
@@ -52,7 +60,7 @@ public class Orchestrator {
                 .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.from(originalExecutionNode, n)))
                 .toList();
 
-        if(ne.getWorkflowNode().getType().equals(WorkflowNodeType.START)){
+        if (ne.getWorkflowNode().getType().equals(WorkflowNodeType.START)) {
             we = we.renew();
             we.setStatus(WorkflowExecutionStatus.IN_PROGRESS);
 
@@ -61,15 +69,15 @@ public class Orchestrator {
             ne.setState(WorkflowNodeExecutionState.DONE);
         }
 
-        if(ne.getWorkflowNode().getType().equals(WorkflowNodeType.END)){
+        if (ne.getWorkflowNode().getType().equals(WorkflowNodeType.END)) {
             we.setStatus(WorkflowExecutionStatus.SUCCESS);
         }
 
         ne.getChildren().addAll(nodeExecutions);
 
         WorkflowNodeExecution finalNe = ne;
-        if(we.getWorkflow().getNodes().stream().anyMatch(n-> n.getWorkflowNodeId().equals(finalNe.getWorkflowNodeId()))) {
-            we.getNodes().removeIf(cne-> cne.getWorkflowNodeExecutionId().equals(finalNe.getWorkflowNodeExecutionId()));
+        if (we.getWorkflow().getNodes().stream().anyMatch(n -> n.getWorkflowNodeId().equals(finalNe.getWorkflowNodeId()))) {
+            we.getNodes().removeIf(cne -> cne.getWorkflowNodeExecutionId().equals(finalNe.getWorkflowNodeExecutionId()));
             we.getNodes().add(ne);
         }
 
@@ -99,6 +107,43 @@ public class Orchestrator {
     }
 
     private void requestActivation(WorkflowExecution we, WorkflowNodeExecution ne) {
+        Optional<LocalComponentBundle<?>> optionalBundle = localComponentBundles.stream().filter(
+                b -> b.matches(ne.getWorkflowNode().getComponent())).findFirst();
+        if (optionalBundle.isPresent()) {
+            LocalComponentBundle<?> localComponentBundle = optionalBundle.get();
+            LocalComponentRuntime localComponentRuntime = localComponentBundle.newInstance();
+            requestLocalActivation(localComponentRuntime, we, ne);
+        } else {
+            requestRemoteActivation(we, ne);
+        }
+    }
+
+    private void requestLocalActivation(LocalComponentRuntime localComponentRuntime,
+                                        WorkflowExecution we, WorkflowNodeExecution ne) {
+        localComponentRuntime.configure(ne.getWorkflowNode().getComponentConfig());
+        CompletableFuture.runAsync(() ->
+            localComponentRuntime.canActivate(ne.getStageContext().renew(), new ComponentUpdateEmitter() {
+                @Override
+                public void success(WorkflowContext updatedContext) {
+                    requestLocalInvocation(localComponentRuntime, we, ne);
+                }
+
+                @Override
+                public void failure(Exception ex) {
+                    //todo handle exception
+                    log.error("Error -> {}", ex.getMessage(), ex);
+                }
+            })
+        ).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                //todo handle throwable
+                log.error("Error -> {}", throwable.getMessage(), throwable);
+            }
+        });
+
+    }
+
+    private void requestRemoteActivation(WorkflowExecution we, WorkflowNodeExecution ne) {
         ActivationRequestEvent activationRequestEvent =
                 ActivationRequestEvent.builder(this)
                         .origin(OrchestrationEvent.Origin.ORCHESTRATOR)
@@ -119,12 +164,36 @@ public class Orchestrator {
 
         } else {
             OrchestrationEvent.EventContext oc = activationResponseEvent.getOrchestrationEventContext();
-            requestInvocation(oc.workflowExecution(), oc.nodeExecution());
+            requestRemoteInvocation(oc.workflowExecution(), oc.nodeExecution());
         }
     }
 
+    private void requestLocalInvocation(LocalComponentRuntime localComponentRuntime,
+                                        WorkflowExecution we, WorkflowNodeExecution ne) {
+        CompletableFuture.runAsync(() ->
+                localComponentRuntime.run(ne.getStageContext().renew(), new ComponentUpdateEmitter() {
+                    @Override
+                    public void success(WorkflowContext updatedContext) {
+                        ne.setStageContext(updatedContext);
+                        proceed(we, ne);
+                    }
 
-    private void requestInvocation(WorkflowExecution we, WorkflowNodeExecution ne) {
+                    @Override
+                    public void failure(Exception ex) {
+                        //todo handle exception
+                        log.error("Error -> {}", ex.getMessage(), ex);
+                    }
+                })
+        ).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                //todo handle throwable
+                log.error("Error -> {}", throwable.getMessage(), throwable);
+            }
+        });
+
+    }
+
+    private void requestRemoteInvocation(WorkflowExecution we, WorkflowNodeExecution ne) {
         InvocationRequestEvent invocationRequestEvent =
                 InvocationRequestEvent.builder(this)
                         .origin(OrchestrationEvent.Origin.ORCHESTRATOR)
