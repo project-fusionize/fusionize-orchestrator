@@ -44,11 +44,16 @@ public class OrchestrationWorkflowNavigatorTest {
 
         when(decisionEngine.determineNextNodes(any())).thenReturn(List.of(child));
 
-        List<WorkflowNodeExecution> nextExecutions = navigator.navigate(we, ne);
+        navigator.navigate(we, ne,
+                (
+                        WorkflowExecution nextWe, WorkflowNodeExecution nextNe
+                )->{
+                    assertEquals(1, nextNe.getChildren().size());
+                    assertEquals("node2", nextNe.getChildren().getFirst().getWorkflowNodeId());
+                    assertEquals(WorkflowNodeExecutionState.DONE, nextNe.getState());
+        });
 
-        assertEquals(1, nextExecutions.size());
-        assertEquals("node2", nextExecutions.get(0).getWorkflowNodeId());
-        assertEquals(WorkflowNodeExecutionState.DONE, ne.getState());
+
     }
 
     @Test
@@ -62,9 +67,13 @@ public class OrchestrationWorkflowNavigatorTest {
 
         when(decisionEngine.determineNextNodes(any())).thenReturn(new ArrayList<>());
 
-        List<WorkflowNodeExecution> nextExecutions = navigator.navigate(we, ne);
+        navigator.navigate(we, ne,
+                (
+                        WorkflowExecution nextWe, WorkflowNodeExecution nextNe
+                )->{
+                    assertTrue(nextNe.getChildren().isEmpty());
+                    assertEquals(WorkflowExecutionStatus.SUCCESS, nextWe.getStatus());
+                });
 
-        assertTrue(nextExecutions.isEmpty());
-        assertEquals(WorkflowExecutionStatus.SUCCESS, we.getStatus());
     }
 }

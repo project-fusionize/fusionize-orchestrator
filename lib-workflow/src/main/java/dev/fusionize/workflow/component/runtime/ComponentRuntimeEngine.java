@@ -1,6 +1,7 @@
 package dev.fusionize.workflow.component.runtime;
 
-
+import dev.fusionize.workflow.WorkflowLog;
+import dev.fusionize.workflow.WorkflowLogger;
 import dev.fusionize.workflow.context.WorkflowContext;
 import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
@@ -24,11 +25,14 @@ public class ComponentRuntimeEngine {
 
     private final ComponentRuntimeRegistry componentRuntimeRegistry;
     private final EventPublisher<Event> eventPublisher;
+    private final WorkflowLogger workflowLogger;
 
     public ComponentRuntimeEngine(ComponentRuntimeRegistry componentRuntimeRegistry,
-                                  EventPublisher<Event> eventPublisher) {
+                                  EventPublisher<Event> eventPublisher,
+                                  WorkflowLogger workflowLogger) {
         this.componentRuntimeRegistry = componentRuntimeRegistry;
         this.eventPublisher = eventPublisher;
+        this.workflowLogger = workflowLogger;
     }
 
     private Optional<ComponentRuntime> getRuntimeComponent(OrchestrationEvent orchestrationEvent) {
@@ -38,85 +42,125 @@ public class ComponentRuntimeEngine {
         return componentRuntimeRegistry.get(component, componentConfig);
     }
 
-    public ActivationResponseEvent activateComponent(ActivationRequestEvent activationRequestEvent){
-        Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  getRuntimeComponent(activationRequestEvent);
-        if(optionalWorkflowComponentRuntime.isEmpty()){
+    public ActivationResponseEvent activateComponent(ActivationRequestEvent activationRequestEvent) {
+        Optional<ComponentRuntime> optionalWorkflowComponentRuntime = getRuntimeComponent(activationRequestEvent);
+        if (optionalWorkflowComponentRuntime.isEmpty()) {
             ActivationResponseEvent responseEvent = ActivationResponseEvent.from(
                     this, OrchestrationEvent.Origin.RUNTIME_ENGINE, activationRequestEvent);
-            responseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND + " " + activationRequestEvent.getComponent()));
+            responseEvent.setException(new ComponentNotFoundException(
+                    ERR_CODE_COMP_NOT_FOUND + " " + activationRequestEvent.getComponent()));
             return responseEvent;
         }
 
-        Supplier<ActivationResponseEvent> supplier = () ->  ActivationResponseEvent.from(
+        Supplier<ActivationResponseEvent> supplier = () -> ActivationResponseEvent.from(
                 this, OrchestrationEvent.Origin.RUNTIME_ENGINE, activationRequestEvent);
 
         ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
-        CompletableFuture.runAsync(() ->
-            runtime.canActivate(
-                    activationRequestEvent.getContext(),
-                    new ComponentUpdateEmitter() {
-                        @Override
-                        public void success(WorkflowContext updatedContext) {
-                            ActivationResponseEvent responseEvent = supplier.get();
-                            responseEvent.setContext(updatedContext);
-                            eventPublisher.publish(responseEvent);
-                        }
-                        @Override
-                        public void failure(Exception ex) {
-                            ActivationResponseEvent responseEvent = supplier.get();
-                            responseEvent.setException(ex);
-                            eventPublisher.publish(responseEvent);
-                        }
+        CompletableFuture.runAsync(() -> runtime.canActivate(
+                activationRequestEvent.getContext(),
+                new ComponentUpdateEmitter() {
+                    @Override
+                    public void success(WorkflowContext updatedContext) {
+                        ActivationResponseEvent responseEvent = supplier.get();
+                        responseEvent.setContext(updatedContext);
+                        eventPublisher.publish(responseEvent);
                     }
-            )).whenComplete((result, throwable) -> {
-            if (throwable != null) {
-                ActivationResponseEvent responseEvent = supplier.get();
-                responseEvent.setException(new InterruptedException("activation interrupted: " + throwable.getMessage()));
-                eventPublisher.publish(responseEvent);
-            }
-        });
+
+                    @Override
+                    public void failure(Exception ex) {
+                        ActivationResponseEvent responseEvent = supplier.get();
+                        responseEvent.setException(ex);
+                        eventPublisher.publish(responseEvent);
+                    }
+
+                    @Override
+                    public void log(String message) {
+                        ActivationResponseEvent responseEvent = supplier.get();
+                        var oc=  responseEvent.getOrchestrationEventContext();
+                        workflowLogger.log(oc.workflowExecution().getWorkflowId(),
+                                oc.workflowExecution().getWorkflowExecutionId(),
+                                oc.nodeExecution().getWorkflowNodeId(),
+                                oc.nodeExecution().getWorkflowNode().getComponent(), message);
+                    }
+
+                    @Override
+                    public void log(String message, WorkflowLog.LogLevel level) {
+                        ActivationResponseEvent responseEvent = supplier.get();
+                        var oc=  responseEvent.getOrchestrationEventContext();
+                        workflowLogger.log(oc.workflowExecution().getWorkflowId(),
+                                oc.workflowExecution().getWorkflowExecutionId(),
+                                oc.nodeExecution().getWorkflowNodeId(),
+                                oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
+                    }
+                })).whenComplete((result, throwable) -> {
+                    if (throwable != null) {
+                        ActivationResponseEvent responseEvent = supplier.get();
+                        responseEvent.setException(
+                                new InterruptedException("activation interrupted: " + throwable.getMessage()));
+                        eventPublisher.publish(responseEvent);
+                    }
+                });
 
         return null;
     }
 
     public InvocationResponseEvent invokeComponent(InvocationRequestEvent invocationRequestEvent) {
-        Optional<ComponentRuntime> optionalWorkflowComponentRuntime =  getRuntimeComponent(invocationRequestEvent);
-        if(optionalWorkflowComponentRuntime.isEmpty()){
+        Optional<ComponentRuntime> optionalWorkflowComponentRuntime = getRuntimeComponent(invocationRequestEvent);
+        if (optionalWorkflowComponentRuntime.isEmpty()) {
             InvocationResponseEvent invocationResponseEvent = InvocationResponseEvent.from(
                     this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
             invocationResponseEvent.setException(new ComponentNotFoundException(ERR_CODE_COMP_NOT_FOUND));
             return invocationResponseEvent;
         }
         ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
-        Supplier<InvocationResponseEvent> supplier = () ->  InvocationResponseEvent.from(
+        Supplier<InvocationResponseEvent> supplier = () -> InvocationResponseEvent.from(
                 this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
-        CompletableFuture.runAsync(() ->
-                runtime.run(
-                        invocationRequestEvent.getContext(),
-                        new ComponentUpdateEmitter() {
-                            @Override
-                            public void success(WorkflowContext updatedContext) {
-                                InvocationResponseEvent responseEvent = supplier.get();
-                                responseEvent.setContext(updatedContext);
-                                eventPublisher.publish(responseEvent);
-                            }
-                            @Override
-                            public void failure(Exception ex) {
-                                InvocationResponseEvent responseEvent = supplier.get();
-                                responseEvent.setException(ex);
-                                eventPublisher.publish(responseEvent);
-                            }
-                        }
-                )).whenComplete((result, throwable) -> {
-            if (throwable != null) {
-                InvocationResponseEvent responseEvent = supplier.get();
-                responseEvent.setException(new InterruptedException("component run interrupted: " + throwable.getMessage()));
-                eventPublisher.publish(responseEvent);
-            }
-        });
+        CompletableFuture.runAsync(() -> runtime.run(
+                invocationRequestEvent.getContext(),
+                new ComponentUpdateEmitter() {
+                    @Override
+                    public void success(WorkflowContext updatedContext) {
+                        InvocationResponseEvent responseEvent = supplier.get();
+                        responseEvent.setContext(updatedContext);
+                        eventPublisher.publish(responseEvent);
+                    }
+
+                    @Override
+                    public void failure(Exception ex) {
+                        InvocationResponseEvent responseEvent = supplier.get();
+                        responseEvent.setException(ex);
+                        eventPublisher.publish(responseEvent);
+                    }
+
+                    @Override
+                    public void log(String message) {
+                        InvocationResponseEvent responseEvent = supplier.get();
+                        var oc=  responseEvent.getOrchestrationEventContext();
+                        workflowLogger.log(oc.workflowExecution().getWorkflowId(),
+                                oc.workflowExecution().getWorkflowExecutionId(),
+                                oc.nodeExecution().getWorkflowNodeId(),
+                                oc.nodeExecution().getWorkflowNode().getComponent(), message);
+                    }
+
+                    @Override
+                    public void log(String message, WorkflowLog.LogLevel level) {
+                        InvocationResponseEvent responseEvent = supplier.get();
+                        var oc=  responseEvent.getOrchestrationEventContext();
+                        workflowLogger.log(oc.workflowExecution().getWorkflowId(),
+                                oc.workflowExecution().getWorkflowExecutionId(),
+                                oc.nodeExecution().getWorkflowNodeId(),
+                                oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
+                    }
+                })).whenComplete((result, throwable) -> {
+                    if (throwable != null) {
+                        InvocationResponseEvent responseEvent = supplier.get();
+                        responseEvent.setException(
+                                new InterruptedException("component run interrupted: " + throwable.getMessage()));
+                        eventPublisher.publish(responseEvent);
+                    }
+                });
 
         return null;
     }
-
 
 }
