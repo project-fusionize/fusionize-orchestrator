@@ -1,5 +1,7 @@
 package dev.fusionize.process;
 
+import dev.fusionize.workflow.Workflow;
+import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,16 +14,20 @@ import java.nio.file.Files;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ProcessConverterTest {
-
+    ProcessConverter processConverter;
     @BeforeEach
     void setUp() {
+        processConverter = new ProcessConverter();
     }
 
     @Test
     void convert() throws IOException, XMLStreamException {
-        URL yamlUrl = this.getClass().getResource("/diagram_1.bpmn");
-        assertNotNull(yamlUrl);
-        String xml = Files.readString(new File(yamlUrl.getFile()).toPath());
-        new ProcessConverter().convert(xml);
+        URL bpmnUrl = this.getClass().getResource("/diagram_email.bpmn");
+        assertNotNull(bpmnUrl);
+        String xml = Files.readString(new File(bpmnUrl.getFile()).toPath());
+        Process process = new ProcessConverter().convert(xml);
+        Workflow workflow= processConverter.convertToWorkflow(process);
+        assertNotNull(workflow);
+        System.out.println(new WorkflowDescriptor().toYamlDescription(workflow));
     }
 }

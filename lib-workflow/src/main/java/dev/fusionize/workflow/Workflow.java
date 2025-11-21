@@ -3,11 +3,13 @@ package dev.fusionize.workflow;
 import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.user.activity.DomainEntity;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Document(collection = "workflow")
@@ -19,9 +21,15 @@ public class Workflow extends DomainEntity {
     private String description;
     private int version;
     private boolean active = true;
+    private Map<String, WorkflowNode> nodeMap = new java.util.HashMap<>();
+    private List<String> rootNodeIds = new ArrayList<>();
+    @Transient
     private List<WorkflowNode> nodes = new ArrayList<>();
 
     public WorkflowNode findNode(String workflowNodeId) {
+        if (nodeMap.containsKey(workflowNodeId)) {
+            return nodeMap.get(workflowNodeId);
+        }
         return nodes.stream().filter(n-> n.getWorkflowNodeId().equals(workflowNodeId)).findFirst().orElse(
                 nodes.stream().map(n->n.findNode(workflowNodeId)).filter(Objects::nonNull).findFirst().orElse(null)
         );
@@ -171,5 +179,21 @@ public class Workflow extends DomainEntity {
 
     public void setNodes(List<WorkflowNode> nodes) {
         this.nodes = nodes;
+    }
+
+    public Map<String, WorkflowNode> getNodeMap() {
+        return nodeMap;
+    }
+
+    public void setNodeMap(Map<String, WorkflowNode> nodeMap) {
+        this.nodeMap = nodeMap;
+    }
+
+    public List<String> getRootNodeIds() {
+        return rootNodeIds;
+    }
+
+    public void setRootNodeIds(List<String> rootNodeIds) {
+        this.rootNodeIds = rootNodeIds;
     }
 }

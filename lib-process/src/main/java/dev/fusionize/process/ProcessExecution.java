@@ -1,7 +1,7 @@
 package dev.fusionize.process;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.WorkflowContext;
+import dev.fusionize.workflow.context.WorkflowContext;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;

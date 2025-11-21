@@ -2,10 +2,9 @@ package dev.fusionize.process.runtime;
 
 import dev.fusionize.process.*;
 import dev.fusionize.process.repo.ProcessExecutionRepository;
-import dev.fusionize.workflow.WorkflowContext;
+import dev.fusionize.workflow.context.WorkflowContext;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
-import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import org.flowable.bpmn.model.*;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Service
 public class ProcessRuntimeEngine {

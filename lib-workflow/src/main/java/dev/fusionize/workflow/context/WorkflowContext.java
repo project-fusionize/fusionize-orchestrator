@@ -1,4 +1,4 @@
-package dev.fusionize.workflow;
+package dev.fusionize.workflow.context;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,10 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WorkflowContext {
     private ConcurrentHashMap<String, Object> data;
     private List<WorkflowDecision> decisions;
+    private List<WorkflowGraphNode> graphNodes;
 
     public WorkflowContext() {
         this.data = new ConcurrentHashMap<>();
         this.decisions = new ArrayList<>();
+        this.graphNodes = new ArrayList<>();
     }
 
     public WorkflowContext renew() {
@@ -25,12 +27,21 @@ public class WorkflowContext {
             }
             copy.decisions = copiedDecisions;
         }
+        if (this.graphNodes != null) {
+            List<WorkflowGraphNode> copiedCurrentNodes = new ArrayList<>();
+            for (WorkflowGraphNode node : this.graphNodes) {
+                copiedCurrentNodes.add(node != null ? node.renew() : null);
+            }
+            copy.graphNodes = copiedCurrentNodes;
+        }
         return copy;
     }
 
     public static class Builder {
-        private ConcurrentHashMap<String, Object> data = new ConcurrentHashMap<>();
-        private List<WorkflowDecision> decisions = new ArrayList<>();
+        private final ConcurrentHashMap<String, Object> data = new ConcurrentHashMap<>();
+        private final List<WorkflowDecision> decisions = new ArrayList<>();
+        private final List<WorkflowGraphNode> graphNodes = new ArrayList<>();
+
 
         public Builder() {
         }
@@ -50,9 +61,16 @@ public class WorkflowContext {
             return this;
         }
 
+        public Builder graphNodes(WorkflowGraphNode... graphNodes) {
+            this.graphNodes.addAll(Arrays.stream(graphNodes).toList());
+            return this;
+        }
+
         public WorkflowContext build() {
             WorkflowContext workflowContext = new WorkflowContext();
             workflowContext.data = new ConcurrentHashMap<>(this.data);
+            workflowContext.decisions = new ArrayList<>(this.decisions);
+            workflowContext.graphNodes = new ArrayList<>(this.graphNodes);
             return workflowContext;
         }
     }
@@ -78,11 +96,20 @@ public class WorkflowContext {
         this.decisions = decisions;
     }
 
+    public List<WorkflowGraphNode> getGraphNodes() {
+        return graphNodes;
+    }
+
+    public void setGraphNodes(List<WorkflowGraphNode> graphNodes) {
+        this.graphNodes = graphNodes;
+    }
+
     @Override
     public String toString() {
         return "WorkflowContext{" +
                 "data=" + data +
                 ", decisions=" + decisions +
+                ", graphNodes=" + graphNodes +
                 '}';
     }
 }

@@ -28,14 +28,21 @@ nodes:
     component: task:test.sendEmail
     componentConfig:
       address: outgoing1@email.com
-    next: [end]
+    next: [waiting]
 
   outgoing2:
     type: TASK
     component: task:test.sendEmail
     componentConfig:
       address: outgoing2@email.com
-    next: [end]
+    next: [waiting]
+
+  waiting:
+    type: WAIT
+    component: Wait4FewSeconds
+    componentConfig:
+      delay: 500
+    next: [ end ]
 
   end:
     type: END

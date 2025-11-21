@@ -1,5 +1,5 @@
 package dev.fusionize.workflow.events;
-import dev.fusionize.workflow.WorkflowContext;
+import dev.fusionize.workflow.context.WorkflowContext;
 
 public abstract class RuntimeEvent extends Event {
     private WorkflowContext context;

@@ -2,18 +2,21 @@ package dev.fusionize.workflow;
 
 import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class WorkflowNode {
-    private List<WorkflowNode> children = new ArrayList<>();
+    private List<String> childrenIds = new ArrayList<>();
     private WorkflowNodeType type;
     private String workflowNodeId;
     private String workflowNodeKey;
     private String component;
     private ComponentRuntimeConfig componentConfig;
+    @Transient
+    private List<WorkflowNode> children = new ArrayList<>();
 
     public WorkflowNode(){}
 
@@ -43,6 +46,14 @@ public class WorkflowNode {
 
     public void setChildren(List<WorkflowNode> children) {
         this.children = children;
+    }
+
+    public List<String> getChildrenIds() {
+        return childrenIds;
+    }
+
+    public void setChildrenIds(List<String> childrenIds) {
+        this.childrenIds = childrenIds;
     }
 
     public WorkflowNodeType getType() {
