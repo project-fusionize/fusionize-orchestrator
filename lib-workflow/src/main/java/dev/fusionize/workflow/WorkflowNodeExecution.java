@@ -1,7 +1,7 @@
 package dev.fusionize.workflow;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
@@ -13,11 +13,11 @@ public class WorkflowNodeExecution {
     private String workflowNodeId;
     private String workflowNodeExecutionId;
     private WorkflowNodeExecutionState state;
-    private WorkflowContext stageContext;
+    private Context stageContext;
     @Transient
     private WorkflowNode workflowNode;
 
-    public static WorkflowNodeExecution of(WorkflowNode node, WorkflowContext context) {
+    public static WorkflowNodeExecution of(WorkflowNode node, Context context) {
         WorkflowNodeExecution execution = new WorkflowNodeExecution();
         execution.workflowNodeExecutionId = KeyUtil.getTimestampId("NEXE");
         execution.workflowNodeId = node.getWorkflowNodeId();
@@ -88,11 +88,11 @@ public class WorkflowNodeExecution {
         this.state = state;
     }
 
-    public WorkflowContext getStageContext() {
+    public Context getStageContext() {
         return stageContext;
     }
 
-    public void setStageContext(WorkflowContext stageContext) {
+    public void setStageContext(Context stageContext) {
         this.stageContext = stageContext;
     }
 

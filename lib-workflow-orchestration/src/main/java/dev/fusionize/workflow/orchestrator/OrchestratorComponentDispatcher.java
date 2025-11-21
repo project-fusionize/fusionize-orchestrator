@@ -1,13 +1,12 @@
 package dev.fusionize.workflow.orchestrator;
 
 import dev.fusionize.workflow.WorkflowExecution;
-import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.WorkflowLogger;
 import dev.fusionize.workflow.WorkflowNodeExecution;
-import dev.fusionize.workflow.component.local.LocalComponentBundle;
 import dev.fusionize.workflow.component.local.LocalComponentRuntime;
+import dev.fusionize.workflow.component.local.LocalComponentRuntimeFactory;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -28,25 +27,25 @@ public class OrchestratorComponentDispatcher {
 
     private static final Logger log = LoggerFactory.getLogger(OrchestratorComponentDispatcher.class);
     private final EventPublisher<Event> eventPublisher;
-    private final List<LocalComponentBundle<? extends LocalComponentRuntime>> localComponentBundles;
+    private final List<LocalComponentRuntimeFactory<? extends LocalComponentRuntime>> localComponentRuntimeFactories;
     private final WorkflowLogger workflowLogger;
 
     public OrchestratorComponentDispatcher(EventPublisher<Event> eventPublisher,
-            List<LocalComponentBundle<? extends LocalComponentRuntime>> localComponentBundles,
-            WorkflowLogRepoLogger workflowLogger) {
+                                           List<LocalComponentRuntimeFactory<? extends LocalComponentRuntime>> localComponentRuntimeFactories,
+                                           WorkflowLogRepoLogger workflowLogger) {
         this.eventPublisher = eventPublisher;
-        this.localComponentBundles = localComponentBundles;
+        this.localComponentRuntimeFactories = localComponentRuntimeFactories;
         this.workflowLogger = workflowLogger;
     }
 
     public void dispatchActivation(WorkflowExecution we, WorkflowNodeExecution ne,
             BiConsumer<WorkflowExecution, WorkflowNodeExecution> onSuccess,
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
-        Optional<LocalComponentBundle<?>> optionalBundle = localComponentBundles.stream().filter(
-                b -> b.matches(ne.getWorkflowNode().getComponent())).findFirst();
-        if (optionalBundle.isPresent()) {
-            LocalComponentBundle<?> localComponentBundle = optionalBundle.get();
-            LocalComponentRuntime localComponentRuntime = localComponentBundle.newInstance();
+        Optional<LocalComponentRuntimeFactory<?>> optionalFactory = localComponentRuntimeFactories.stream().filter(
+                f -> f.getName().equalsIgnoreCase(ne.getWorkflowNode().getComponent())).findFirst();
+        if (optionalFactory.isPresent()) {
+            LocalComponentRuntimeFactory<?> localComponentBundle = optionalFactory.get();
+            LocalComponentRuntime localComponentRuntime = localComponentBundle.create();
             requestLocalActivation(localComponentRuntime, we, ne, onSuccess, onFailure);
         } else {
             requestRemoteActivation(we, ne);
@@ -56,11 +55,11 @@ public class OrchestratorComponentDispatcher {
     public void dispatchInvocation(WorkflowExecution we, WorkflowNodeExecution ne,
             BiConsumer<WorkflowExecution, WorkflowNodeExecution> onSuccess,
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
-        Optional<LocalComponentBundle<?>> optionalBundle = localComponentBundles.stream().filter(
-                b -> b.matches(ne.getWorkflowNode().getComponent())).findFirst();
-        if (optionalBundle.isPresent()) {
-            LocalComponentBundle<?> localComponentBundle = optionalBundle.get();
-            LocalComponentRuntime localComponentRuntime = localComponentBundle.newInstance();
+        Optional<LocalComponentRuntimeFactory<?>> optionalFactory = localComponentRuntimeFactories.stream().filter(
+                f -> f.getName().equalsIgnoreCase(ne.getWorkflowNode().getComponent())).findFirst();
+        if (optionalFactory.isPresent()) {
+            LocalComponentRuntimeFactory<?> localComponentBundle = optionalFactory.get();
+            LocalComponentRuntime localComponentRuntime = localComponentBundle.create();
             requestLocalInvocation(localComponentRuntime, we, ne, onSuccess, onFailure);
         } else {
             requestRemoteInvocation(we, ne);
@@ -75,7 +74,7 @@ public class OrchestratorComponentDispatcher {
         CompletableFuture.runAsync(
                 () -> localComponentRuntime.canActivate(ne.getStageContext().renew(), new ComponentUpdateEmitter() {
                     @Override
-                    public void success(WorkflowContext updatedContext) {
+                    public void success(Context updatedContext) {
                         onSuccess.accept(we, ne);
                     }
 
@@ -119,7 +118,7 @@ public class OrchestratorComponentDispatcher {
         CompletableFuture
                 .runAsync(() -> localComponentRuntime.run(ne.getStageContext().renew(), new ComponentUpdateEmitter() {
                     @Override
-                    public void success(WorkflowContext updatedContext) {
+                    public void success(Context updatedContext) {
                         ne.setStageContext(updatedContext);
                         onSuccess.accept(we, ne);
                     }

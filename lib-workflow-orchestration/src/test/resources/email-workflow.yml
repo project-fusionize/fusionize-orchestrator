@@ -39,7 +39,7 @@ nodes:
 
   waiting:
     type: WAIT
-    component: Wait4FewSeconds
+    component: delay
     componentConfig:
       delay: 500
     next: [ end ]

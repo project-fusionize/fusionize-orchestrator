@@ -1,7 +1,7 @@
 package dev.fusionize.process;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -18,19 +18,19 @@ public class ProcessExecution {
     private String processId;
     private String processDefinitionKey;
     private ProcessExecutionStatus status;
-    private WorkflowContext context;
+    private Context context;
     private List<ProcessElementExecution> activeElements = new ArrayList<>();
     private List<ProcessElementExecution> completedElements = new ArrayList<>();
     @Transient
     private Process process;
 
-    public static ProcessExecution of(Process process, WorkflowContext initialContext) {
+    public static ProcessExecution of(Process process, Context initialContext) {
         ProcessExecution execution = new ProcessExecution();
         execution.process = process;
         execution.processId = process.getProcessId();
         execution.processDefinitionKey = process.getProcessDefinitionKey();
         execution.status = ProcessExecutionStatus.IDLE;
-        execution.context = initialContext != null ? initialContext : new WorkflowContext();
+        execution.context = initialContext != null ? initialContext : new Context();
         execution.processExecutionId = KeyUtil.getTimestampId("PEXE");
         return execution;
     }
@@ -98,11 +98,11 @@ public class ProcessExecution {
         this.status = status;
     }
 
-    public WorkflowContext getContext() {
+    public Context getContext() {
         return context;
     }
 
-    public void setContext(WorkflowContext context) {
+    public void setContext(Context context) {
         this.context = context;
     }
 

@@ -1,12 +1,12 @@
 package dev.fusionize.workflow.component.runtime.interfaces;
 
 import dev.fusionize.workflow.WorkflowLog;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
 
 public interface ComponentUpdateEmitter {
-    void success(WorkflowContext updatedContext);
+    void success(Context updatedContext);
 
     void failure(Exception ex);
 

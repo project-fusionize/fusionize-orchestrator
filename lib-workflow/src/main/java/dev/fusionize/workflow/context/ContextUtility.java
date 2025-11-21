@@ -2,16 +2,16 @@ package dev.fusionize.workflow.context;
 
 import java.util.*;
 
-public class WorkflowContextUtility {
+public class ContextUtility {
     /**
      * Reconstructs a list of recursive WorkflowGraphNode
      * where parents are full object references instead of IDs.
      * Only leaf nodes (nodes with no children) are included in the result.
      *
-     * @param context The Mongo-safe WorkflowContext
+     * @param context The Mongo-safe Context
      * @return List of leaf nodeId to reconstructed WorkflowGraphNode
      */
-    public static List<WorkflowGraphNodeRecursive> extractCurrentNodes(WorkflowContext context) {
+    static List<WorkflowGraphNodeRecursive> extractCurrentNodes(Context context) {
         if (context == null || context.getGraphNodes() == null) {
             return Collections.emptyList();
         }
@@ -21,8 +21,7 @@ public class WorkflowContextUtility {
         for (WorkflowGraphNode node : context.getGraphNodes()) {
             nodeMap.put(node.getNode(), new WorkflowGraphNodeRecursive(
                     node.getNode(),
-                    node.getState()
-            ));
+                    node.getState()));
         }
 
         // Step 2: Resolve parent references and populate children
@@ -48,16 +47,15 @@ public class WorkflowContextUtility {
         return new ArrayList<>(leafNodes.values());
     }
 
-
     /**
      * Returns the latest WorkflowDecision for a given node key.
      * Traverses the decisions from end to start and returns the first match.
      *
-     * @param context  The WorkflowContext
-     * @param nodeKey  The workflow node key to search for
+     * @param context The Context
+     * @param nodeKey The workflow node key to search for
      * @return Latest WorkflowDecision for the node, or null if not found
      */
-    public static WorkflowDecision getLatestDecisionForNode(WorkflowContext context, String nodeKey) {
+    static WorkflowDecision getLatestDecisionForNode(Context context, String nodeKey) {
         if (context == null || context.getDecisions() == null) {
             return null;
         }

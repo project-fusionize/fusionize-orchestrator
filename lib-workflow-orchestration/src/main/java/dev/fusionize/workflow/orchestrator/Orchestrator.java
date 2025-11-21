@@ -1,7 +1,7 @@
 package dev.fusionize.workflow.orchestrator;
 
 import dev.fusionize.workflow.*;
-import dev.fusionize.workflow.context.WorkflowContextFactory;
+import dev.fusionize.workflow.context.ContextFactory;
 import dev.fusionize.workflow.events.OrchestrationEvent;
 import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
 import dev.fusionize.workflow.events.orchestration.InvocationResponseEvent;
@@ -37,7 +37,7 @@ public class Orchestrator {
         WorkflowExecution we = WorkflowExecution.of(workflow);
         // todo check and re-use idle execution
         List<WorkflowNodeExecution> nodes = workflow.getNodes().stream()
-                .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.empty()))
+                .map(n -> WorkflowNodeExecution.of(n, ContextFactory.empty()))
                 .peek(ne -> we.getNodes().add(ne)).toList();
         workflowExecutionRegistry.register(we);
         nodes.forEach(ne -> requestActivation(we, ne));

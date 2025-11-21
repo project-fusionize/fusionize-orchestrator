@@ -1,11 +1,10 @@
 package dev.fusionize.workflow.component.runtime;
 
-import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.WorkflowLogger;
-import dev.fusionize.workflow.context.WorkflowContext;
 import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
-import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
+import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
+import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -60,7 +59,7 @@ public class ComponentRuntimeEngine {
                 activationRequestEvent.getContext(),
                 new ComponentUpdateEmitter() {
                     @Override
-                    public void success(WorkflowContext updatedContext) {
+                    public void success(Context updatedContext) {
                         ActivationResponseEvent responseEvent = supplier.get();
                         responseEvent.setContext(updatedContext);
                         eventPublisher.publish(responseEvent);
@@ -112,7 +111,7 @@ public class ComponentRuntimeEngine {
                 invocationRequestEvent.getContext(),
                 new ComponentUpdateEmitter() {
                     @Override
-                    public void success(WorkflowContext updatedContext) {
+                    public void success(Context updatedContext) {
                         InvocationResponseEvent responseEvent = supplier.get();
                         responseEvent.setContext(updatedContext);
                         eventPublisher.publish(responseEvent);

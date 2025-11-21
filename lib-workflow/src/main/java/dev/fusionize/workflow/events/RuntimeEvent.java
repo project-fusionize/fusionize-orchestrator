@@ -1,8 +1,8 @@
 package dev.fusionize.workflow.events;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 
 public abstract class RuntimeEvent extends Event {
-    private WorkflowContext context;
+    private Context context;
     private String component;
     private Exception exception;
 
@@ -16,7 +16,7 @@ public abstract class RuntimeEvent extends Event {
     }
 
     public abstract static class Builder<T extends Builder<T>> extends Event.Builder<T> {
-        private WorkflowContext context;
+        private Context context;
         private String component;
         private Exception exception;
 
@@ -24,7 +24,7 @@ public abstract class RuntimeEvent extends Event {
             super(eventClass, source);
         }
 
-        public T context(WorkflowContext context) {
+        public T context(Context context) {
             this.context = context;
             return self();
         }
@@ -47,11 +47,11 @@ public abstract class RuntimeEvent extends Event {
         }
     }
 
-    public WorkflowContext getContext() {
+    public Context getContext() {
         return context;
     }
 
-    public void setContext(WorkflowContext context) {
+    public void setContext(Context context) {
         this.context = context;
     }
 

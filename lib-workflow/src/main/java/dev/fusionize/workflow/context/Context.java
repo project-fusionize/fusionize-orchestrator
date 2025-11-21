@@ -5,20 +5,21 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Optional;
 
-public class WorkflowContext {
+public class Context {
     private ConcurrentHashMap<String, Object> data;
     private List<WorkflowDecision> decisions;
     private List<WorkflowGraphNode> graphNodes;
 
-    public WorkflowContext() {
+    public Context() {
         this.data = new ConcurrentHashMap<>();
         this.decisions = new ArrayList<>();
         this.graphNodes = new ArrayList<>();
     }
 
-    public WorkflowContext renew() {
-        WorkflowContext copy = new WorkflowContext();
+    public Context renew() {
+        Context copy = new Context();
         copy.data = new ConcurrentHashMap<>(this.data);
         if (this.decisions != null) {
             List<WorkflowDecision> copiedDecisions = new ArrayList<>();
@@ -41,7 +42,6 @@ public class WorkflowContext {
         private final ConcurrentHashMap<String, Object> data = new ConcurrentHashMap<>();
         private final List<WorkflowDecision> decisions = new ArrayList<>();
         private final List<WorkflowGraphNode> graphNodes = new ArrayList<>();
-
 
         public Builder() {
         }
@@ -66,12 +66,12 @@ public class WorkflowContext {
             return this;
         }
 
-        public WorkflowContext build() {
-            WorkflowContext workflowContext = new WorkflowContext();
-            workflowContext.data = new ConcurrentHashMap<>(this.data);
-            workflowContext.decisions = new ArrayList<>(this.decisions);
-            workflowContext.graphNodes = new ArrayList<>(this.graphNodes);
-            return workflowContext;
+        public Context build() {
+            Context ctx = new Context();
+            ctx.data = new ConcurrentHashMap<>(this.data);
+            ctx.decisions = new ArrayList<>(this.decisions);
+            ctx.graphNodes = new ArrayList<>(this.graphNodes);
+            return ctx;
         }
     }
 
@@ -86,7 +86,6 @@ public class WorkflowContext {
     public void setData(ConcurrentHashMap<String, Object> data) {
         this.data = data;
     }
-
 
     public List<WorkflowDecision> getDecisions() {
         return decisions;
@@ -104,9 +103,59 @@ public class WorkflowContext {
         this.graphNodes = graphNodes;
     }
 
+    public List<WorkflowGraphNodeRecursive> currentNodes() {
+        return ContextUtility.extractCurrentNodes(this);
+    }
+
+    public WorkflowDecision latestDecisionForNode(String nodeKey) {
+        return ContextUtility.getLatestDecisionForNode(this, nodeKey);
+    }
+
+    public <T> Optional<T> var(String key, Class<T> type) {
+        Object value = data.get(key);
+        if (type.isInstance(value)) {
+            return Optional.of(type.cast(value));
+        }
+        return Optional.empty();
+    }
+
+    public boolean contains(String key) {
+        return data.containsKey(key);
+    }
+
+    public void set(String key, Object value) {
+        data.put(key, value);
+    }
+
+    public Optional<String> varString(String key) {
+        return var(key, String.class);
+    }
+
+    public Optional<Integer> varInt(String key) {
+        return var(key, Integer.class);
+    }
+
+    public Optional<Double> varDouble(String key) {
+        return var(key, Double.class);
+    }
+
+    public Optional<Float> varFloat(String key) {
+        return var(key, Float.class);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public Optional<List> varList(String key) {
+        return var(key, List.class);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public Optional<Map> varMap(String key) {
+        return var(key, Map.class);
+    }
+
     @Override
     public String toString() {
-        return "WorkflowContext{" +
+        return "Context{" +
                 "data=" + data +
                 ", decisions=" + decisions +
                 ", graphNodes=" + graphNodes +
