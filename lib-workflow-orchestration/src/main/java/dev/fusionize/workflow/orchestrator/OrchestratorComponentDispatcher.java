@@ -85,16 +85,12 @@ public class OrchestratorComponentDispatcher {
                     }
 
                     @Override
-                    public void log(String message) {
-                        workflowLogger.log(we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
-                                ne.getWorkflowNode().getComponent(), message);
-                    }
-
-                    @Override
-                    public void log(String message, WorkflowLog.LogLevel level) {
-                        workflowLogger.log(we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
+                    public Logger logger() {
+                        return (message, level, throwable) -> workflowLogger.log(
+                                we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
                                 ne.getWorkflowNode().getComponent(), level, message);
                     }
+
                 })).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         onFailure.accept(new Exception(throwable), ne);
@@ -134,14 +130,9 @@ public class OrchestratorComponentDispatcher {
                     }
 
                     @Override
-                    public void log(String message) {
-                        workflowLogger.log(we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
-                                ne.getWorkflowNode().getComponent(), message);
-                    }
-
-                    @Override
-                    public void log(String message, WorkflowLog.LogLevel level) {
-                        workflowLogger.log(we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
+                    public Logger logger() {
+                        return (message, level, throwable) -> workflowLogger.log(
+                                we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
                                 ne.getWorkflowNode().getComponent(), level, message);
                     }
                 })).whenComplete((result, throwable) -> {

@@ -3,8 +3,6 @@ package dev.fusionize.workflow;
 import java.util.List;
 
 public interface WorkflowLogger {
-    void log(String workflowId, String workflowExecutionId, String workflowNodeId, String component,
-                    String message);
 
     void log(String workflowId, String workflowExecutionId, String workflowNodeId, String component,
                     WorkflowLog.LogLevel level, String message);

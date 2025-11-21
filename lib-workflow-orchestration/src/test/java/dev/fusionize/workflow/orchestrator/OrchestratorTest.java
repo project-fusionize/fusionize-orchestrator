@@ -246,7 +246,6 @@ class OrchestratorTest {
 
         Thread.sleep(2000);
 
-
         List<WorkflowLog> logs = workflowLogRepository.findAll();
         logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
 
@@ -255,19 +254,19 @@ class OrchestratorTest {
                 .collect(Collectors.joining("\n")));
         assertEquals(3, workflowExecutions.size());
         List<WorkflowExecution> done = workflowExecutions.stream()
-                .filter(we->we.getStatus() == WorkflowExecutionStatus.SUCCESS).toList();
+                .filter(we -> we.getStatus() == WorkflowExecutionStatus.SUCCESS).toList();
         List<WorkflowExecution> idles = workflowExecutions.stream()
-                .filter(we->we.getStatus() == WorkflowExecutionStatus.IDLE).toList();
+                .filter(we -> we.getStatus() == WorkflowExecutionStatus.IDLE).toList();
 
         assertEquals(1, idles.size());
         assertEquals(2, done.size());
 
-        List<WorkflowLog> idleLogs = logs.stream().filter(l->
-                l.getWorkflowExecutionId().equals(idles.getFirst().getWorkflowExecutionId())).toList();
-        List<WorkflowLog> firsRunLogs = logs.stream().filter(l->
-                l.getWorkflowExecutionId().equals(done.getFirst().getWorkflowExecutionId())).toList();
-        List<WorkflowLog> lastRunLogs = logs.stream().filter(l->
-                l.getWorkflowExecutionId().equals(done.getLast().getWorkflowExecutionId())).toList();
+        List<WorkflowLog> idleLogs = logs.stream()
+                .filter(l -> l.getWorkflowExecutionId().equals(idles.getFirst().getWorkflowExecutionId())).toList();
+        List<WorkflowLog> firsRunLogs = logs.stream()
+                .filter(l -> l.getWorkflowExecutionId().equals(done.getFirst().getWorkflowExecutionId())).toList();
+        List<WorkflowLog> lastRunLogs = logs.stream()
+                .filter(l -> l.getWorkflowExecutionId().equals(done.getLast().getWorkflowExecutionId())).toList();
 
         logger.info("DB idleLogs ->\n{}", idleLogs.stream().map(WorkflowLog::toString)
                 .collect(Collectors.joining("\n")));
@@ -285,22 +284,30 @@ class OrchestratorTest {
                 "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime handle email: test email route 2 from incoming@email.com"));
 
         assertEquals(7, firsRunLogs.size());
-        assertTrue(firsRunLogs.get(0).toString().endsWith("decision:test.emailDecision: MockSendEmailDecisionComponent activated"));
-        assertTrue(firsRunLogs.get(1).toString().endsWith("decision:test.emailDecision: Decision made to route email: {outgoing1=true, outgoing2=false}"));
+        assertTrue(firsRunLogs.get(0).toString()
+                .endsWith("decision:test.emailDecision: MockSendEmailDecisionComponent activated"));
+        assertTrue(firsRunLogs.get(1).toString().endsWith(
+                "decision:test.emailDecision: Decision made to route email: {outgoing1=true, outgoing2=false}"));
         assertTrue(firsRunLogs.get(2).toString().endsWith("task:test.sendEmail: MockSendEmailComponent activated"));
         assertTrue(firsRunLogs.get(3).toString().endsWith("task:test.sendEmail: sending email to outgoing1@email.com"));
         assertTrue(firsRunLogs.get(4).toString().endsWith("task:test.sendEmail: BODY: test email route 1"));
-        assertTrue(firsRunLogs.get(5).toString().endsWith("end:test.endEmailWorkflow: MockEndEmailComponent activated"));
-        assertTrue(firsRunLogs.get(6).toString().endsWith("end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500"));
+        assertTrue(
+                firsRunLogs.get(5).toString().endsWith("end:test.endEmailWorkflow: MockEndEmailComponent activated"));
+        assertTrue(firsRunLogs.get(6).toString()
+                .endsWith("end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500"));
 
         assertEquals(7, lastRunLogs.size());
-        assertTrue(lastRunLogs.get(0).toString().endsWith("decision:test.emailDecision: MockSendEmailDecisionComponent activated"));
-        assertTrue(lastRunLogs.get(1).toString().endsWith("decision:test.emailDecision: Decision made to route email: {outgoing1=false, outgoing2=true}"));
+        assertTrue(lastRunLogs.get(0).toString()
+                .endsWith("decision:test.emailDecision: MockSendEmailDecisionComponent activated"));
+        assertTrue(lastRunLogs.get(1).toString().endsWith(
+                "decision:test.emailDecision: Decision made to route email: {outgoing1=false, outgoing2=true}"));
         assertTrue(lastRunLogs.get(2).toString().endsWith("task:test.sendEmail: MockSendEmailComponent activated"));
         assertTrue(lastRunLogs.get(3).toString().endsWith("task:test.sendEmail: sending email to outgoing2@email.com"));
         assertTrue(lastRunLogs.get(4).toString().endsWith("task:test.sendEmail: BODY: test email route 2"));
-        assertTrue(lastRunLogs.get(5).toString().endsWith("end:test.endEmailWorkflow: MockEndEmailComponent activated"));
-        assertTrue(lastRunLogs.get(6).toString().endsWith("end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500"));
+        assertTrue(
+                lastRunLogs.get(5).toString().endsWith("end:test.endEmailWorkflow: MockEndEmailComponent activated"));
+        assertTrue(lastRunLogs.get(6).toString()
+                .endsWith("end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500"));
     }
 
     // --------------------------------------------------------------------------
@@ -312,7 +319,6 @@ class OrchestratorTest {
      * Logs its activation and publishes completion asynchronously.
      */
     static final class MockEndEmailComponent implements ComponentRuntime {
-        private static final Logger logger = LoggerFactory.getLogger(MockEndEmailComponent.class);
 
         MockEndEmailComponent() {
         }
@@ -323,8 +329,7 @@ class OrchestratorTest {
 
         @Override
         public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
-            emitter.log("MockEndEmailComponent activated");
-            logger.info("MockEndEmailComponent activated");
+            emitter.logger().info("MockEndEmailComponent activated");
             emitter.success(workflowContext);
         }
 
@@ -333,8 +338,7 @@ class OrchestratorTest {
             try {
                 Thread.sleep(200);
                 String delayFromLocalComponent = workflowContext.getData().get("delayFromWait").toString();
-                emitter.log("ComponentFinishedEvent finished after " + delayFromLocalComponent);
-                logger.info("ComponentFinishedEvent finished after {}", delayFromLocalComponent);
+                emitter.logger().info("ComponentFinishedEvent finished after {}", delayFromLocalComponent);
                 emitter.success(workflowContext);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -347,7 +351,6 @@ class OrchestratorTest {
      * based on the email content.
      */
     static final class MockEmailDecisionComponent implements ComponentRuntime {
-        private static final Logger logger = LoggerFactory.getLogger(MockEmailDecisionComponent.class);
         private Map<String, String> routeMap = new HashMap<>();
 
         MockEmailDecisionComponent() {
@@ -362,16 +365,11 @@ class OrchestratorTest {
 
         @Override
         public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
-            String worklog;
             if (!routeMap.isEmpty() && !workflowContext.getDecisions().isEmpty()) {
-                worklog = "MockSendEmailDecisionComponent activated";
-                emitter.log(worklog);
-                logger.info(worklog);
+                emitter.logger().info("MockSendEmailDecisionComponent activated");
                 emitter.success(workflowContext);
             } else {
-                worklog = "MockSendEmailDecisionComponent not activated";
-                emitter.log(worklog);
-                logger.info(worklog);
+                emitter.logger().info("MockSendEmailDecisionComponent not activated");
                 emitter.failure(new Exception("No route map found"));
             }
 
@@ -393,8 +391,7 @@ class OrchestratorTest {
                 decision.getOptionNodes().put(nodeOption, messageRoute.contains(nodeOption));
             }
 
-            emitter.log("Decision made to route email: " + decision.getOptionNodes().toString());
-            logger.info("Decision made: {}", decision.getOptionNodes());
+            emitter.logger().info("Decision made to route email: {}", decision.getOptionNodes().toString());
             emitter.success(workflowContext);
         }
     }
@@ -404,7 +401,6 @@ class OrchestratorTest {
      * Reads the target address from config and logs the email body.
      */
     static final class MockSendEmailComponent implements ComponentRuntime {
-        private static final Logger logger = LoggerFactory.getLogger(MockSendEmailComponent.class);
         private String address;
 
         MockSendEmailComponent() {
@@ -418,24 +414,19 @@ class OrchestratorTest {
         @Override
         public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
             boolean hasMessage = workflowContext.getData().containsKey("email_message");
-            String worklog = hasMessage ? "MockSendEmailComponent activated" : "MockSendEmailComponent not activated";
-            emitter.log(worklog);
-            logger.info(worklog);
             if (hasMessage) {
+                emitter.logger().info("MockSendEmailComponent activated");
                 emitter.success(workflowContext);
             } else {
+                emitter.logger().info("MockSendEmailComponent not activated");
                 emitter.failure(new Exception("No email to send"));
             }
         }
 
         @Override
         public void run(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
-            emitter.log("sending email to " + address);
-            logger.info("sending email to {}", address);
-
-            emitter.log("BODY: " + workflowContext.getData().get("email_message").toString());
-            logger.info("BODY: {}", workflowContext.getData().get("email_message"));
-
+            emitter.logger().info("sending email to {}", address);
+            emitter.logger().info("BODY: {}", workflowContext.getData().get("email_message").toString());
             emitter.success(workflowContext);
         }
 
@@ -446,7 +437,6 @@ class OrchestratorTest {
      * When an email arrives, it triggers the workflow chain.
      */
     static final class MockRecEmailComponentRuntime implements ComponentRuntime {
-        private static final Logger logger = LoggerFactory.getLogger(MockRecEmailComponentRuntime.class);
         private final List<String> inbox;
         private String address;
 
@@ -463,8 +453,7 @@ class OrchestratorTest {
         public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
             try {
                 Thread.sleep(100);
-                emitter.log("MockRecEmailComponentRuntime activated");
-                logger.info("MockRecEmailComponentRuntime activated");
+                emitter.logger().info("MockRecEmailComponentRuntime activated");
                 emitter.success(workflowContext);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -483,9 +472,7 @@ class OrchestratorTest {
                         String email = inbox.removeFirst();
 
                         String worklog = "MockRecEmailComponentRuntime handle email: " + email + " from " + address;
-                        emitter.log(worklog);
-                        logger.info(worklog);
-
+                        emitter.logger().info(worklog);
                         workflowContext.getData().put("email_message", email);
                         emitter.success(workflowContext);
                     }
@@ -495,6 +482,8 @@ class OrchestratorTest {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
+                    emitter.logger().error("Error processing email", e);
+                    emitter.failure(e);
                     logger.error("Error processing email", e);
                 }
             }
