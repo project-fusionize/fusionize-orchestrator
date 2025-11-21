@@ -28,8 +28,8 @@ public class ComponentRuntimeEngine {
     private final WorkflowLogger workflowLogger;
 
     public ComponentRuntimeEngine(ComponentRuntimeRegistry componentRuntimeRegistry,
-                                  EventPublisher<Event> eventPublisher,
-                                  WorkflowLogger workflowLogger) {
+            EventPublisher<Event> eventPublisher,
+            WorkflowLogger workflowLogger) {
         this.componentRuntimeRegistry = componentRuntimeRegistry;
         this.eventPublisher = eventPublisher;
         this.workflowLogger = workflowLogger;
@@ -74,24 +74,17 @@ public class ComponentRuntimeEngine {
                     }
 
                     @Override
-                    public void log(String message) {
-                        ActivationResponseEvent responseEvent = supplier.get();
-                        var oc=  responseEvent.getOrchestrationEventContext();
-                        workflowLogger.log(oc.workflowExecution().getWorkflowId(),
-                                oc.workflowExecution().getWorkflowExecutionId(),
-                                oc.nodeExecution().getWorkflowNodeId(),
-                                oc.nodeExecution().getWorkflowNode().getComponent(), message);
+                    public Logger logger() {
+                        return (message, level, throwable) -> {
+                            ActivationResponseEvent responseEvent = supplier.get();
+                            var oc = responseEvent.getOrchestrationEventContext();
+                            workflowLogger.log(oc.workflowExecution().getWorkflowId(),
+                                    oc.workflowExecution().getWorkflowExecutionId(),
+                                    oc.nodeExecution().getWorkflowNodeId(),
+                                    oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
+                        };
                     }
 
-                    @Override
-                    public void log(String message, WorkflowLog.LogLevel level) {
-                        ActivationResponseEvent responseEvent = supplier.get();
-                        var oc=  responseEvent.getOrchestrationEventContext();
-                        workflowLogger.log(oc.workflowExecution().getWorkflowId(),
-                                oc.workflowExecution().getWorkflowExecutionId(),
-                                oc.nodeExecution().getWorkflowNodeId(),
-                                oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
-                    }
                 })).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         ActivationResponseEvent responseEvent = supplier.get();
@@ -133,23 +126,15 @@ public class ComponentRuntimeEngine {
                     }
 
                     @Override
-                    public void log(String message) {
-                        InvocationResponseEvent responseEvent = supplier.get();
-                        var oc=  responseEvent.getOrchestrationEventContext();
-                        workflowLogger.log(oc.workflowExecution().getWorkflowId(),
-                                oc.workflowExecution().getWorkflowExecutionId(),
-                                oc.nodeExecution().getWorkflowNodeId(),
-                                oc.nodeExecution().getWorkflowNode().getComponent(), message);
-                    }
-
-                    @Override
-                    public void log(String message, WorkflowLog.LogLevel level) {
-                        InvocationResponseEvent responseEvent = supplier.get();
-                        var oc=  responseEvent.getOrchestrationEventContext();
-                        workflowLogger.log(oc.workflowExecution().getWorkflowId(),
-                                oc.workflowExecution().getWorkflowExecutionId(),
-                                oc.nodeExecution().getWorkflowNodeId(),
-                                oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
+                    public Logger logger() {
+                        return (message, level, throwable) -> {
+                            InvocationResponseEvent responseEvent = supplier.get();
+                            var oc = responseEvent.getOrchestrationEventContext();
+                            workflowLogger.log(oc.workflowExecution().getWorkflowId(),
+                                    oc.workflowExecution().getWorkflowExecutionId(),
+                                    oc.nodeExecution().getWorkflowNodeId(),
+                                    oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
+                        };
                     }
                 })).whenComplete((result, throwable) -> {
                     if (throwable != null) {
