@@ -21,6 +21,7 @@ import dev.fusionize.workflow.events.EventStore;
 import dev.fusionize.workflow.logging.WorkflowLogRepository;
 import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import dev.fusionize.workflow.repo.WorkflowExecutionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -142,11 +143,13 @@ class OrchestratorTest {
     WorkflowLogRepository workflowLogRepository;
     @Autowired
     WorkflowExecutionRepository workflowExecutionRepository;
+    List<String> inbox;
 
-    @Test
-    void orchestrate() throws InterruptedException, IOException {
+
+    @BeforeEach
+    public void setUp() throws IOException {
         // Inbox shared across async threads (thread-safe list)
-        List<String> inbox = new CopyOnWriteArrayList<>();
+        inbox = new CopyOnWriteArrayList<>();
 
         // Define factories for workflow runtime components
         ComponentRuntimeFactory<MockRecEmailComponentRuntime> emailRecStartFactory = () -> new MockRecEmailComponentRuntime(
@@ -188,7 +191,116 @@ class OrchestratorTest {
                         .build(),
                 emailEndStepFactory);
 
+    }
+
+    @Test
+    void orchestrate() throws InterruptedException, IOException {
+
         URL yamlUrl = this.getClass().getResource("/email-workflow.yml");
+        assertNotNull(yamlUrl);
+        String yml = Files.readString(new File(yamlUrl.getFile()).toPath());
+
+        Workflow workflow = new WorkflowDescriptor().fromYamlDescription(yml);
+        workflow = workflowRegistry.register(workflow);
+        // Start orchestrating the workflow
+        service.orchestrate(workflow.getWorkflowId());
+
+        // Simulate asynchronous email arrivals
+        Thread.sleep(200);
+        String worklog = "Receiving First Email";
+        logger.info(worklog);
+        inbox.add("test email route 1");
+
+        Thread.sleep(500);
+        worklog = "Receiving Second Email";
+        logger.info(worklog);
+        inbox.add("test email route 2");
+
+        Thread.sleep(2000);
+
+        List<WorkflowLog> logs = workflowLogRepository.findAll();
+        logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
+
+        List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
+        logger.info("DB logs ->\n{}", logs.stream().map(WorkflowLog::toString)
+                .collect(Collectors.joining("\n")));
+        assertEquals(3, workflowExecutions.size());
+        List<WorkflowExecution> done = workflowExecutions.stream()
+                .filter(we -> we.getStatus() == WorkflowExecutionStatus.SUCCESS).toList();
+        List<WorkflowExecution> idles = workflowExecutions.stream()
+                .filter(we -> we.getStatus() == WorkflowExecutionStatus.IDLE).toList();
+
+        assertEquals(1, idles.size());
+        assertEquals(2, done.size());
+
+        List<WorkflowLog> idleLogs = logs.stream()
+                .filter(l -> l.getWorkflowExecutionId().equals(idles.getFirst().getWorkflowExecutionId())).toList();
+        List<WorkflowLog> firsRunLogs = logs.stream()
+                .filter(l -> l.getWorkflowExecutionId().equals(done.getFirst().getWorkflowExecutionId())).toList();
+        List<WorkflowLog> lastRunLogs = logs.stream()
+                .filter(l -> l.getWorkflowExecutionId().equals(done.getLast().getWorkflowExecutionId())).toList();
+
+        logger.info("DB idleLogs ->\n{}", idleLogs.stream().map(WorkflowLog::toString)
+                .collect(Collectors.joining("\n")));
+        logger.info("DB firsRunLogs ->\n{}", firsRunLogs.stream().map(WorkflowLog::toString)
+                .collect(Collectors.joining("\n")));
+        logger.info("DB lastRunLogs ->\n{}", lastRunLogs.stream().map(WorkflowLog::toString)
+                .collect(Collectors.joining("\n")));
+
+        List<String> expectedMessages = List.of(
+                "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime activated",
+                "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime handle email: test email route 1 from incoming@email.com",
+                "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime handle email: test email route 2 from incoming@email.com"
+        );
+        assertEquals(expectedMessages.size(), idleLogs.size(), "Log count mismatch");
+        for (int i = 0; i < expectedMessages.size(); i++) {
+            String expected = expectedMessages.get(i);
+            String actual = idleLogs.get(i).toString();
+            assertTrue(actual.endsWith(expected),
+                    "Expected log at index " + i + " to end with: " + expected + "\nActual: " + actual);
+        }
+
+        expectedMessages = List.of(
+                "decision:test.emailDecision: MockSendEmailDecisionComponent activated",
+                "decision:test.emailDecision: Decision made to route email: {outgoing1=true, outgoing2=false}",
+                "task:test.sendEmail: MockSendEmailComponent activated",
+                "task:test.sendEmail: sending email to outgoing1@email.com",
+                "task:test.sendEmail: BODY: test email route 1",
+                "delay: sleeping 500 milliseconds",
+                "end:test.endEmailWorkflow: MockEndEmailComponent activated",
+                "end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500"
+        );
+        assertEquals(expectedMessages.size(), firsRunLogs.size(), "Log count mismatch");
+        for (int i = 0; i < expectedMessages.size(); i++) {
+            String expected = expectedMessages.get(i);
+            String actual = firsRunLogs.get(i).toString();
+            assertTrue(actual.endsWith(expected),
+                    "Expected log at index " + i + " to end with: " + expected + "\nActual: " + actual);
+        }
+
+        expectedMessages = List.of(
+                "decision:test.emailDecision: MockSendEmailDecisionComponent activated",
+                "decision:test.emailDecision: Decision made to route email: {outgoing1=false, outgoing2=true}",
+                "task:test.sendEmail: MockSendEmailComponent activated",
+                "task:test.sendEmail: sending email to outgoing2@email.com",
+                "task:test.sendEmail: BODY: test email route 2",
+                "delay: sleeping 500 milliseconds",
+                "end:test.endEmailWorkflow: MockEndEmailComponent activated",
+                "end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500"
+        );
+        assertEquals(expectedMessages.size(), lastRunLogs.size(), "Log count mismatch");
+        for (int i = 0; i < expectedMessages.size(); i++) {
+            String expected = expectedMessages.get(i);
+            String actual = lastRunLogs.get(i).toString();
+            assertTrue(actual.endsWith(expected),
+                    "Expected log at index " + i + " to end with: " + expected + "\nActual: " + actual);
+        }
+    }
+
+    @Test
+    void orchestrateParallel() throws InterruptedException, IOException {
+
+        URL yamlUrl = this.getClass().getResource("/email-workflow-parallel.yml");
         assertNotNull(yamlUrl);
         String yml = Files.readString(new File(yamlUrl.getFile()).toPath());
 

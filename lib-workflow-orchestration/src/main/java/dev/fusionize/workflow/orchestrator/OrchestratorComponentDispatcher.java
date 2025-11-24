@@ -31,8 +31,8 @@ public class OrchestratorComponentDispatcher {
     private final WorkflowLogger workflowLogger;
 
     public OrchestratorComponentDispatcher(EventPublisher<Event> eventPublisher,
-                                           List<LocalComponentRuntimeFactory<? extends LocalComponentRuntime>> localComponentRuntimeFactories,
-                                           WorkflowLogRepoLogger workflowLogger) {
+            List<LocalComponentRuntimeFactory<? extends LocalComponentRuntime>> localComponentRuntimeFactories,
+            WorkflowLogRepoLogger workflowLogger) {
         this.eventPublisher = eventPublisher;
         this.localComponentRuntimeFactories = localComponentRuntimeFactories;
         this.workflowLogger = workflowLogger;
@@ -115,8 +115,11 @@ public class OrchestratorComponentDispatcher {
             BiConsumer<WorkflowExecution, WorkflowNodeExecution> onSuccess,
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
         localComponentRuntime.configure(ne.getWorkflowNode().getComponentConfig());
+        Context context = ne.getStageContext().renew();
+        context.set("_executionId", we.getWorkflowExecutionId());
+        context.set("_nodeId", ne.getWorkflowNodeId());
         CompletableFuture
-                .runAsync(() -> localComponentRuntime.run(ne.getStageContext().renew(), new ComponentUpdateEmitter() {
+                .runAsync(() -> localComponentRuntime.run(context, new ComponentUpdateEmitter() {
                     @Override
                     public void success(Context updatedContext) {
                         ne.setStageContext(updatedContext);
