@@ -7,6 +7,7 @@ public class ContextRuntimeData {
     private String workflowId;
     private String workflowExecutionId;
     private String workflowNodeId;
+    private String workflowNodeKey;
     private String workflowNodeExecutionId;
     private RuntimeData runtimeData;
     public record RuntimeData(WorkflowExecution workflowExecution, WorkflowNodeExecution nodeExecution){}
@@ -16,6 +17,7 @@ public class ContextRuntimeData {
         runtimeData.workflowExecutionId = workflowExecution.getWorkflowExecutionId();
         runtimeData.workflowId = workflowExecution.getWorkflowId();
         runtimeData.workflowNodeId = nodeExecution.getWorkflowNodeId();
+        runtimeData.workflowNodeKey = nodeExecution.getWorkflowNode().getWorkflowNodeKey();
         runtimeData.workflowNodeExecutionId = nodeExecution.getWorkflowNodeExecutionId();
         runtimeData.runtimeData = new RuntimeData(workflowExecution, nodeExecution);
         return runtimeData;
@@ -43,6 +45,14 @@ public class ContextRuntimeData {
 
     public void setWorkflowNodeId(String workflowNodeId) {
         this.workflowNodeId = workflowNodeId;
+    }
+
+    public String getWorkflowNodeKey() {
+        return workflowNodeKey;
+    }
+
+    public void setWorkflowNodeKey(String workflowNodeKey) {
+        this.workflowNodeKey = workflowNodeKey;
     }
 
     public String getWorkflowNodeExecutionId() {

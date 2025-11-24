@@ -124,6 +124,10 @@ public class Context {
         return ContextUtility.getLatestDecisionForNode(this, nodeKey);
     }
 
+    public WorkflowDecision getDecisionToRun() {
+        return this.latestDecisionForNode(this.getRuntimeData().getWorkflowNodeKey());
+    }
+
     public <T> Optional<T> var(String key, Class<T> type) {
         Object value = data.get(key);
         if (type.isInstance(value)) {

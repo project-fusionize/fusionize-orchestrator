@@ -212,7 +212,7 @@ class OrchestratorTest {
 
     @Test
     void orchestrate() throws InterruptedException, IOException {
-        loadWorkflow("/email-workflow.yml");
+        loadWorkflow("/email-workflow-with-fork.yml");
 
         // Simulate asynchronous email arrivals
         Thread.sleep(200);
