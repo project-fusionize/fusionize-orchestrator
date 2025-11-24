@@ -2,6 +2,7 @@ package dev.fusionize.workflow.context;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class WorkflowDecision {
     private String decisionNode;
@@ -36,5 +37,18 @@ public class WorkflowDecision {
                 "decisionNode='" + decisionNode + '\'' +
                 ", optionNodes=" + optionNodes +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        WorkflowDecision that = (WorkflowDecision) o;
+        return Objects.equals(decisionNode, that.decisionNode) && Objects.equals(optionNodes, that.optionNodes);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(decisionNode, optionNodes);
     }
 }

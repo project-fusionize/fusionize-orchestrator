@@ -178,10 +178,41 @@ public class JoinComponent implements LocalComponentRuntime {
         }
 
         // Merge Decisions and GraphNodes (Append all)
+        // Merge Decisions and GraphNodes (Deduplicate by ID)
+        Map<String, dev.fusionize.workflow.context.WorkflowDecision> decisionsMap = new java.util.HashMap<>();
+        Map<String, dev.fusionize.workflow.context.WorkflowGraphNode> graphNodesMap = new java.util.HashMap<>();
+
         for (Context ctx : contexts) {
-            mergedContext.getDecisions().addAll(ctx.getDecisions());
-            mergedContext.getGraphNodes().addAll(ctx.getGraphNodes());
+            if (ctx.getDecisions() != null) {
+                for (dev.fusionize.workflow.context.WorkflowDecision d : ctx.getDecisions()) {
+                    decisionsMap.putIfAbsent(d.getDecisionNode(), d);
+                }
+            }
+            if (ctx.getGraphNodes() != null) {
+                for (dev.fusionize.workflow.context.WorkflowGraphNode n : ctx.getGraphNodes()) {
+                    graphNodesMap.compute(n.getNode(), (key, existing) -> {
+                        if (existing == null) {
+                            return n;
+                        } else {
+                            // Merge parents
+                            List<String> mergedParents = new ArrayList<>(existing.getParents());
+                            if (n.getParents() != null) {
+                                for (String parent : n.getParents()) {
+                                    if (!mergedParents.contains(parent)) {
+                                        mergedParents.add(parent);
+                                    }
+                                }
+                            }
+                            existing.setParents(mergedParents);
+                            return existing;
+                        }
+                    });
+                }
+            }
         }
+
+        mergedContext.getDecisions().addAll(decisionsMap.values());
+        mergedContext.getGraphNodes().addAll(graphNodesMap.values());
 
         return mergedContext;
     }
