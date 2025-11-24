@@ -5,6 +5,7 @@ import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
+import dev.fusionize.workflow.context.ContextRuntimeData;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -56,7 +57,7 @@ public class ComponentRuntimeEngine {
 
         ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
         CompletableFuture.runAsync(() -> runtime.canActivate(
-                activationRequestEvent.getContext(),
+                getContext(activationRequestEvent),
                 new ComponentUpdateEmitter() {
                     @Override
                     public void success(Context updatedContext) {
@@ -96,6 +97,15 @@ public class ComponentRuntimeEngine {
         return null;
     }
 
+    private Context getContext(OrchestrationEvent orchestrationEvent) {
+        Context context = orchestrationEvent.getContext().renew();
+        context.setRuntimeData(ContextRuntimeData.from(
+                orchestrationEvent.getOrchestrationEventContext().workflowExecution(),
+                orchestrationEvent.getOrchestrationEventContext().nodeExecution()
+        ));
+        return context;
+    }
+
     public InvocationResponseEvent invokeComponent(InvocationRequestEvent invocationRequestEvent) {
         Optional<ComponentRuntime> optionalWorkflowComponentRuntime = getRuntimeComponent(invocationRequestEvent);
         if (optionalWorkflowComponentRuntime.isEmpty()) {
@@ -108,7 +118,7 @@ public class ComponentRuntimeEngine {
         Supplier<InvocationResponseEvent> supplier = () -> InvocationResponseEvent.from(
                 this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
         CompletableFuture.runAsync(() -> runtime.run(
-                invocationRequestEvent.getContext(),
+                getContext(invocationRequestEvent),
                 new ComponentUpdateEmitter() {
                     @Override
                     public void success(Context updatedContext) {

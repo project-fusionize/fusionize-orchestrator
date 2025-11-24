@@ -1,10 +1,13 @@
 package dev.fusionize.workflow.component.local.beans;
 
+import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.WorkflowNodeExecutionState;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.context.WorkflowGraphNode;
+import dev.fusionize.workflow.registry.WorkflowExecutionRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,13 +26,39 @@ class JoinComponentTest {
     private JoinComponent joinComponent;
     private Context context;
     private TestEmitter emitter;
+    private WorkflowExecutionRegistry registry;
+    private WorkflowExecution workflowExecution;
+    private List<WorkflowNodeExecution> nodeExecutions;
 
     @BeforeEach
     void setUp() {
-        joinComponent = new JoinComponent();
+        nodeExecutions = new ArrayList<>();
+        workflowExecution = new WorkflowExecution() {
+            @Override
+            public List<WorkflowNodeExecution> findNodesByWorkflowNodeId(String workflowNodeId) {
+                return new ArrayList<>(nodeExecutions);
+            }
+        };
+
+        registry = new WorkflowExecutionRegistry() {
+            @Override
+            public WorkflowExecution getWorkflowExecution(String id) {
+                return workflowExecution;
+            }
+
+            @Override
+            public WorkflowExecution register(WorkflowExecution workflowExecution) {
+                return workflowExecution;
+            }
+        };
+
+        joinComponent = new JoinComponent(registry);
         context = new Context();
-        context.set("_executionId", "testExecId");
-        context.set("_nodeId", "testNodeId");
+        dev.fusionize.workflow.context.ContextRuntimeData runtimeData = new dev.fusionize.workflow.context.ContextRuntimeData();
+        runtimeData.setWorkflowExecutionId("testExecId");
+        runtimeData.setWorkflowNodeId("testNodeId");
+        runtimeData.setWorkflowNodeExecutionId("testNodeExecId");
+        context.setRuntimeData(runtimeData);
         emitter = new TestEmitter();
     }
 
@@ -85,11 +114,20 @@ class JoinComponentTest {
         assertFalse(emitter.successCalled);
     }
 
+    private void registerExecution(Context ctx) {
+        WorkflowNodeExecution ne = new WorkflowNodeExecution();
+        ne.setStageContext(ctx);
+        ne.setWorkflowNodeExecutionId(ctx.getRuntimeData().getWorkflowNodeExecutionId());
+        ne.setWorkflowNodeId(ctx.getRuntimeData().getWorkflowNodeId());
+        nodeExecutions.add(ne);
+    }
+
     @Test
     void testRun_AllAwaitedNodesPresent() {
         configureComponent(List.of("A", "B"));
         addNodeToContext(context, "A", Collections.emptyList());
         addNodeToContext(context, "B", Collections.emptyList());
+        registerExecution(context);
 
         joinComponent.run(context, emitter);
         assertTrue(emitter.successCalled);
@@ -104,6 +142,7 @@ class JoinComponentTest {
         addNodeToContext(context, "B", Collections.emptyList());
         addNodeToContext(context, "C", List.of("A"));
         addNodeToContext(context, "D", List.of("B"));
+        registerExecution(context);
 
         joinComponent.run(context, emitter);
         assertTrue(emitter.successCalled);
@@ -115,20 +154,28 @@ class JoinComponentTest {
 
         // First call with Context A (missing B)
         Context contextA = new Context();
-        contextA.set("_executionId", "exec1");
-        contextA.set("_nodeId", "join1");
+        dev.fusionize.workflow.context.ContextRuntimeData runtimeDataA = new dev.fusionize.workflow.context.ContextRuntimeData();
+        runtimeDataA.setWorkflowExecutionId("exec1");
+        runtimeDataA.setWorkflowNodeId("join1");
+        runtimeDataA.setWorkflowNodeExecutionId("execA");
+        contextA.setRuntimeData(runtimeDataA);
         contextA.set("varA", "valA");
         addNodeToContext(contextA, "A", Collections.emptyList());
+        registerExecution(contextA);
 
         joinComponent.run(contextA, emitter);
         assertFalse(emitter.successCalled);
 
         // Second call with Context B (missing A)
         Context contextB = new Context();
-        contextB.set("_executionId", "exec1");
-        contextB.set("_nodeId", "join1");
+        dev.fusionize.workflow.context.ContextRuntimeData runtimeDataB = new dev.fusionize.workflow.context.ContextRuntimeData();
+        runtimeDataB.setWorkflowExecutionId("exec1");
+        runtimeDataB.setWorkflowNodeId("join1");
+        runtimeDataB.setWorkflowNodeExecutionId("execB");
+        contextB.setRuntimeData(runtimeDataB);
         contextB.set("varB", "valB");
         addNodeToContext(contextB, "B", Collections.emptyList());
+        registerExecution(contextB);
 
         joinComponent.run(contextB, emitter);
         assertTrue(emitter.successCalled);
@@ -144,18 +191,26 @@ class JoinComponentTest {
         configureComponent(List.of("A", "B")); // Default is PICK_LAST
 
         Context contextA = new Context();
-        contextA.set("_executionId", "exec2");
-        contextA.set("_nodeId", "join2");
+        dev.fusionize.workflow.context.ContextRuntimeData runtimeDataA = new dev.fusionize.workflow.context.ContextRuntimeData();
+        runtimeDataA.setWorkflowExecutionId("exec2");
+        runtimeDataA.setWorkflowNodeId("join2");
+        runtimeDataA.setWorkflowNodeExecutionId("execA");
+        contextA.setRuntimeData(runtimeDataA);
         contextA.set("shared", "valA");
         addNodeToContext(contextA, "A", Collections.emptyList());
+        registerExecution(contextA);
 
         joinComponent.run(contextA, emitter);
 
         Context contextB = new Context();
-        contextB.set("_executionId", "exec2");
-        contextB.set("_nodeId", "join2");
+        dev.fusionize.workflow.context.ContextRuntimeData runtimeDataB = new dev.fusionize.workflow.context.ContextRuntimeData();
+        runtimeDataB.setWorkflowExecutionId("exec2");
+        runtimeDataB.setWorkflowNodeId("join2");
+        runtimeDataB.setWorkflowNodeExecutionId("execB");
+        contextB.setRuntimeData(runtimeDataB);
         contextB.set("shared", "valB");
         addNodeToContext(contextB, "B", Collections.emptyList());
+        registerExecution(contextB);
 
         joinComponent.run(contextB, emitter);
         assertTrue(emitter.successCalled);

@@ -7,6 +7,7 @@ import dev.fusionize.workflow.component.local.LocalComponentRuntime;
 import dev.fusionize.workflow.component.local.LocalComponentRuntimeFactory;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
+import dev.fusionize.workflow.context.ContextRuntimeData;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -72,7 +73,7 @@ public class OrchestratorComponentDispatcher {
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
         localComponentRuntime.configure(ne.getWorkflowNode().getComponentConfig());
         CompletableFuture.runAsync(
-                () -> localComponentRuntime.canActivate(ne.getStageContext().renew(), new ComponentUpdateEmitter() {
+                () -> localComponentRuntime.canActivate(getContext(we, ne), new ComponentUpdateEmitter() {
                     @Override
                     public void success(Context updatedContext) {
                         onSuccess.accept(we, ne);
@@ -110,16 +111,19 @@ public class OrchestratorComponentDispatcher {
         eventPublisher.publish(activationRequestEvent);
     }
 
+    private Context getContext(WorkflowExecution we, WorkflowNodeExecution ne) {
+        Context context = ne.getStageContext().renew();
+        context.setRuntimeData(ContextRuntimeData.from(we, ne));
+        return context;
+    }
+
     private void requestLocalInvocation(LocalComponentRuntime localComponentRuntime,
             WorkflowExecution we, WorkflowNodeExecution ne,
             BiConsumer<WorkflowExecution, WorkflowNodeExecution> onSuccess,
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
         localComponentRuntime.configure(ne.getWorkflowNode().getComponentConfig());
-        Context context = ne.getStageContext().renew();
-        context.set("_executionId", we.getWorkflowExecutionId());
-        context.set("_nodeId", ne.getWorkflowNodeId());
         CompletableFuture
-                .runAsync(() -> localComponentRuntime.run(context, new ComponentUpdateEmitter() {
+                .runAsync(() -> localComponentRuntime.run(getContext(we, ne), new ComponentUpdateEmitter() {
                     @Override
                     public void success(Context updatedContext) {
                         ne.setStageContext(updatedContext);

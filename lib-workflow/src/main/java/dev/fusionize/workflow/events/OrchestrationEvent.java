@@ -114,7 +114,7 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
             Workflow workflow = workflowRegistry.getWorkflow(workflowId);
             WorkflowExecution workflowExecution = workflowExecutionRegistry.getWorkflowExecution(workflowExecutionId);
             workflowExecution.setWorkflow(workflow);
-            WorkflowNodeExecution workflowNodeExecution = workflowExecution.findNode(workflowNodeExecutionId);
+            WorkflowNodeExecution workflowNodeExecution = workflowExecution.findNodeByWorkflowNodeExecutionId(workflowNodeExecutionId);
             workflowNodeExecution.setWorkflowNode(workflow.findNode(workflowNodeId));
             this.orchestrationEventContext = new EventContext(workflowExecution, workflowNodeExecution);
 

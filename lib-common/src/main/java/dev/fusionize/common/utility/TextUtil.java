@@ -110,14 +110,6 @@ public class TextUtil {
                 fromSnakeCase(aNorm).toLowerCase(),
         };
 
-        System.out.println(
-                "Actual: " + Arrays.stream(actualForms).toList()
-        );
-
-        System.out.println(
-                "Expected: " + Arrays.stream(expectedForms).toList()
-        );
-
         // Cross-compare
         for (String e : expectedForms) {
             for (String a : actualForms) {

@@ -1,5 +1,7 @@
 package dev.fusionize.workflow.context;
 
+import org.springframework.data.annotation.Transient;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -11,6 +13,9 @@ public class Context {
     private ConcurrentHashMap<String, Object> data;
     private List<WorkflowDecision> decisions;
     private List<WorkflowGraphNode> graphNodes;
+
+    @Transient
+    private ContextRuntimeData runtimeData;
 
     public Context() {
         this.data = new ConcurrentHashMap<>();
@@ -101,6 +106,14 @@ public class Context {
 
     public void setGraphNodes(List<WorkflowGraphNode> graphNodes) {
         this.graphNodes = graphNodes;
+    }
+
+    public ContextRuntimeData getRuntimeData() {
+        return runtimeData;
+    }
+
+    public void setRuntimeData(ContextRuntimeData runtimeData) {
+        this.runtimeData = runtimeData;
     }
 
     public List<WorkflowGraphNodeRecursive> currentNodes() {

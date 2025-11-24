@@ -1,40 +1,65 @@
 package dev.fusionize.workflow.component.local.beans;
 
 import dev.fusionize.common.utility.TextUtil;
+import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.component.local.LocalComponentRuntime;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
+import dev.fusionize.workflow.context.WorkflowGraphNodeRecursive;
+import dev.fusionize.workflow.registry.WorkflowExecutionRegistry;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * JoinComponent handles the synchronization of multiple parallel execution
+ * paths in a workflow.
+ * It waits for a specified set of parent nodes to complete before merging their
+ * contexts and proceeding.
+ * <p>
+ * Configuration:
+ * <ul>
+ * <li>{@code await}: List of node IDs to wait for.</li>
+ * <li>{@code mergeStrategy}: Strategy to merge data from incoming contexts
+ * (PICK_FIRST or PICK_LAST).</li>
+ * </ul>
+ */
 public class JoinComponent implements LocalComponentRuntime {
-    // Key: executionId + ":" + nodeId -> List of Contexts
-    private static final ConcurrentHashMap<String, List<Context>> pendingJoins = new ConcurrentHashMap<>();
-
+    private final WorkflowExecutionRegistry workflowExecutionRegistry;
     public static final String CONF_MERGE_STRATEGY = "mergeStrategy";
     public static final String CONF_AWAIT = "await";
     private MergeStrategy mergeStrategy = MergeStrategy.PICK_LAST;
     private final List<String> awaits = new ArrayList<>();
 
+    public JoinComponent(WorkflowExecutionRegistry workflowExecutionRegistry) {
+        this.workflowExecutionRegistry = workflowExecutionRegistry;
+    }
+
+    /**
+     * Strategy for merging data when keys collide in incoming contexts.
+     */
     public enum MergeStrategy {
+        /**
+         * Retain the value from the first context encountered.
+         */
         PICK_FIRST,
+        /**
+         * Overwrite with the value from the last context encountered (default).
+         */
         PICK_LAST,
     }
 
     @Override
     public void configure(ComponentRuntimeConfig config) {
         config.varString(CONF_MERGE_STRATEGY)
-                .ifPresent(mergeStrategy -> this.mergeStrategy = TextUtil.matchesFlexible("PICK_LAST", mergeStrategy)
+                .ifPresent(strategy -> this.mergeStrategy = TextUtil.matchesFlexible("PICK_LAST", strategy)
                         ? MergeStrategy.PICK_LAST
                         : MergeStrategy.PICK_FIRST);
         config.varList(CONF_AWAIT).ifPresent(items -> awaits.addAll(
                 items.stream().filter(i -> i instanceof String).toList()));
-
     }
 
     @Override
@@ -58,22 +83,30 @@ public class JoinComponent implements LocalComponentRuntime {
             return;
         }
 
-        String executionId = context.varString("_executionId").orElse(null);
-        String nodeId = context.varString("_nodeId").orElse(null);
+        String executionId = context.getRuntimeData().getWorkflowExecutionId();
+        String nodeId = context.getRuntimeData().getWorkflowNodeId();
+        String currentExecutionNodeId = context.getRuntimeData().getWorkflowNodeExecutionId();
 
         if (executionId == null || nodeId == null) {
-            emitter.failure(new Exception("JoinComponent requires _executionId and _nodeId in context"));
+            emitter.failure(new Exception("JoinComponent requires WorkflowExecutionId and WorkflowNodeId in context"));
             return;
         }
 
-        String key = executionId + ":" + nodeId;
-        List<Context> contexts = pendingJoins.computeIfAbsent(key, k -> new CopyOnWriteArrayList<>());
-        contexts.add(context);
+        WorkflowExecution workflowExecution = workflowExecutionRegistry.getWorkflowExecution(executionId);
+        if (workflowExecution == null) {
+            emitter.failure(new Exception("JoinComponent requires WorkflowNodeExecution to exist"));
+            return;
+        }
 
+        List<WorkflowNodeExecution> matchingNodeExecution = workflowExecution.findNodesByWorkflowNodeId(nodeId);
+        List<Context> contexts = matchingNodeExecution.stream()
+                .map(WorkflowNodeExecution::getStageContext).toList();
+
+        emitter.logger().info("Found matching contexts: {}", contexts.size());
         // Check if ALL awaited nodes are in the history of the COMBINED contexts
         List<String> foundAwaitedNodes = new ArrayList<>();
         for (Context ctx : contexts) {
-            for (dev.fusionize.workflow.context.WorkflowGraphNodeRecursive node : ctx.currentNodes()) {
+            for (WorkflowGraphNodeRecursive node : ctx.currentNodes()) {
                 collectFoundAwaitedNodes(node, awaits, foundAwaitedNodes);
             }
         }
@@ -82,48 +115,85 @@ public class JoinComponent implements LocalComponentRuntime {
                 .count();
 
         if (allAwaitedNodesFound) {
-            // Merge logic
-            Context mergedContext = new Context();
-
-            // Merge Strategy for Data
-            if (mergeStrategy == MergeStrategy.PICK_FIRST) {
-                for (Context ctx : contexts) {
-                    for (Map.Entry<String, Object> entry : ctx.getData().entrySet()) {
-                        if (!mergedContext.contains(entry.getKey())) {
-                            mergedContext.set(entry.getKey(), entry.getValue());
-                        }
-                    }
-                }
-            } else { // PICK_LAST (Default)
-                for (Context ctx : contexts) {
-                    mergedContext.getData().putAll(ctx.getData());
-                }
+            if (!isLeaderExecution(matchingNodeExecution, currentExecutionNodeId, emitter)) {
+                return;
             }
 
-            // Merge Decisions and GraphNodes (Append all)
-            for (Context ctx : contexts) {
-                mergedContext.getDecisions().addAll(ctx.getDecisions());
-                mergedContext.getGraphNodes().addAll(ctx.getGraphNodes());
-            }
-
-            // Clean up
-            pendingJoins.remove(key);
-
+            Context mergedContext = mergeContexts(contexts);
             emitter.success(mergedContext);
         }
         // If not all found, we just wait (do nothing, effectively holding the context
         // in the map)
     }
 
-    private boolean isNodeInHistory(dev.fusionize.workflow.context.WorkflowGraphNodeRecursive node,
-            List<String> targets) {
+    /**
+     * Determines if the current execution is the "leader" responsible for emitting
+     * the merged context.
+     * This prevents multiple emissions when multiple parents finish concurrently.
+     *
+     * @param matchingExecutions List of all concurrent executions for this Join
+     *                           node.
+     * @param currentId          The ID of the current execution.
+     * @param emitter            The emitter for logging.
+     * @return true if this is the leader, false otherwise.
+     */
+    private boolean isLeaderExecution(List<WorkflowNodeExecution> matchingExecutions, String currentId,
+            ComponentUpdateEmitter emitter) {
+        String leaderId = matchingExecutions.stream()
+                .map(WorkflowNodeExecution::getWorkflowNodeExecutionId)
+                .max(String::compareTo)
+                .orElse(null);
+
+        if (leaderId != null && !leaderId.equals(currentId)) {
+            emitter.logger().info("Not the leader execution. Current: {}, Leader: {}. Skipping emission.",
+                    currentId, leaderId);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Merges multiple contexts into a single context based on the configured
+     * strategy.
+     *
+     * @param contexts List of contexts to merge.
+     * @return A new merged Context.
+     */
+    private Context mergeContexts(List<Context> contexts) {
+        Context mergedContext = new Context();
+
+        // Merge Data
+        if (mergeStrategy == MergeStrategy.PICK_FIRST) {
+            for (Context ctx : contexts) {
+                for (Map.Entry<String, Object> entry : ctx.getData().entrySet()) {
+                    if (!mergedContext.contains(entry.getKey())) {
+                        mergedContext.set(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
+        } else { // PICK_LAST (Default)
+            for (Context ctx : contexts) {
+                mergedContext.getData().putAll(ctx.getData());
+            }
+        }
+
+        // Merge Decisions and GraphNodes (Append all)
+        for (Context ctx : contexts) {
+            mergedContext.getDecisions().addAll(ctx.getDecisions());
+            mergedContext.getGraphNodes().addAll(ctx.getGraphNodes());
+        }
+
+        return mergedContext;
+    }
+
+    private boolean isNodeInHistory(WorkflowGraphNodeRecursive node, List<String> targets) {
         if (targets.contains(node.getNode())) {
             return true;
         }
         if (node.getParents() == null || node.getParents().isEmpty()) {
             return false;
         }
-        for (dev.fusionize.workflow.context.WorkflowGraphNodeRecursive parent : node.getParents()) {
+        for (WorkflowGraphNodeRecursive parent : node.getParents()) {
             if (isNodeInHistory(parent, targets)) {
                 return true;
             }
@@ -131,13 +201,12 @@ public class JoinComponent implements LocalComponentRuntime {
         return false;
     }
 
-    private void collectFoundAwaitedNodes(dev.fusionize.workflow.context.WorkflowGraphNodeRecursive node,
-            List<String> targets, List<String> found) {
+    private void collectFoundAwaitedNodes(WorkflowGraphNodeRecursive node, List<String> targets, List<String> found) {
         if (targets.contains(node.getNode())) {
             found.add(node.getNode());
         }
         if (node.getParents() != null) {
-            for (dev.fusionize.workflow.context.WorkflowGraphNodeRecursive parent : node.getParents()) {
+            for (WorkflowGraphNodeRecursive parent : node.getParents()) {
                 collectFoundAwaitedNodes(parent, targets, found);
             }
         }

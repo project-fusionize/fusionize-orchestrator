@@ -21,6 +21,7 @@ import dev.fusionize.workflow.events.EventStore;
 import dev.fusionize.workflow.logging.WorkflowLogRepository;
 import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import dev.fusionize.workflow.repo.WorkflowExecutionRepository;
+import dev.fusionize.workflow.repo.WorkflowRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -140,6 +141,8 @@ class OrchestratorTest {
     WorkflowRepoRegistry workflowRegistry;
 
     @Autowired
+    WorkflowRepository workflowRepository;
+    @Autowired
     WorkflowLogRepository workflowLogRepository;
     @Autowired
     WorkflowExecutionRepository workflowExecutionRepository;
@@ -148,6 +151,9 @@ class OrchestratorTest {
 
     @BeforeEach
     public void setUp() throws IOException {
+        workflowRepository.deleteAll();
+        workflowExecutionRepository.deleteAll();
+
         // Inbox shared across async threads (thread-safe list)
         inbox = new CopyOnWriteArrayList<>();
 
@@ -313,12 +319,12 @@ class OrchestratorTest {
         Thread.sleep(200);
         String worklog = "Receiving First Email";
         logger.info(worklog);
-        inbox.add("test email route 1");
+        inbox.add("First Email Content");
 
         Thread.sleep(500);
         worklog = "Receiving Second Email";
         logger.info(worklog);
-        inbox.add("test email route 2");
+        inbox.add("Second Email Content");
 
         Thread.sleep(2000);
 
@@ -353,8 +359,8 @@ class OrchestratorTest {
 
         List<String> expectedMessages = List.of(
                 "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime activated",
-                "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime handle email: test email route 1 from incoming@email.com",
-                "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime handle email: test email route 2 from incoming@email.com"
+                "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime handle email: First Email Content from incoming@email.com",
+                "start:test.receivedIncomingEmail: MockRecEmailComponentRuntime handle email: Second Email Content from incoming@email.com"
         );
         assertEquals(expectedMessages.size(), idleLogs.size(), "Log count mismatch");
         for (int i = 0; i < expectedMessages.size(); i++) {
@@ -364,40 +370,36 @@ class OrchestratorTest {
                     "Expected log at index " + i + " to end with: " + expected + "\nActual: " + actual);
         }
 
-        expectedMessages = List.of(
-                "decision:test.emailDecision: MockSendEmailDecisionComponent activated",
-                "decision:test.emailDecision: Decision made to route email: {outgoing1=true, outgoing2=false}",
-                "task:test.sendEmail: MockSendEmailComponent activated",
-                "task:test.sendEmail: sending email to outgoing1@email.com",
-                "task:test.sendEmail: BODY: test email route 1",
-                "delay: sleeping 500 milliseconds",
-                "end:test.endEmailWorkflow: MockEndEmailComponent activated",
-                "end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500"
+        Map<String, Integer> expectedMessagesMap = Map.of(
+                "task:test.sendEmail: MockSendEmailComponent activated", 3,
+                "task:test.sendEmail: sending email to outgoing1@email.com", 1,
+                "task:test.sendEmail: sending email to outgoing2@email.com", 1,
+                "task:test.sendEmail: sending email to outgoing3@email.com", 1,
+                "task:test.sendEmail: BODY: First Email Content",3,
+                "end:test.endEmailWorkflow: MockEndEmailComponent activated", 1,
+                "end:test.endEmailWorkflow: ComponentFinishedEvent finished after -1", 1
         );
-        assertEquals(expectedMessages.size(), firsRunLogs.size(), "Log count mismatch");
-        for (int i = 0; i < expectedMessages.size(); i++) {
-            String expected = expectedMessages.get(i);
-            String actual = firsRunLogs.get(i).toString();
-            assertTrue(actual.endsWith(expected),
-                    "Expected log at index " + i + " to end with: " + expected + "\nActual: " + actual);
+        for (String key : expectedMessagesMap.keySet()) {
+            long expected = expectedMessagesMap.get(key);
+            long actual = firsRunLogs.stream().filter(m->m.toString().endsWith(key)).count();
+            assertEquals(expected, actual,
+                    "Expected log line" + key + " to appear: " + expected + "(times) Actual: " + actual);
         }
 
-        expectedMessages = List.of(
-                "decision:test.emailDecision: MockSendEmailDecisionComponent activated",
-                "decision:test.emailDecision: Decision made to route email: {outgoing1=false, outgoing2=true}",
-                "task:test.sendEmail: MockSendEmailComponent activated",
-                "task:test.sendEmail: sending email to outgoing2@email.com",
-                "task:test.sendEmail: BODY: test email route 2",
-                "delay: sleeping 500 milliseconds",
-                "end:test.endEmailWorkflow: MockEndEmailComponent activated",
-                "end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500"
+        expectedMessagesMap = Map.of(
+                "task:test.sendEmail: MockSendEmailComponent activated", 3,
+                "task:test.sendEmail: sending email to outgoing1@email.com", 1,
+                "task:test.sendEmail: sending email to outgoing2@email.com", 1,
+                "task:test.sendEmail: sending email to outgoing3@email.com", 1,
+                "task:test.sendEmail: BODY: Second Email Content",3,
+                "end:test.endEmailWorkflow: MockEndEmailComponent activated", 1,
+                "end:test.endEmailWorkflow: ComponentFinishedEvent finished after -1", 1
         );
-        assertEquals(expectedMessages.size(), lastRunLogs.size(), "Log count mismatch");
-        for (int i = 0; i < expectedMessages.size(); i++) {
-            String expected = expectedMessages.get(i);
-            String actual = lastRunLogs.get(i).toString();
-            assertTrue(actual.endsWith(expected),
-                    "Expected log at index " + i + " to end with: " + expected + "\nActual: " + actual);
+        for (String key : expectedMessagesMap.keySet()) {
+            long expected = expectedMessagesMap.get(key);
+            long actual = lastRunLogs.stream().filter(m->m.toString().endsWith(key)).count();
+            assertEquals(expected, actual,
+                    "Expected log line" + key + " to appear: " + expected + "(times) Actual: " + actual);
         }
     }
 
@@ -516,9 +518,14 @@ class OrchestratorTest {
 
         @Override
         public void run(Context context, ComponentUpdateEmitter emitter) {
-            emitter.logger().info("sending email to {}", address);
-            emitter.logger().info("BODY: {}", context.varString("email_message").orElse(""));
-            emitter.success(context);
+            try {
+                emitter.logger().info("sending email to {}", address);
+                Thread.sleep(10);
+                emitter.logger().info("BODY: {}", context.varString("email_message").orElse(""));
+                emitter.success(context);
+            } catch (InterruptedException e) {
+                emitter.failure(e);
+            }
         }
 
     }
