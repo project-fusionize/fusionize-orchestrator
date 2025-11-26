@@ -11,6 +11,7 @@ import dev.fusionize.workflow.context.WorkflowGraphNodeRecursive;
 import dev.fusionize.workflow.registry.WorkflowExecutionRegistry;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -30,8 +31,14 @@ import java.util.Map;
 public class JoinComponent implements LocalComponentRuntime {
     private final WorkflowExecutionRegistry workflowExecutionRegistry;
     public static final String CONF_MERGE_STRATEGY = "mergeStrategy";
+    public static final String CONF_WAIT_MODE = "waitMode";
+    public static final String CONF_THRESHOLD_CT = "thresholdCount";
+
     public static final String CONF_AWAIT = "await";
     private MergeStrategy mergeStrategy = MergeStrategy.PICK_LAST;
+    private WaitMode waitMode = WaitMode.ALL;
+    private int thresholdCount = 1;
+
     private final List<String> awaits = new ArrayList<>();
 
     public JoinComponent(WorkflowExecutionRegistry workflowExecutionRegistry) {
@@ -52,14 +59,27 @@ public class JoinComponent implements LocalComponentRuntime {
         PICK_LAST,
     }
 
+    public enum WaitMode {
+        ALL,
+        ANY,
+        THRESHOLD
+    }
+
     @Override
     public void configure(ComponentRuntimeConfig config) {
         config.varString(CONF_MERGE_STRATEGY)
                 .ifPresent(strategy -> this.mergeStrategy = TextUtil.matchesFlexible("PICK_LAST", strategy)
                         ? MergeStrategy.PICK_LAST
                         : MergeStrategy.PICK_FIRST);
+        config.varString(CONF_WAIT_MODE)
+                .ifPresent(mode -> this.waitMode = TextUtil.matchesFlexible("THRESHOLD", mode)
+                        ? WaitMode.THRESHOLD
+                        : (TextUtil.matchesFlexible("ANY", mode)
+                                ? WaitMode.ANY
+                                : WaitMode.ALL));
         config.varList(CONF_AWAIT).ifPresent(items -> awaits.addAll(
                 items.stream().filter(i -> i instanceof String).toList()));
+        config.varInt(CONF_THRESHOLD_CT).ifPresent(c -> thresholdCount = c);
     }
 
     @Override
@@ -99,57 +119,63 @@ public class JoinComponent implements LocalComponentRuntime {
         }
 
         List<WorkflowNodeExecution> matchingNodeExecution = workflowExecution.findNodesByWorkflowNodeId(nodeId);
-        List<Context> contexts = matchingNodeExecution.stream()
-                .map(WorkflowNodeExecution::getStageContext).toList();
 
-        emitter.logger().info("Found matching contexts: {}", contexts.size());
-        // Check if ALL awaited nodes are in the history of the COMBINED contexts
-        List<String> foundAwaitedNodes = new ArrayList<>();
-        for (Context ctx : contexts) {
+        // Sort executions by ID to ensure deterministic processing order
+        matchingNodeExecution.sort(Comparator.comparing(WorkflowNodeExecution::getWorkflowNodeExecutionId));
+
+        List<Context> contextsToMerge = new ArrayList<>();
+        List<String> satisfiedAwaits = new ArrayList<>();
+        String triggerExecutionId = null;
+
+        for (WorkflowNodeExecution exec : matchingNodeExecution) {
+            Context ctx = exec.getStageContext();
+            contextsToMerge.add(ctx);
+
+            // Collect awaited nodes found in this execution's history
             for (WorkflowGraphNodeRecursive node : ctx.currentNodes()) {
-                collectFoundAwaitedNodes(node, awaits, foundAwaitedNodes);
+                collectFoundAwaitedNodes(node, awaits, satisfiedAwaits);
+            }
+
+            // Check if condition is met with the accumulated executions so far
+            if (isConditionMet(satisfiedAwaits)) {
+                triggerExecutionId = exec.getWorkflowNodeExecutionId();
+                break;
             }
         }
 
-        boolean allAwaitedNodesFound = foundAwaitedNodes.stream().distinct().count() == awaits.stream().distinct()
-                .count();
+        if (triggerExecutionId != null) {
+            // If the condition is met, we check if WE are the one who triggered it (or the
+            // representative for it)
+            // The triggerExecutionId corresponds to the execution that *completed* the
+            // condition.
+            // Since we sorted by ID, this is the "earliest" set of executions that
+            // satisfies the condition.
 
-        if (allAwaitedNodesFound) {
-            if (!isLeaderExecution(matchingNodeExecution, currentExecutionNodeId, emitter)) {
-                return;
+            if (triggerExecutionId.equals(currentExecutionNodeId)) {
+                Context mergedContext = mergeContexts(contextsToMerge);
+                emitter.success(mergedContext);
+            } else {
+                emitter.logger().info("Condition met by earlier execution {}. Current {} skipping.", triggerExecutionId,
+                        currentExecutionNodeId);
             }
-
-            Context mergedContext = mergeContexts(contexts);
-            emitter.success(mergedContext);
+        } else {
+            emitter.logger().info("Wait condition not yet met. Awaited: {}, Found: {}, Mode: {}", awaits,
+                    satisfiedAwaits.stream().distinct().toList(), waitMode);
         }
-        // If not all found, we just wait (do nothing, effectively holding the context
-        // in the map)
     }
 
-    /**
-     * Determines if the current execution is the "leader" responsible for emitting
-     * the merged context.
-     * This prevents multiple emissions when multiple parents finish concurrently.
-     *
-     * @param matchingExecutions List of all concurrent executions for this Join
-     *                           node.
-     * @param currentId          The ID of the current execution.
-     * @param emitter            The emitter for logging.
-     * @return true if this is the leader, false otherwise.
-     */
-    private boolean isLeaderExecution(List<WorkflowNodeExecution> matchingExecutions, String currentId,
-            ComponentUpdateEmitter emitter) {
-        String leaderId = matchingExecutions.stream()
-                .map(WorkflowNodeExecution::getWorkflowNodeExecutionId)
-                .max(String::compareTo)
-                .orElse(null);
+    private boolean isConditionMet(List<String> satisfiedAwaits) {
+        long uniqueFound = satisfiedAwaits.stream().distinct().count();
 
-        if (leaderId != null && !leaderId.equals(currentId)) {
-            emitter.logger().info("Not the leader execution. Current: {}, Leader: {}. Skipping emission.",
-                    currentId, leaderId);
-            return false;
+        switch (waitMode) {
+            case ANY:
+                return uniqueFound >= 1;
+            case THRESHOLD:
+                return uniqueFound >= thresholdCount;
+            case ALL:
+            default:
+                return uniqueFound == awaits.stream().distinct().count();
         }
-        return true;
     }
 
     /**

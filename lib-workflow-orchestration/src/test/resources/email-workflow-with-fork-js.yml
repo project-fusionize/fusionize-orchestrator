@@ -16,11 +16,13 @@ nodes:
 
   emailDecision:
     type: DECISION
-    component: decision:test.emailDecision
+    component: fork
     componentConfig:
-      routeMap:
-        route 1: outgoing1
-        route 2: outgoing2
+      parser: js
+      default: outgoing1
+      conditions:
+        outgoing1: email_message.includes("route 1")
+        outgoing2: email_message.includes("route 2")
     next: [outgoing1, outgoing2]
 
   outgoing1:

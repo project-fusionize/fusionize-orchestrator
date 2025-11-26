@@ -1,0 +1,100 @@
+kind: Workflow
+apiVersion: v1
+name: Email Routing Workflow
+domain: fusionize.demo
+key: email-routing-demo
+description: Demonstrates Script, Fork, and Join components
+version: 1
+active: true
+
+nodes:
+
+  start:
+    type: START
+    component: start:test.receivedIncomingEmail
+    componentConfig:
+      address: incoming@fusionize.dev
+    next: [extractFields]
+
+  extractFields:
+    type: TASK
+    component: script
+    componentConfig:
+      parser: js
+      script: |
+        // Parse the email text and determine its traits
+        let lower = email_message.toLowerCase();
+        context["isBilling"] = lower.includes("invoice") || lower.includes("billing");
+        context["isSupport"] = lower.includes("help") || lower.includes("support");
+        context["isSales"]   = lower.includes("quote") || lower.includes("pricing");
+        print(JSON.stringify(context))
+    next: [forkRoute]
+
+  forkRoute:
+    type: DECISION
+    component: fork
+    componentConfig:
+      parser: spel   # using SpEL first, can switch to js or groovy
+      default: salesRoute
+      conditions:
+        billingRoute: "#isBilling == true"
+        supportRoute: "#isSupport == true"
+        salesRoute:   "#isSales == true"
+    next: [billingRoute, supportRoute, salesRoute]
+
+  billingRoute:
+    type: TASK
+    component: task:test.sendEmail
+    componentConfig:
+      address: billing-team@fusionize.dev
+    next: [billingWait]
+
+  supportRoute:
+    type: TASK
+    component: task:test.sendEmail
+    componentConfig:
+      address: support-team@fusionize.dev
+    next: [supportWait]
+
+  salesRoute:
+    type: TASK
+    component: task:test.sendEmail
+    componentConfig:
+      address: sales-team@fusionize.dev
+    next: [salesWait]
+
+  billingWait:
+    type: WAIT
+    component: delay
+    componentConfig:
+      delay: 120
+    next: [joinAll]
+
+  supportWait:
+    type: WAIT
+    component: delay
+    componentConfig:
+      delay: 180
+    next: [joinAll]
+
+  salesWait:
+    type: WAIT
+    component: delay
+    componentConfig:
+      delay: 300
+    next: [joinAll]
+
+  joinAll:
+    type: WAIT
+    component: join
+    componentConfig:
+      await: [billingWait, supportWait, salesWait]
+      waitMode: threshold
+      thresholdCount: 2
+      mergeStrategy: pickLast
+    next: [end]
+
+  end:
+    type: END
+    component: end:test.endEmailWorkflow
+    next: []

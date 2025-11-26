@@ -18,9 +18,10 @@ nodes:
     type: DECISION
     component: fork
     componentConfig:
+      default: outgoing1
       conditions:
-        outgoing1: email_message.includes("route 1")
-        outgoing2: email_message.includes("route 2")
+        outgoing1: "#email_message.contains('route 1')"
+        outgoing2: "#email_message.contains('route 2')"
     next: [outgoing1, outgoing2]
 
   outgoing1:
