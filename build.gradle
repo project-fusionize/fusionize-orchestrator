@@ -28,7 +28,6 @@ subprojects {
         mavenCentral()
     }
     tasks.named('test') {
-        maxParallelForks = 1;
         useJUnitPlatform()
         testLogging {
             showStandardStreams = true
