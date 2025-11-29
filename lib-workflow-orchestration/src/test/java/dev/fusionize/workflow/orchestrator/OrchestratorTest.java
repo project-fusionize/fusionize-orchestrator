@@ -222,7 +222,7 @@ class OrchestratorTest {
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
-                logWorkflowLogs("DB logs ->\n{}", logs);
+                logWorkflowLogs("DB logs orchestrateWithScript ->\n{}", logs);
 
                 List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
                 assertEquals(3, workflowExecutions.size());
@@ -397,11 +397,15 @@ class OrchestratorTest {
                         long doneCount = executions.stream()
                                         .filter(we -> we.getStatus() == WorkflowExecutionStatus.SUCCESS)
                                         .count();
+                        logger.info("waitForWorkflowCompletion {} / {} done", doneCount, executions.size());
                         if (doneCount >= expectedDoneCount) {
+                                logger.info("waitForWorkflowCompletion -> done");
                                 return;
                         }
                         Thread.sleep(1000);
                 }
+                logger.info("waitForWorkflowCompletion time out {}", timeoutSeconds);
+
         }
 
         @Test
@@ -419,7 +423,7 @@ class OrchestratorTest {
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
-                logWorkflowLogs("DB logs ->\n{}", logs);
+                logWorkflowLogs("DB logs orchestrateWithForkJs ->\n{}", logs);
 
                 List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
                 assertEquals(3, workflowExecutions.size());
@@ -510,7 +514,7 @@ class OrchestratorTest {
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
-                logWorkflowLogs("DB logs ->\n{}", logs);
+                logWorkflowLogs("DB logs orchestrateWithFork ->\n{}", logs);
 
                 List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
                 assertEquals(3, workflowExecutions.size());
@@ -602,7 +606,7 @@ class OrchestratorTest {
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
-                logWorkflowLogs("DB logs ->\n{}", logs);
+                logWorkflowLogs("DB logs orchestrateParallelPickLast ->\n{}", logs);
 
                 List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
                 assertEquals(3, workflowExecutions.size());
@@ -728,7 +732,7 @@ class OrchestratorTest {
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
-                logWorkflowLogs("DB logs ->\n{}", logs);
+                logWorkflowLogs("DB logs orchestrateParallelPickFirst ->\n{}", logs);
                 List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
                 assertEquals(3, workflowExecutions.size());
                 List<WorkflowExecution> done = workflowExecutions.stream()
