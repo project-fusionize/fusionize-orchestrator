@@ -19,6 +19,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import java.util.concurrent.ExecutorService;
+
 @Service
 public class ComponentRuntimeEngine {
     public static final String ERR_CODE_COMP_NOT_FOUND = "(wcre101) Runtime component not found";
@@ -26,13 +29,16 @@ public class ComponentRuntimeEngine {
     private final ComponentRuntimeRegistry componentRuntimeRegistry;
     private final EventPublisher<Event> eventPublisher;
     private final WorkflowLogger workflowLogger;
+    private final ExecutorService executor;
 
     public ComponentRuntimeEngine(ComponentRuntimeRegistry componentRuntimeRegistry,
             EventPublisher<Event> eventPublisher,
-            WorkflowLogger workflowLogger) {
+            WorkflowLogger workflowLogger,
+            @Qualifier("componentExecutor") ExecutorService executor) {
         this.componentRuntimeRegistry = componentRuntimeRegistry;
         this.eventPublisher = eventPublisher;
         this.workflowLogger = workflowLogger;
+        this.executor = executor;
     }
 
     private Optional<ComponentRuntime> getRuntimeComponent(OrchestrationEvent orchestrationEvent) {
@@ -85,7 +91,7 @@ public class ComponentRuntimeEngine {
                         };
                     }
 
-                })).whenComplete((result, throwable) -> {
+                }), executor).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         ActivationResponseEvent responseEvent = supplier.get();
                         responseEvent.setException(
@@ -101,8 +107,7 @@ public class ComponentRuntimeEngine {
         Context context = orchestrationEvent.getContext().renew();
         context.setRuntimeData(ContextRuntimeData.from(
                 orchestrationEvent.getOrchestrationEventContext().workflowExecution(),
-                orchestrationEvent.getOrchestrationEventContext().nodeExecution()
-        ));
+                orchestrationEvent.getOrchestrationEventContext().nodeExecution()));
         return context;
     }
 
@@ -145,7 +150,7 @@ public class ComponentRuntimeEngine {
                                     oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
                         };
                     }
-                })).whenComplete((result, throwable) -> {
+                }), executor).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         InvocationResponseEvent responseEvent = supplier.get();
                         responseEvent.setException(

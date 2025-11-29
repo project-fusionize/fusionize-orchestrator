@@ -23,6 +23,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import java.util.concurrent.ExecutorService;
+
 @Component
 public class OrchestratorComponentDispatcher {
 
@@ -30,13 +33,16 @@ public class OrchestratorComponentDispatcher {
     private final EventPublisher<Event> eventPublisher;
     private final List<LocalComponentRuntimeFactory<? extends LocalComponentRuntime>> localComponentRuntimeFactories;
     private final WorkflowLogger workflowLogger;
+    private final ExecutorService executor;
 
     public OrchestratorComponentDispatcher(EventPublisher<Event> eventPublisher,
             List<LocalComponentRuntimeFactory<? extends LocalComponentRuntime>> localComponentRuntimeFactories,
-            WorkflowLogRepoLogger workflowLogger) {
+            WorkflowLogRepoLogger workflowLogger,
+            @Qualifier("componentExecutor") ExecutorService executor) {
         this.eventPublisher = eventPublisher;
         this.localComponentRuntimeFactories = localComponentRuntimeFactories;
         this.workflowLogger = workflowLogger;
+        this.executor = executor;
     }
 
     public void dispatchActivation(WorkflowExecution we, WorkflowNodeExecution ne,
@@ -91,7 +97,7 @@ public class OrchestratorComponentDispatcher {
                                 ne.getWorkflowNode().getComponent(), level, message);
                     }
 
-                })).whenComplete((result, throwable) -> {
+                }), executor).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         onFailure.accept(new Exception(throwable), ne);
                     }
@@ -141,7 +147,7 @@ public class OrchestratorComponentDispatcher {
                                 we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
                                 ne.getWorkflowNode().getComponent(), level, message);
                     }
-                })).whenComplete((result, throwable) -> {
+                }), executor).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         onFailure.accept(new Exception(throwable), ne);
                     }

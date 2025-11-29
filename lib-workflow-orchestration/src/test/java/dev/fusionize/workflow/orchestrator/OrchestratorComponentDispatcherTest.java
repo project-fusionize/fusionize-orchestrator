@@ -18,6 +18,7 @@ import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
@@ -33,7 +34,9 @@ public class OrchestratorComponentDispatcherTest {
         eventPublisher = Mockito.mock(EventPublisher.class);
         localComponentRuntimeFactories = new ArrayList<>();
         WorkflowLogRepoLogger workflowLogger = Mockito.mock(WorkflowLogRepoLogger.class);
-        dispatcher = new OrchestratorComponentDispatcher(eventPublisher, localComponentRuntimeFactories, workflowLogger);
+        ExecutorService executor = Mockito.mock(ExecutorService.class);
+        dispatcher = new OrchestratorComponentDispatcher(eventPublisher, localComponentRuntimeFactories, workflowLogger,
+                executor);
     }
 
     @Test

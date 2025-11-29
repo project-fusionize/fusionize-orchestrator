@@ -5,10 +5,18 @@ import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 public class DelayComponent implements LocalComponentRuntime {
-    public static final String VAR_DELAYED= "delayed";
+    public static final String VAR_DELAYED = "delayed";
     public static final String CONF_DELAY = "delay";
     private int delay;
+
+    // Shared scheduler for all DelayComponent instances to avoid creating too many
+    // threads
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Override
     public void configure(ComponentRuntimeConfig config) {
@@ -23,14 +31,14 @@ public class DelayComponent implements LocalComponentRuntime {
 
     @Override
     public void run(Context context, ComponentUpdateEmitter emitter) {
-        try {
-            emitter.logger().info("sleeping {} milliseconds", delay);
-            Thread.sleep(delay);
-            context.set(VAR_DELAYED, delay);
-            emitter.success(context);
-        } catch (InterruptedException e) {
-            emitter.failure(e);
-        }
-
+        emitter.logger().info("scheduling delay of {} milliseconds", delay);
+        scheduler.schedule(() -> {
+            try {
+                context.set(VAR_DELAYED, delay);
+                emitter.success(context);
+            } catch (Exception e) {
+                emitter.failure(e);
+            }
+        }, delay, TimeUnit.MILLISECONDS);
     }
 }

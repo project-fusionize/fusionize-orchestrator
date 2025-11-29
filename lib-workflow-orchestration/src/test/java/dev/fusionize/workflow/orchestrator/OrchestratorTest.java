@@ -278,9 +278,9 @@ class OrchestratorTest {
                                 "task:test.sendEmail: sending email to support-team@fusionize.dev",
                                 "task:test.sendEmail: BODY: invoice help needed."));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("billingWait"), List.of(
-                                "delay: sleeping 120 milliseconds"));
+                                "delay: scheduling delay of 120 milliseconds"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("supportWait"), List.of(
-                                "delay: sleeping 180 milliseconds"));
+                                "delay: scheduling delay of 180 milliseconds"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("joinAll"), List.of(
                                 "join: Wait condition not yet met. Awaited: [billingWait, supportWait, salesWait], Found: [billingWait], Mode: THRESHOLD"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("end"), List.of(
@@ -310,9 +310,9 @@ class OrchestratorTest {
                                 "task:test.sendEmail: sending email to sales-team@fusionize.dev",
                                 "task:test.sendEmail: BODY: submitted the invoice pricing."));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("billingWait"), List.of(
-                                "delay: sleeping 120 milliseconds"));
+                                "delay: scheduling delay of 120 milliseconds"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("salesWait"), List.of(
-                                "delay: sleeping 300 milliseconds"));
+                                "delay: scheduling delay of 300 milliseconds"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("joinAll"), List.of(
                                 "join: Wait condition not yet met. Awaited: [billingWait, supportWait, salesWait], Found: [billingWait], Mode: THRESHOLD"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("end"), List.of(
@@ -469,7 +469,7 @@ class OrchestratorTest {
                                 "task:test.sendEmail: MockSendEmailComponent activated",
                                 "task:test.sendEmail: sending email to outgoing1@email.com",
                                 "task:test.sendEmail: BODY: test email route 1",
-                                "delay: sleeping 500 milliseconds",
+                                "delay: scheduling delay of 500 milliseconds",
                                 "end:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500");
                 assertEquals(expectedMessages.size(), firsRunLogs.size(), "Log count mismatch");
@@ -486,7 +486,7 @@ class OrchestratorTest {
                                 "task:test.sendEmail: MockSendEmailComponent activated",
                                 "task:test.sendEmail: sending email to outgoing2@email.com",
                                 "task:test.sendEmail: BODY: test email route 2",
-                                "delay: sleeping 500 milliseconds",
+                                "delay: scheduling delay of 500 milliseconds",
                                 "end:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500");
                 assertEquals(expectedMessages.size(), lastRunLogs.size(), "Log count mismatch");
@@ -560,7 +560,7 @@ class OrchestratorTest {
                                 "task:test.sendEmail: MockSendEmailComponent activated",
                                 "task:test.sendEmail: sending email to outgoing1@email.com",
                                 "task:test.sendEmail: BODY: test email route 1",
-                                "delay: sleeping 500 milliseconds",
+                                "delay: scheduling delay of 500 milliseconds",
                                 "end:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500");
                 assertEquals(expectedMessages.size(), firsRunLogs.size(), "Log count mismatch");
@@ -577,7 +577,7 @@ class OrchestratorTest {
                                 "task:test.sendEmail: MockSendEmailComponent activated",
                                 "task:test.sendEmail: sending email to outgoing2@email.com",
                                 "task:test.sendEmail: BODY: test email route 2",
-                                "delay: sleeping 500 milliseconds",
+                                "delay: scheduling delay of 500 milliseconds",
                                 "end:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "end:test.endEmailWorkflow: ComponentFinishedEvent finished after 500");
                 assertEquals(expectedMessages.size(), lastRunLogs.size(), "Log count mismatch");
@@ -661,11 +661,11 @@ class OrchestratorTest {
                                 "task:test.sendEmail: sending email to outgoing3@email.com",
                                 "task:test.sendEmail: BODY: First Email Content"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting1"), List.of(
-                                "delay: sleeping 120 milliseconds"));
+                                "delay: scheduling delay of 120 milliseconds"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting2"), List.of(
-                                "delay: sleeping 230 milliseconds"));
+                                "delay: scheduling delay of 230 milliseconds"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting3"), List.of(
-                                "delay: sleeping 300 milliseconds"));
+                                "delay: scheduling delay of 300 milliseconds"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("waitFor123"), List.of(
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1], Mode: ALL",
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1, waiting2], Mode: ALL"));
@@ -695,11 +695,11 @@ class OrchestratorTest {
                                 "task:test.sendEmail: sending email to outgoing3@email.com",
                                 "task:test.sendEmail: BODY: Second Email Content"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting1"), List.of(
-                                "delay: sleeping 120 milliseconds"));
+                                "delay: scheduling delay of 120 milliseconds"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting2"), List.of(
-                                "delay: sleeping 230 milliseconds"));
+                                "delay: scheduling delay of 230 milliseconds"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting3"), List.of(
-                                "delay: sleeping 300 milliseconds"));
+                                "delay: scheduling delay of 300 milliseconds"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("waitFor123"), List.of(
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1], Mode: ALL",
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1, waiting2], Mode: ALL"));
@@ -786,11 +786,11 @@ class OrchestratorTest {
                                 "task:test.sendEmail: sending email to outgoing3@email.com",
                                 "task:test.sendEmail: BODY: First Email Content"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting1"), List.of(
-                                "delay: sleeping 120 milliseconds"));
+                                "delay: scheduling delay of 120 milliseconds"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting2"), List.of(
-                                "delay: sleeping 230 milliseconds"));
+                                "delay: scheduling delay of 230 milliseconds"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting3"), List.of(
-                                "delay: sleeping 300 milliseconds"));
+                                "delay: scheduling delay of 300 milliseconds"));
                 assertNodeLogs(firsRunLogs, nodeKeyToId.get("waitFor123"), List.of(
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1], Mode: ALL",
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1, waiting2], Mode: ALL"));
@@ -820,11 +820,11 @@ class OrchestratorTest {
                                 "task:test.sendEmail: sending email to outgoing3@email.com",
                                 "task:test.sendEmail: BODY: Second Email Content"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting1"), List.of(
-                                "delay: sleeping 120 milliseconds"));
+                                "delay: scheduling delay of 120 milliseconds"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting2"), List.of(
-                                "delay: sleeping 230 milliseconds"));
+                                "delay: scheduling delay of 230 milliseconds"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting3"), List.of(
-                                "delay: sleeping 300 milliseconds"));
+                                "delay: scheduling delay of 300 milliseconds"));
                 assertNodeLogs(lastRunLogs, nodeKeyToId.get("waitFor123"), List.of(
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1], Mode: ALL",
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1, waiting2], Mode: ALL"));
