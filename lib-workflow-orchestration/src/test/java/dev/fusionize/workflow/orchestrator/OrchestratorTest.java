@@ -218,7 +218,7 @@ class OrchestratorTest {
                 Thread.sleep(500);
                 inbox.add("submitted the invoice pricing.");
 
-                Thread.sleep(2000);
+                waitForWorkflowCompletion(2, 15);
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
@@ -390,6 +390,20 @@ class OrchestratorTest {
                 }
         }
 
+        private void waitForWorkflowCompletion(int expectedDoneCount, int timeoutSeconds) throws InterruptedException {
+                long endTime = System.currentTimeMillis() + (timeoutSeconds * 1000L);
+                while (System.currentTimeMillis() < endTime) {
+                        List<WorkflowExecution> executions = workflowExecutionRepository.findAll();
+                        long doneCount = executions.stream()
+                                        .filter(we -> we.getStatus() == WorkflowExecutionStatus.SUCCESS)
+                                        .count();
+                        if (doneCount >= expectedDoneCount) {
+                                return;
+                        }
+                        Thread.sleep(1000);
+                }
+        }
+
         @Test
         void orchestrateWithForkJs() throws InterruptedException, IOException {
                 loadWorkflow("/email-workflow-with-fork-js.yml");
@@ -401,7 +415,7 @@ class OrchestratorTest {
                 Thread.sleep(500);
                 inbox.add("test email route 2");
 
-                Thread.sleep(3000);
+                waitForWorkflowCompletion(2, 15);
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
@@ -492,7 +506,7 @@ class OrchestratorTest {
                 Thread.sleep(500);
                 inbox.add("test email route 2");
 
-                Thread.sleep(2000);
+                waitForWorkflowCompletion(2, 15);
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
@@ -584,7 +598,7 @@ class OrchestratorTest {
                 Thread.sleep(500);
                 inbox.add("Second Email Content");
 
-                Thread.sleep(2000);
+                waitForWorkflowCompletion(2, 15);
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
@@ -710,7 +724,7 @@ class OrchestratorTest {
                 Thread.sleep(500);
                 inbox.add("Second Email Content");
 
-                Thread.sleep(2000);
+                waitForWorkflowCompletion(2, 15);
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
