@@ -8,13 +8,13 @@ import dev.fusionize.workflow.WorkflowNodeType;
 import java.util.HashMap;
 import java.util.Map;
 
-public class WorkflowContextFactory {
-    public static WorkflowContext empty() {
-        return new WorkflowContext();
+public class ContextFactory {
+    public static Context empty() {
+        return new Context();
     }
 
-    public static WorkflowContext from(WorkflowNodeExecution lastExecution, WorkflowNode nextNode) {
-        WorkflowContext context = new WorkflowContext();
+    public static Context from(WorkflowNodeExecution lastExecution, WorkflowNode nextNode) {
+        Context context = new Context();
         // Carry existing context forward (deep copy)
         if (lastExecution.getStageContext() != null) {
             context = lastExecution.getStageContext().renew();
@@ -33,10 +33,9 @@ public class WorkflowContextFactory {
     }
 
     private static void addOrUpdateGraphNode(
-            WorkflowContext context,
+            Context context,
             WorkflowNodeExecution lastExecution,
-            WorkflowNode nextNode
-    ) {
+            WorkflowNode nextNode) {
         String nextNodeKey = nextNode.getWorkflowNodeKey();
 
         // Find existing graph node for this workflow node key (if exists)
@@ -64,11 +63,11 @@ public class WorkflowContextFactory {
         }
     }
 
-    private static void addDecision(WorkflowContext context, WorkflowNode nextNode){
+    private static void addDecision(Context context, WorkflowNode nextNode) {
         WorkflowDecision workflowDecision = new WorkflowDecision();
         workflowDecision.setDecisionNode(nextNode.getWorkflowNodeKey());
-        Map<String,Boolean> options = new HashMap<>();
-        nextNode.getChildren().forEach(cn -> options.put(cn.getWorkflowNodeKey(),false));
+        Map<String, Boolean> options = new HashMap<>();
+        nextNode.getChildren().forEach(cn -> options.put(cn.getWorkflowNodeKey(), false));
         workflowDecision.setOptionNodes(options);
         context.getDecisions().add(workflowDecision);
     }

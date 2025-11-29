@@ -1,11 +1,11 @@
 package dev.fusionize.workflow.component.runtime;
 
-import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.WorkflowLogger;
-import dev.fusionize.workflow.context.WorkflowContext;
 import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
-import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
+import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
+import dev.fusionize.workflow.context.Context;
+import dev.fusionize.workflow.context.ContextRuntimeData;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.OrchestrationEvent;
@@ -19,6 +19,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import java.util.concurrent.ExecutorService;
+
 @Service
 public class ComponentRuntimeEngine {
     public static final String ERR_CODE_COMP_NOT_FOUND = "(wcre101) Runtime component not found";
@@ -26,13 +29,16 @@ public class ComponentRuntimeEngine {
     private final ComponentRuntimeRegistry componentRuntimeRegistry;
     private final EventPublisher<Event> eventPublisher;
     private final WorkflowLogger workflowLogger;
+    private final ExecutorService executor;
 
     public ComponentRuntimeEngine(ComponentRuntimeRegistry componentRuntimeRegistry,
             EventPublisher<Event> eventPublisher,
-            WorkflowLogger workflowLogger) {
+            WorkflowLogger workflowLogger,
+            @Qualifier("componentExecutor") ExecutorService executor) {
         this.componentRuntimeRegistry = componentRuntimeRegistry;
         this.eventPublisher = eventPublisher;
         this.workflowLogger = workflowLogger;
+        this.executor = executor;
     }
 
     private Optional<ComponentRuntime> getRuntimeComponent(OrchestrationEvent orchestrationEvent) {
@@ -57,10 +63,10 @@ public class ComponentRuntimeEngine {
 
         ComponentRuntime runtime = optionalWorkflowComponentRuntime.get();
         CompletableFuture.runAsync(() -> runtime.canActivate(
-                activationRequestEvent.getContext(),
+                getContext(activationRequestEvent),
                 new ComponentUpdateEmitter() {
                     @Override
-                    public void success(WorkflowContext updatedContext) {
+                    public void success(Context updatedContext) {
                         ActivationResponseEvent responseEvent = supplier.get();
                         responseEvent.setContext(updatedContext);
                         eventPublisher.publish(responseEvent);
@@ -85,7 +91,7 @@ public class ComponentRuntimeEngine {
                         };
                     }
 
-                })).whenComplete((result, throwable) -> {
+                }), executor).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         ActivationResponseEvent responseEvent = supplier.get();
                         responseEvent.setException(
@@ -95,6 +101,14 @@ public class ComponentRuntimeEngine {
                 });
 
         return null;
+    }
+
+    private Context getContext(OrchestrationEvent orchestrationEvent) {
+        Context context = orchestrationEvent.getContext().renew();
+        context.setRuntimeData(ContextRuntimeData.from(
+                orchestrationEvent.getOrchestrationEventContext().workflowExecution(),
+                orchestrationEvent.getOrchestrationEventContext().nodeExecution()));
+        return context;
     }
 
     public InvocationResponseEvent invokeComponent(InvocationRequestEvent invocationRequestEvent) {
@@ -109,10 +123,10 @@ public class ComponentRuntimeEngine {
         Supplier<InvocationResponseEvent> supplier = () -> InvocationResponseEvent.from(
                 this, OrchestrationEvent.Origin.RUNTIME_ENGINE, invocationRequestEvent);
         CompletableFuture.runAsync(() -> runtime.run(
-                invocationRequestEvent.getContext(),
+                getContext(invocationRequestEvent),
                 new ComponentUpdateEmitter() {
                     @Override
-                    public void success(WorkflowContext updatedContext) {
+                    public void success(Context updatedContext) {
                         InvocationResponseEvent responseEvent = supplier.get();
                         responseEvent.setContext(updatedContext);
                         eventPublisher.publish(responseEvent);
@@ -136,7 +150,7 @@ public class ComponentRuntimeEngine {
                                     oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
                         };
                     }
-                })).whenComplete((result, throwable) -> {
+                }), executor).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         InvocationResponseEvent responseEvent = supplier.get();
                         responseEvent.setException(

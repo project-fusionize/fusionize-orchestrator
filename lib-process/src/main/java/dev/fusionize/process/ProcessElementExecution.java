@@ -1,7 +1,7 @@
 package dev.fusionize.process;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import org.flowable.bpmn.model.FlowElement;
 import org.springframework.data.annotation.Transient;
 
@@ -15,20 +15,20 @@ public class ProcessElementExecution {
     private String elementName;
     private String elementType;
     private ProcessElementExecutionState state;
-    private WorkflowContext context;
+    private Context context;
     private List<ProcessElementExecution> children = new ArrayList<>();
     private String parentExecutionId;
     @Transient
     private FlowElement flowElement;
 
-    public static ProcessElementExecution of(FlowElement flowElement, WorkflowContext context) {
+    public static ProcessElementExecution of(FlowElement flowElement, Context context) {
         ProcessElementExecution execution = new ProcessElementExecution();
         execution.elementExecutionId = KeyUtil.getTimestampId("PELE");
         execution.elementId = flowElement.getId();
         execution.elementName = flowElement.getName();
         execution.elementType = flowElement.getClass().getSimpleName();
         execution.state = ProcessElementExecutionState.IDLE;
-        execution.context = context != null ? context : new WorkflowContext();
+        execution.context = context != null ? context : new Context();
         execution.flowElement = flowElement;
         return execution;
     }
@@ -84,11 +84,11 @@ public class ProcessElementExecution {
         this.state = state;
     }
 
-    public WorkflowContext getContext() {
+    public Context getContext() {
         return context;
     }
 
-    public void setContext(WorkflowContext context) {
+    public void setContext(Context context) {
         this.context = context;
     }
 

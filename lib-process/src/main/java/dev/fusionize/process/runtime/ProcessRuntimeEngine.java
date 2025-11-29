@@ -2,7 +2,7 @@ package dev.fusionize.process.runtime;
 
 import dev.fusionize.process.*;
 import dev.fusionize.process.repo.ProcessExecutionRepository;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
 import dev.fusionize.workflow.events.Event;
@@ -34,7 +34,7 @@ public class ProcessRuntimeEngine {
     /**
      * Start a new process execution
      */
-    public ProcessExecution startProcess(dev.fusionize.process.Process process, WorkflowContext initialContext) {
+    public ProcessExecution startProcess(dev.fusionize.process.Process process, Context initialContext) {
         if (process == null || process.getBpmnModel() == null) {
             throw new IllegalArgumentException("Process and BpmnModel cannot be null");
         }
@@ -105,7 +105,7 @@ public class ProcessRuntimeEngine {
     /**
      * Activate a BPMN element
      */
-    private void activateElement(ProcessExecution execution, FlowElement element, WorkflowContext context) {
+    private void activateElement(ProcessExecution execution, FlowElement element, Context context) {
         ProcessElementExecution elementExecution = ProcessElementExecution.of(element, context);
         elementExecution.setState(ProcessElementExecutionState.ACTIVE);
         execution.getActiveElements().add(elementExecution);
@@ -169,7 +169,7 @@ public class ProcessRuntimeEngine {
                 Thread.sleep(100); // Simulate work
                 
                 // Update context (in real implementation, this would come from component)
-                WorkflowContext updatedContext = elementExecution.getContext();
+                Context updatedContext = elementExecution.getContext();
                 updatedContext.getData().put("lastTask", task.getId());
                 updatedContext.getData().put("lastTaskName", task.getName());
                 
@@ -360,7 +360,7 @@ public class ProcessRuntimeEngine {
     /**
      * Evaluate condition on a sequence flow
      */
-    private boolean evaluateFlowCondition(SequenceFlow flow, WorkflowContext context) {
+    private boolean evaluateFlowCondition(SequenceFlow flow, Context context) {
         if (flow.getConditionExpression() == null) {
             return true; // No condition means always true
         }

@@ -17,6 +17,7 @@ dependencies {
     implementation project(':lib-common')
     implementation project(':lib-user')
     implementation project(':lib-workflow')
+    implementation project(':lib-script-engine')
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 

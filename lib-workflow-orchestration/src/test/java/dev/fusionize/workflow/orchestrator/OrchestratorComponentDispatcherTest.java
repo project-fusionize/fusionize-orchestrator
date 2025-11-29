@@ -3,9 +3,9 @@ package dev.fusionize.workflow.orchestrator;
 import dev.fusionize.workflow.WorkflowExecution;
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeExecution;
-import dev.fusionize.workflow.component.local.LocalComponentBundle;
 import dev.fusionize.workflow.component.local.LocalComponentRuntime;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.component.local.LocalComponentRuntimeFactory;
+import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.orchestration.ActivationRequestEvent;
@@ -18,24 +18,25 @@ import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
 
 public class OrchestratorComponentDispatcherTest {
 
     private EventPublisher<Event> eventPublisher;
-    private List<LocalComponentBundle<? extends LocalComponentRuntime>> localComponentBundles;
+    private List<LocalComponentRuntimeFactory<? extends LocalComponentRuntime>> localComponentRuntimeFactories;
     private OrchestratorComponentDispatcher dispatcher;
 
     @BeforeEach
     public void setUp() {
         eventPublisher = Mockito.mock(EventPublisher.class);
-        localComponentBundles = new ArrayList<>();
+        localComponentRuntimeFactories = new ArrayList<>();
         WorkflowLogRepoLogger workflowLogger = Mockito.mock(WorkflowLogRepoLogger.class);
-        dispatcher = new OrchestratorComponentDispatcher(eventPublisher, localComponentBundles, workflowLogger);
+        ExecutorService executor = Mockito.mock(ExecutorService.class);
+        dispatcher = new OrchestratorComponentDispatcher(eventPublisher, localComponentRuntimeFactories, workflowLogger,
+                executor);
     }
 
     @Test
@@ -45,7 +46,7 @@ public class OrchestratorComponentDispatcherTest {
         we.setWorkflowId("wf-1");
 
         WorkflowNode node = WorkflowNode.builder().workflowNodeId("node-1").component("remote-component").build();
-        WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, WorkflowContext.builder().build());
+        WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, Context.builder().build());
 
         dispatcher.dispatchActivation(we, ne, (w, n) -> {
         }, (e, n) -> {
@@ -66,7 +67,7 @@ public class OrchestratorComponentDispatcherTest {
         we.setWorkflowId("wf-1");
 
         WorkflowNode node = WorkflowNode.builder().workflowNodeId("node-1").component("remote-component").build();
-        WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, WorkflowContext.builder().build());
+        WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, Context.builder().build());
 
         dispatcher.dispatchInvocation(we, ne, (w, n) -> {
         }, (e, n) -> {

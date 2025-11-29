@@ -18,12 +18,12 @@ dependencies {
     implementation 'org.graalvm.js:js-scriptengine:25.0.1'
     implementation 'org.graalvm.js:js-language:25.0.1'
 
-    implementation "org.jetbrains.kotlin:kotlin-scripting-jsr223:2.2.21"
-    implementation "org.jetbrains.kotlin:kotlin-scripting-common:2.2.21"
-    implementation "org.jetbrains.kotlin:kotlin-scripting-jvm:2.2.21"
-    implementation "org.jetbrains.kotlin:kotlin-scripting-jvm-host:2.2.21"
-    runtimeOnly "org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21"
-    runtimeOnly "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:2.2.21"
+    implementation "org.jetbrains.kotlin:kotlin-scripting-jsr223:1.9.25"
+    implementation "org.jetbrains.kotlin:kotlin-scripting-common:1.9.25"
+    implementation "org.jetbrains.kotlin:kotlin-scripting-jvm:1.9.25"
+    implementation "org.jetbrains.kotlin:kotlin-scripting-jvm-host:1.9.25"
+    runtimeOnly "org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.25"
+    runtimeOnly "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.9.25"
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

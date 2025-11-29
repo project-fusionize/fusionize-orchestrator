@@ -1,7 +1,7 @@
 package dev.fusionize.orchestrator.components;
 
 import dev.fusionize.orchestrator.EmailBoxService;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
@@ -23,18 +23,18 @@ public class MyCustomComponentRecEmail implements ComponentRuntime {
     }
 
     @Override
-    public void canActivate(WorkflowContext workflowContext, ComponentUpdateEmitter emitter) {
+    public void canActivate(Context context, ComponentUpdateEmitter emitter) {
         try {
             Thread.sleep(100);
             logger.info("MyCustomComponentRecEmail activated");
-            emitter.success(workflowContext);
+            emitter.success(context);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
     }
 
     @Override
-    public void run(WorkflowContext context, ComponentUpdateEmitter emitter) {
+    public void run(Context context, ComponentUpdateEmitter emitter) {
         while (true) {
             try {
                 Thread.sleep(100);

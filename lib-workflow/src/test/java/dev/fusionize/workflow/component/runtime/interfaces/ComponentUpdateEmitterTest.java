@@ -1,7 +1,7 @@
 package dev.fusionize.workflow.component.runtime.interfaces;
 
 import dev.fusionize.workflow.WorkflowLog;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -40,7 +40,7 @@ class ComponentUpdateEmitterTest {
         private final List<LogEntry> logs = new ArrayList<>();
 
         @Override
-        public void success(WorkflowContext updatedContext) {
+        public void success(Context updatedContext) {
         }
 
         @Override

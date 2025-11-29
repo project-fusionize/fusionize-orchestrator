@@ -6,8 +6,11 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Document(collection = "workflow-execution")
 public class WorkflowExecution {
@@ -29,15 +32,25 @@ public class WorkflowExecution {
         return execution;
     }
 
-    public WorkflowNodeExecution findNode(String workflowNodeExecutionId) {
+    public WorkflowNodeExecution findNodeByWorkflowNodeExecutionId(String workflowNodeExecutionId) {
         return nodes.stream()
                 .filter(n -> n.getWorkflowNodeExecutionId().equals(workflowNodeExecutionId))
                 .findFirst()
                 .orElseGet(() -> nodes.stream()
-                        .map(n -> n.findNode(workflowNodeExecutionId))
+                        .map(n -> n.findNodeByWorkflowNodeExecutionId(workflowNodeExecutionId))
                         .filter(Objects::nonNull)
                         .findFirst()
                         .orElse(null));
+    }
+
+    public List<WorkflowNodeExecution> findNodesByWorkflowNodeId(String workflowNodeId) {
+        List<WorkflowNodeExecution> nodesByWorkflowNodeId =  nodes.stream()
+                .filter(n -> n.getWorkflowNodeId().equals(workflowNodeId)).toList();
+        List<WorkflowNodeExecution> childrenNodesByWorkflowNodeId = nodes.stream()
+                .map(n -> n.findNodesByWorkflowNodeId(workflowNodeId))
+                .flatMap(Collection::stream).toList();
+        return Stream.concat(nodesByWorkflowNodeId.stream(), childrenNodesByWorkflowNodeId.stream())
+                .collect(Collectors.toList());
     }
 
     public WorkflowExecution renew() {

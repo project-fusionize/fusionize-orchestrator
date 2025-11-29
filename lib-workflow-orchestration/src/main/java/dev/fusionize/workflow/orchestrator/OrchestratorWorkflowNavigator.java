@@ -5,7 +5,7 @@ import dev.fusionize.workflow.WorkflowExecutionStatus;
 import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.WorkflowNodeExecutionState;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.context.WorkflowContextFactory;
+import dev.fusionize.workflow.context.ContextFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -26,7 +26,7 @@ public class OrchestratorWorkflowNavigator {
         WorkflowNodeExecution originalExecutionNode = ne;
         ne.setState(WorkflowNodeExecutionState.DONE);
         List<WorkflowNodeExecution> nodeExecutions = decisionEngine.determineNextNodes(ne).stream()
-                .map(n -> WorkflowNodeExecution.of(n, WorkflowContextFactory.from(originalExecutionNode, n)))
+                .map(n -> WorkflowNodeExecution.of(n, ContextFactory.from(originalExecutionNode, n)))
                 .toList();
 
         if (ne.getWorkflowNode().getType().equals(WorkflowNodeType.START)) {

@@ -1,7 +1,9 @@
 package dev.fusionize.workflow.component.runtime;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ComponentRuntimeConfig {
@@ -24,6 +26,48 @@ public class ComponentRuntimeConfig {
 
     public void setConfig(ConcurrentHashMap<String, Object> config) {
         this.config = config;
+    }
+
+    public <T> Optional<T> var(String key, Class<T> type) {
+        Object value = config.get(key);
+        if (type.isInstance(value)) {
+            return Optional.of(type.cast(value));
+        }
+        return Optional.empty();
+    }
+
+    public boolean contains(String key) {
+        return config.containsKey(key);
+    }
+
+    public void set(String key, Object value) {
+        config.put(key, value);
+    }
+
+    public Optional<String> varString(String key) {
+        return var(key, String.class);
+    }
+
+    public Optional<Integer> varInt(String key) {
+        return var(key, Integer.class);
+    }
+
+    public Optional<Double> varDouble(String key) {
+        return var(key, Double.class);
+    }
+
+    public Optional<Float> varFloat(String key) {
+        return var(key, Float.class);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public Optional<List> varList(String key) {
+        return var(key, List.class);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public Optional<Map> varMap(String key) {
+        return var(key, Map.class);
     }
 
     @Override

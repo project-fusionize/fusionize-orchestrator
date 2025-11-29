@@ -1,0 +1,52 @@
+kind: Workflow
+apiVersion: v1
+name: Test Email Workflow
+domain: test.emailWorkflow
+key: test-email-workflow-key
+description: A test workflow for email processing
+version: 1
+active: true
+nodes:
+  start:
+    type: START
+    component: start:test.receivedIncomingEmail
+    componentConfig:
+      address: incoming@email.com
+    next: [emailDecision]
+
+  emailDecision:
+    type: DECISION
+    component: fork
+    componentConfig:
+      parser: js
+      default: outgoing1
+      conditions:
+        outgoing1: email_message.includes("route 1")
+        outgoing2: email_message.includes("route 2")
+    next: [outgoing1, outgoing2]
+
+  outgoing1:
+    type: TASK
+    component: task:test.sendEmail
+    componentConfig:
+      address: outgoing1@email.com
+    next: [waiting]
+
+  outgoing2:
+    type: TASK
+    component: task:test.sendEmail
+    componentConfig:
+      address: outgoing2@email.com
+    next: [waiting]
+
+  waiting:
+    type: WAIT
+    component: delay
+    componentConfig:
+      delay: 500
+    next: [ end ]
+
+  end:
+    type: END
+    component: end:test.endEmailWorkflow
+    next: []

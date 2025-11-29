@@ -1,23 +1,26 @@
 package dev.fusionize.workflow;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class WorkflowNodeExecution {
     private List<WorkflowNodeExecution> children = new ArrayList<>();
     private String workflowNodeId;
     private String workflowNodeExecutionId;
     private WorkflowNodeExecutionState state;
-    private WorkflowContext stageContext;
+    private Context stageContext;
     @Transient
     private WorkflowNode workflowNode;
 
-    public static WorkflowNodeExecution of(WorkflowNode node, WorkflowContext context) {
+    public static WorkflowNodeExecution of(WorkflowNode node, Context context) {
         WorkflowNodeExecution execution = new WorkflowNodeExecution();
         execution.workflowNodeExecutionId = KeyUtil.getTimestampId("NEXE");
         execution.workflowNodeId = node.getWorkflowNodeId();
@@ -27,15 +30,25 @@ public class WorkflowNodeExecution {
         return execution;
     }
 
-    public WorkflowNodeExecution findNode(String workflowNodeExecutionId) {
+    public WorkflowNodeExecution findNodeByWorkflowNodeExecutionId(String workflowNodeExecutionId) {
         return children.stream()
                 .filter(n -> n.getWorkflowNodeExecutionId().equals(workflowNodeExecutionId))
                 .findFirst()
                 .orElseGet(() -> children.stream()
-                        .map(n -> n.findNode(workflowNodeExecutionId))
+                        .map(n -> n.findNodeByWorkflowNodeExecutionId(workflowNodeExecutionId))
                         .filter(Objects::nonNull)
                         .findFirst()
                         .orElse(null));
+    }
+
+    public List<WorkflowNodeExecution> findNodesByWorkflowNodeId(String workflowNodeId) {
+        List<WorkflowNodeExecution> nodesByWorkflowNodeId =  children.stream()
+                .filter(n -> n.getWorkflowNodeId().equals(workflowNodeId)).toList();
+        List<WorkflowNodeExecution> childrenNodesByWorkflowNodeId = children.stream()
+                .map(n -> n.findNodesByWorkflowNodeId(workflowNodeId))
+                .flatMap(Collection::stream).toList();
+        return Stream.concat(nodesByWorkflowNodeId.stream(), childrenNodesByWorkflowNodeId.stream())
+                .collect(Collectors.toList());
     }
 
 
@@ -88,11 +101,11 @@ public class WorkflowNodeExecution {
         this.state = state;
     }
 
-    public WorkflowContext getStageContext() {
+    public Context getStageContext() {
         return stageContext;
     }
 
-    public void setStageContext(WorkflowContext stageContext) {
+    public void setStageContext(Context stageContext) {
         this.stageContext = stageContext;
     }
 

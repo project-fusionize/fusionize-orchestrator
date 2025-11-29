@@ -7,7 +7,7 @@ import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.WorkflowNodeExecutionState;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -39,7 +39,7 @@ public class OrchestrationWorkflowNavigatorTest {
 
         Workflow workflow = Workflow.builder("domain").addNode(node).build();
         WorkflowExecution we = WorkflowExecution.of(workflow);
-        WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, WorkflowContext.builder().build());
+        WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, Context.builder().build());
         we.getNodes().add(ne);
 
         when(decisionEngine.determineNextNodes(any())).thenReturn(List.of(child));
@@ -62,7 +62,7 @@ public class OrchestrationWorkflowNavigatorTest {
         
         Workflow workflow = Workflow.builder("domain").addNode(node).build();
         WorkflowExecution we = WorkflowExecution.of(workflow);
-        WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, WorkflowContext.builder().build());
+        WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, Context.builder().build());
         we.getNodes().add(ne);
 
         when(decisionEngine.determineNextNodes(any())).thenReturn(new ArrayList<>());

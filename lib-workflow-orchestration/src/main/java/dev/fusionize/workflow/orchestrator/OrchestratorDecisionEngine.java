@@ -3,7 +3,6 @@ package dev.fusionize.workflow.orchestrator;
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.context.WorkflowContextUtility;
 import dev.fusionize.workflow.context.WorkflowDecision;
 import org.springframework.stereotype.Component;
 
@@ -21,8 +20,8 @@ public class OrchestratorDecisionEngine {
         if (!WorkflowNodeType.DECISION.equals(ne.getWorkflowNode().getType())) {
             return allChildren;
         }
-        WorkflowDecision lastDecision = WorkflowContextUtility.getLatestDecisionForNode(ne.getStageContext(),
-                ne.getWorkflowNode().getWorkflowNodeKey());
+        WorkflowDecision lastDecision = ne.getStageContext()
+                .latestDecisionForNode(ne.getWorkflowNode().getWorkflowNodeKey());
         if (lastDecision.getDecisionNode() == null
                 || ne.getWorkflowNode().getWorkflowNodeKey() == null) {
             return new ArrayList<>();

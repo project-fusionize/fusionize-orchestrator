@@ -3,7 +3,7 @@ package dev.fusionize.workflow.orchestrator;
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.context.WorkflowContext;
+import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.context.WorkflowDecision;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ public class OrchestrationDecisionEngineTest {
         WorkflowNode child1 = WorkflowNode.builder().workflowNodeId("child1").build();
         node.setChildren(new ArrayList<>(List.of(child1)));
 
-        WorkflowNodeExecution execution = WorkflowNodeExecution.of(node, WorkflowContext.builder().build());
+        WorkflowNodeExecution execution = WorkflowNodeExecution.of(node, Context.builder().build());
 
         List<WorkflowNode> nextNodes = decisionEngine.determineNextNodes(execution);
 
@@ -53,7 +53,7 @@ public class OrchestrationDecisionEngineTest {
         
         decisionNode.setChildren(new ArrayList<>(List.of(optionA, optionB)));
 
-        WorkflowContext context = WorkflowContext.builder().build();
+        Context context = Context.builder().build();
         Map<String, Boolean> options = new HashMap<>();
         options.put("optionA", true);
         options.put("optionB", false);
