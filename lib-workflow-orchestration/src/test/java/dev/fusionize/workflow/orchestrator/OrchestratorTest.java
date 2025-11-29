@@ -24,6 +24,8 @@ import dev.fusionize.workflow.repo.WorkflowRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -125,6 +127,7 @@ class TestConfig {
 @ComponentScan(basePackages = "dev.fusionize.workflow")
 @ContextConfiguration(classes = TestConfig.class)
 @ActiveProfiles("ut")
+@Execution(ExecutionMode.SAME_THREAD)
 class OrchestratorTest {
         public static Logger logger = LoggerFactory.getLogger(OrchestratorTest.class);
 
