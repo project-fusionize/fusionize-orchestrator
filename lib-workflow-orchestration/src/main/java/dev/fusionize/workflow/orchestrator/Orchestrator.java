@@ -1,12 +1,14 @@
 package dev.fusionize.workflow.orchestrator;
 
-import dev.fusionize.workflow.*;
+import dev.fusionize.workflow.Workflow;
+import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.context.ContextFactory;
 import dev.fusionize.workflow.events.OrchestrationEvent;
 import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
 import dev.fusionize.workflow.events.orchestration.InvocationResponseEvent;
 import dev.fusionize.workflow.registry.WorkflowExecutionRepoRegistry;
-import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
+import dev.fusionize.workflow.registry.WorkflowRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -17,12 +19,12 @@ import java.util.List;
 public class Orchestrator {
 
     private static final Logger log = LoggerFactory.getLogger(Orchestrator.class);
-    private final WorkflowRepoRegistry workflowRegistry;
+    private final WorkflowRegistry workflowRegistry;
     private final WorkflowExecutionRepoRegistry workflowExecutionRegistry;
     private final OrchestratorComponentDispatcher componentDispatcher;
     private final OrchestratorWorkflowNavigator workflowNavigator;
 
-    public Orchestrator(WorkflowRepoRegistry workflowRegistry,
+    public Orchestrator(WorkflowRegistry workflowRegistry,
             WorkflowExecutionRepoRegistry workflowExecutionRegistry,
             OrchestratorComponentDispatcher componentDispatcher,
             OrchestratorWorkflowNavigator workflowNavigator) {
@@ -34,6 +36,10 @@ public class Orchestrator {
 
     public void orchestrate(String workflowId) {
         Workflow workflow = workflowRegistry.getWorkflow(workflowId);
+        orchestrate(workflow);
+    }
+
+    public void orchestrate(Workflow workflow) {
         WorkflowExecution we = WorkflowExecution.of(workflow);
         // todo check and re-use idle execution
         List<WorkflowNodeExecution> nodes = workflow.getNodes().stream()
@@ -41,13 +47,11 @@ public class Orchestrator {
                 .peek(ne -> we.getNodes().add(ne)).toList();
         workflowExecutionRegistry.register(we);
         nodes.forEach(ne -> requestActivation(we, ne));
-
     }
 
     private void proceedExecution(WorkflowExecution we, WorkflowNodeExecution ne) {
         workflowNavigator.navigate(we, ne, (
-                WorkflowExecution nextWe, WorkflowNodeExecution nextNe
-        )->{
+                WorkflowExecution nextWe, WorkflowNodeExecution nextNe) -> {
             workflowExecutionRegistry.register(nextWe);
             nextNe.getChildren().forEach(cne -> requestActivation(nextWe, cne));
         });
@@ -71,7 +75,7 @@ public class Orchestrator {
     }
 
     private void requestInvocation(WorkflowExecution we, WorkflowNodeExecution ne) {
-        componentDispatcher.dispatchInvocation( we, ne, this::handleInvocationSuccess, this::handleFailure);
+        componentDispatcher.dispatchInvocation(we, ne, this::handleInvocationSuccess, this::handleFailure);
     }
 
     public void onInvoked(InvocationResponseEvent invocationResponseEvent) {
@@ -88,7 +92,7 @@ public class Orchestrator {
     }
 
     private void handleActivationSuccess(WorkflowExecution we, WorkflowNodeExecution ne) {
-        requestInvocation( we, ne);
+        requestInvocation(we, ne);
     }
 
     private void handleInvocationSuccess(WorkflowExecution we, WorkflowNodeExecution ne) {

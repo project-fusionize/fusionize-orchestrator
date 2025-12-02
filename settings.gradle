@@ -10,4 +10,5 @@ include 'lib-workflow-orchestration'
 include 'lib-script-engine'
 include 'lib-spring-boot-starter'
 include 'lib-process'
+include 'lib-ai'
 

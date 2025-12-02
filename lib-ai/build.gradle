@@ -10,18 +10,16 @@ plugins {
 dependencyManagement {
     imports {
         mavenBom SpringBootPlugin.BOM_COORDINATES
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
     }
 }
 
 dependencies {
-    implementation project(':lib-common')
     implementation project(':lib-user')
-    implementation project(':lib-workflow')
-    implementation project(':lib-script-engine')
-    implementation project(':lib-process')
-    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+    implementation "org.springframework.ai:spring-ai-starter-mcp-client"
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation project(':lib-common-test')
 }

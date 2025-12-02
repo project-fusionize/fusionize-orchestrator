@@ -2,12 +2,15 @@ package dev.fusionize.process;
 
 import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.user.activity.DomainEntity;
+import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Document(collection = "process")
@@ -17,25 +20,28 @@ public class Process extends DomainEntity {
     @Indexed(unique = true)
     private String processId;
     private String processDefinitionKey;
-    private String name;
+
     private String description;
     private int version;
     private boolean active = true;
     private String bpmnXml;
+    private String bpmnSupportYaml;
     @Transient
     private BpmnModel bpmnModel;
+    @Transient
+    private Map<String, WorkflowNodeDescription> definitions;
 
     public static Process of(String processId, String bpmnXml, BpmnModel bpmnModel) {
         Process process = new Process();
         process.processId = processId != null ? processId : KeyUtil.getTimestampId("PROC");
         process.bpmnXml = bpmnXml;
         process.bpmnModel = bpmnModel;
-        process.processDefinitionKey = bpmnModel.getMainProcess() != null 
-                ? bpmnModel.getMainProcess().getId() 
+        process.processDefinitionKey = bpmnModel.getMainProcess() != null
+                ? bpmnModel.getMainProcess().getId()
                 : null;
-        process.name = bpmnModel.getMainProcess() != null 
-                ? bpmnModel.getMainProcess().getName() 
-                : null;
+        if (bpmnModel.getMainProcess() != null) {
+            process.setName(bpmnModel.getMainProcess().getName());
+        }
         process.version = 1;
         process.active = true;
         return process;
@@ -63,14 +69,6 @@ public class Process extends DomainEntity {
 
     public void setProcessDefinitionKey(String processDefinitionKey) {
         this.processDefinitionKey = processDefinitionKey;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public String getDescription() {
@@ -105,6 +103,14 @@ public class Process extends DomainEntity {
         this.bpmnXml = bpmnXml;
     }
 
+    public String getBpmnSupportYaml() {
+        return bpmnSupportYaml;
+    }
+
+    public void setBpmnSupportYaml(String bpmnSupportYaml) {
+        this.bpmnSupportYaml = bpmnSupportYaml;
+    }
+
     public BpmnModel getBpmnModel() {
         return bpmnModel;
     }
@@ -113,10 +119,20 @@ public class Process extends DomainEntity {
         this.bpmnModel = bpmnModel;
     }
 
+    public Map<String, WorkflowNodeDescription> getDefinitions() {
+        return definitions;
+    }
+
+    public void setDefinitions(Map<String, WorkflowNodeDescription> definitions) {
+        this.definitions = definitions;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         Process process = (Process) o;
         return Objects.equals(processId, process.processId);
     }
@@ -126,4 +142,3 @@ public class Process extends DomainEntity {
         return Objects.hash(processId);
     }
 }
-

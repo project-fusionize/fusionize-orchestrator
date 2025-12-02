@@ -1,0 +1,29 @@
+startEvent#start:
+  component: start:test.receivedIncomingEmail
+  componentConfig:
+    address: incoming@fusionize.dev
+
+endEvent#end:
+  component: end:test.endEmailWorkflow
+
+serviceTask#salesRoute:
+  component: task:test.sendEmail
+  componentConfig:
+    address: sales-team@fusionize.dev
+
+serviceTask#billingRoute:
+  component: task:test.sendEmail
+  componentConfig:
+    address: billing-team@fusionize.dev
+
+serviceTask#supportRoute:
+  component: task:test.sendEmail
+  componentConfig:
+    address: support-team@fusionize.dev
+
+
+inclusiveGateway#joinAll:
+  componentConfig:
+    waitMode: threshold
+    thresholdCount: 2
+    mergeStrategy: pickLast

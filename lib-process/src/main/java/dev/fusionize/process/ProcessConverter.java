@@ -1,17 +1,29 @@
 package dev.fusionize.process;
 
 import dev.fusionize.common.utility.KeyUtil;
+import dev.fusionize.process.converters.events.EndEventConverter;
+import dev.fusionize.process.converters.events.IntermediateCatchEventConverter;
+import dev.fusionize.process.converters.events.StartEventConverter;
+import dev.fusionize.process.converters.gateways.ComplexGatewayConverter;
+import dev.fusionize.process.converters.gateways.ExclusiveGatewayConverter;
+import dev.fusionize.process.converters.gateways.InclusiveGatewayConverter;
+import dev.fusionize.process.converters.gateways.ParallelGatewayConverter;
+import dev.fusionize.process.converters.tasks.ManualTaskConverter;
+import dev.fusionize.process.converters.tasks.ScriptTaskConverter;
+import dev.fusionize.process.converters.tasks.ServiceTaskConverter;
 import dev.fusionize.workflow.Workflow;
-import dev.fusionize.workflow.WorkflowNode;
-import dev.fusionize.workflow.WorkflowNodeType;
+
+import dev.fusionize.common.parser.YamlParser;
 import dev.fusionize.workflow.descriptor.WorkflowDescription;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import dev.fusionize.workflow.descriptor.WorkflowTransformer;
 import org.flowable.bpmn.converter.BpmnXMLConverter;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
+import org.flowable.bpmn.model.SequenceFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -22,8 +34,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Component
 public class ProcessConverter {
     private static final Logger log = LoggerFactory.getLogger(ProcessConverter.class);
+
+    public static String buildKey(FlowElement element) {
+        String elementType = element.getClass().getSimpleName();
+        elementType = Character.toLowerCase(elementType.charAt(0)) + elementType.substring(1);
+        return elementType + "#" + element.getId();
+    }
 
     /**
      * Convert BPMN XML string to Process object
@@ -52,10 +71,10 @@ public class ProcessConverter {
         StringReader stringReader = new StringReader(xmlString);
         XMLInputFactory factory = XMLInputFactory.newInstance();
         XMLStreamReader xmlReader = factory.createXMLStreamReader(stringReader);
-        
+
         BpmnXMLConverter converter = new BpmnXMLConverter();
         BpmnModel model = converter.convertToBpmnModel(xmlReader);
-        
+
         if (model == null) {
             throw new IllegalStateException("Failed to convert BPMN XML to BpmnModel");
         }
@@ -74,7 +93,7 @@ public class ProcessConverter {
         return Process.of(processId, xmlString, model);
     }
 
-    public Workflow convertToWorkflow(Process process)  {
+    public Workflow convertToWorkflow(Process process) {
         if (process == null || process.getBpmnModel() == null) {
             throw new IllegalArgumentException("Process cannot be null");
         }
@@ -95,13 +114,42 @@ public class ProcessConverter {
 
         // 1. Convert BPMN elements → WorkflowNodeDescriptions
         for (FlowElement element : bpmnProcess.getFlowElements()) {
-            WorkflowNodeDescription node = mapBpmnElement(element);
-            if (node.getType() == null) {
-                log.warn("Skipping unsupported BPMN element: {} {}", element.getClass().getSimpleName(), element.getId());
+            if (element instanceof SequenceFlow) {
+                continue;
+            }
+            WorkflowNodeDescription node = mapBpmnElement(element, model);
+            if (node == null || node.getType() == null) {
+                log.warn("Skipping unsupported BPMN element: {} {}", element.getClass().getSimpleName(),
+                        element.getId());
                 continue;
             }
             nodeMap.put(buildKey(element), node);
             elementMap.put(element.getId(), buildKey(element));
+        }
+
+        // 1.5 Override with YAML definitions
+        if (process.getDefinitions() != null) {
+            for (Map.Entry<String, WorkflowNodeDescription> entry : process.getDefinitions().entrySet()) {
+                String key = entry.getKey();
+                WorkflowNodeDescription override = entry.getValue();
+                WorkflowNodeDescription existing = nodeMap.get(key);
+                if (existing == null) {
+                    continue;
+                }
+
+                if (override.getComponent() != null) {
+                    existing.setComponent(override.getComponent());
+                }
+                if (override.getType() != null) {
+                    existing.setType(override.getType());
+                }
+                if (override.getComponentConfig() != null && !override.getComponentConfig().isEmpty()) {
+                    if (existing.getComponentConfig() == null) {
+                        existing.setComponentConfig(new HashMap<>());
+                    }
+                    existing.getComponentConfig().putAll(override.getComponentConfig());
+                }
+            }
         }
 
         // 2. Build "next" transitions (SequenceFlow)
@@ -111,7 +159,8 @@ public class ProcessConverter {
             }
 
             WorkflowNodeDescription currentNode = nodeMap.get(elementMap.get(flowNode.getId()));
-            if (currentNode == null) continue;
+            if (currentNode == null)
+                continue;
 
             List<String> next = new ArrayList<>();
             for (org.flowable.bpmn.model.SequenceFlow sf : flowNode.getOutgoingFlows()) {
@@ -125,32 +174,52 @@ public class ProcessConverter {
         return new WorkflowTransformer().toWorkflow(desc);
     }
 
-    private String buildKey(FlowElement element) {
-        String elementType = element.getClass().getSimpleName();
-        elementType = Character.toLowerCase(elementType.charAt(0)) + elementType.substring(1);
-        return elementType + "." + element.getId();
+    private WorkflowNodeDescription mapBpmnElement(FlowElement element, BpmnModel model) {
+        List<ProcessNodeConverter<?>> converters = List.of(
+                new ComplexGatewayConverter(),
+                new InclusiveGatewayConverter(),
+                new ExclusiveGatewayConverter(),
+                new ParallelGatewayConverter(),
+                new ScriptTaskConverter(),
+                new ServiceTaskConverter(),
+                new StartEventConverter(),
+                new EndEventConverter(),
+                new IntermediateCatchEventConverter(),
+                new ManualTaskConverter());
+
+        for (ProcessNodeConverter<?> converter : converters) {
+            if (converter.canConvert(element)) {
+                // Unchecked cast is safe because canConvert checks the type
+                @SuppressWarnings("unchecked")
+                ProcessNodeConverter<FlowElement> typedConverter = (ProcessNodeConverter<FlowElement>) converter;
+                return typedConverter.convert(element, model);
+            }
+        }
+
+        return new WorkflowNodeDescription();
     }
 
-    private WorkflowNodeDescription mapBpmnElement(FlowElement element){
-        WorkflowNodeDescription node = new WorkflowNodeDescription();
-        node.setComponentConfig(new HashMap<>());
-        if (element instanceof org.flowable.bpmn.model.StartEvent) {
-            node.setType(WorkflowNodeType.START);
+    public void annotate(Process process, String bpmnSupportYaml) {
+        if (process == null) {
+            throw new IllegalArgumentException("Process cannot be null");
         }
-        if (element instanceof org.flowable.bpmn.model.EndEvent) {
-            node.setType(WorkflowNodeType.END);
-        }
-        if (element instanceof org.flowable.bpmn.model.ExclusiveGateway) {
-            node.setType(WorkflowNodeType.DECISION);
-        }
-        if (element instanceof org.flowable.bpmn.model.ReceiveTask
-                || element instanceof org.flowable.bpmn.model.IntermediateCatchEvent) {
-            node.setType(WorkflowNodeType.WAIT);
-        }
-        if (element instanceof org.flowable.bpmn.model.Task) {
-            node.setType(WorkflowNodeType.TASK);
-        }
+        process.setBpmnSupportYaml(bpmnSupportYaml);
 
-        return node;
+        if (bpmnSupportYaml != null && !bpmnSupportYaml.trim().isEmpty()) {
+            YamlParser<Map> yamlParser = new YamlParser<>();
+            Map<String, Object> rawMap = yamlParser.fromYaml(bpmnSupportYaml, Map.class);
+
+            if (rawMap != null) {
+                YamlParser<WorkflowNodeDescription> nodeParser = new YamlParser<>();
+                Map<String, WorkflowNodeDescription> definitions = new HashMap<>();
+
+                for (Map.Entry<String, Object> entry : rawMap.entrySet()) {
+                    String nodeYaml = yamlParser.toYaml((Map) entry.getValue());
+                    WorkflowNodeDescription node = nodeParser.fromYaml(nodeYaml, WorkflowNodeDescription.class);
+                    definitions.put(entry.getKey(), node);
+                }
+                process.setDefinitions(definitions);
+            }
+        }
     }
 }
