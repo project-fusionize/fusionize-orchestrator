@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <process id="email-routing-demo" name="Email Routing Workflow" isExecutable="true">
+
+        <startEvent id="start" name="Start">
+            <extensionElements>
+                <field name="address" stringValue="incoming@fusionize.dev"/>
+            </extensionElements>
+        </startEvent>
+
+        <sequenceFlow sourceRef="start" targetRef="extractFields"/>
+
+        <scriptTask id="extractFields" name="Extract Fields" scriptFormat="js">
+            <script>
+                // Parse the email text and determine its traits
+                let lower = email_message.toLowerCase();
+                context["isBilling"] = lower.includes("invoice") || lower.includes("billing");
+                context["isSupport"] = lower.includes("help") || lower.includes("support");
+                context["isSales"]   = lower.includes("quote") || lower.includes("pricing");
+                print(JSON.stringify(context))
+            </script>
+        </scriptTask>
+
+        <sequenceFlow sourceRef="extractFields" targetRef="forkRoute"/>
+
+        <exclusiveGateway id="forkRoute" name="Fork Route" default="salesRoute"/>
+
+        <sequenceFlow sourceRef="forkRoute" targetRef="billingRoute">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[#isBilling == true]]></conditionExpression>
+        </sequenceFlow>
+
+        <sequenceFlow sourceRef="forkRoute" targetRef="supportRoute">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[#isSupport == true]]></conditionExpression>
+        </sequenceFlow>
+
+        <sequenceFlow sourceRef="forkRoute" targetRef="salesRoute">
+            <conditionExpression xsi:type="tFormalExpression"><![CDATA[#isSales == true]]></conditionExpression>
+        </sequenceFlow>
+
+        <serviceTask id="billingRoute" name="Billing Route" class="task:test.sendEmail">
+            <extensionElements>
+                <field name="address" stringValue="billing-team@fusionize.dev"/>
+            </extensionElements>
+        </serviceTask>
+
+        <sequenceFlow sourceRef="billingRoute" targetRef="billingWait"/>
+
+        <serviceTask id="supportRoute" name="Support Route" class="task:test.sendEmail">
+            <extensionElements>
+                <field name="address" stringValue="support-team@fusionize.dev"/>
+            </extensionElements>
+        </serviceTask>
+
+        <sequenceFlow sourceRef="supportRoute" targetRef="supportWait"/>
+
+        <serviceTask id="salesRoute" name="Sales Route" class="task:test.sendEmail">
+            <extensionElements>
+                <field name="address" stringValue="sales-team@fusionize.dev"/>
+            </extensionElements>
+        </serviceTask>
+
+        <sequenceFlow sourceRef="salesRoute" targetRef="salesWait"/>
+
+        <intermediateCatchEvent id="billingWait">
+            <timerEventDefinition>
+                <timeDuration>PT0.120S</timeDuration>
+            </timerEventDefinition>
+        </intermediateCatchEvent>
+
+        <sequenceFlow sourceRef="billingWait" targetRef="joinAll"/>
+
+        <intermediateCatchEvent id="supportWait">
+            <timerEventDefinition>
+                <timeDuration>PT0.180S</timeDuration>
+            </timerEventDefinition>
+        </intermediateCatchEvent>
+
+        <sequenceFlow sourceRef="supportWait" targetRef="joinAll"/>
+
+        <intermediateCatchEvent id="salesWait">
+            <timerEventDefinition>
+                <timeDuration>PT0.300S</timeDuration>
+            </timerEventDefinition>
+        </intermediateCatchEvent>
+
+        <sequenceFlow sourceRef="salesWait" targetRef="joinAll"/>
+
+        <inclusiveGateway id="joinAll" name="Join All" >
+        </inclusiveGateway>
+
+        <sequenceFlow sourceRef="joinAll" targetRef="end"/>
+
+        <endEvent id="end" name="End"/>
+
+    </process>
+
+</definitions>
