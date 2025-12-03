@@ -1,0 +1,30 @@
+kind: Workflow
+apiVersion: v1
+name: Test2 Email Workflow
+domain: test2.emailWorkflow
+key: test-webhook-ai-workflow-key
+description: A test workflow for ai processing
+version: 1
+active: true
+nodes:
+  start:
+    type: START
+    component: start:dev.fusionize.orchestrator.components.MyWebhookComponent
+    next: [process]
+
+  process:
+    type: TASK
+    component: task:dev.fusionize.ai.DocumentExtractor
+    componentConfig:
+      inputVar: sampleFile
+      outputVar: out
+      example:
+        userName: string
+        location: string
+        age: int
+    next: [ end ]
+
+  end:
+    type: END
+    component: end:dev.fusionize.orchestrator.components.MyCustomComponentEnd
+    next: []

@@ -2,6 +2,14 @@ server:
   port: 8081
 
 spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+
   application:
     name: fusionize-orchestrator
   security:
