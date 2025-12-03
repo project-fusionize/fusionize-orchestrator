@@ -167,15 +167,11 @@ public class JoinComponent implements LocalComponentRuntime {
     private boolean isConditionMet(List<String> satisfiedAwaits) {
         long uniqueFound = satisfiedAwaits.stream().distinct().count();
 
-        switch (waitMode) {
-            case ANY:
-                return uniqueFound >= 1;
-            case THRESHOLD:
-                return uniqueFound >= thresholdCount;
-            case ALL:
-            default:
-                return uniqueFound == awaits.stream().distinct().count();
-        }
+        return switch (waitMode) {
+            case ANY -> uniqueFound >= 1;
+            case THRESHOLD -> uniqueFound >= thresholdCount;
+            default -> uniqueFound == awaits.stream().distinct().count();
+        };
     }
 
     /**

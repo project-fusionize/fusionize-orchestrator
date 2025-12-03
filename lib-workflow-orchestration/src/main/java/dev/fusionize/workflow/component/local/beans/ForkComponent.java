@@ -13,6 +13,7 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -22,18 +23,24 @@ public class ForkComponent implements LocalComponentRuntime {
 
     public static final String CONF_PARSER = "parser";
     public static final String CONF_CONDITIONS = "conditions";
+    public static final String CONF_FORK_MODE = "forkMode";
     public static final String CONF_DEFAULT_PATH = "default";
 
-    private final Map<String, String> conditionMap = new HashMap<>();
+    private final Map<String, String> conditionMap = new LinkedHashMap<>();
     private String defaultPath = null;
+    private ForkMode forkMode = ForkMode.INCLUSIVE;
 
-    private ScriptRunnerEngine engine = null;            // JS, Groovy, Kotlin
+    private ScriptRunnerEngine engine = null; // JS, Groovy, Kotlin
     private ScriptRunner scriptRunner = null;
 
     // Default to SpEL unless engine is explicitly configured
     private final ExpressionParser spelParser = new SpelExpressionParser();
     private boolean useSpEL = true;
 
+    public enum ForkMode {
+        INCLUSIVE,
+        EXCLUSIVE,
+    }
 
     // ────────────────────────────────────────────────
     // CONFIGURE()
@@ -43,6 +50,8 @@ public class ForkComponent implements LocalComponentRuntime {
 
         // Load conditions map
         config.varMap(CONF_CONDITIONS).ifPresent(map -> {
+            // Use LinkedHashMap to preserve order if the source map is ordered
+            // (e.g. from YAML parsing that respects order)
             for (Object key : map.keySet()) {
                 Object value = map.get(key);
                 if (key instanceof String && value instanceof String) {
@@ -53,6 +62,15 @@ public class ForkComponent implements LocalComponentRuntime {
 
         // Load default path
         config.varString(CONF_DEFAULT_PATH).ifPresent(s -> this.defaultPath = s);
+
+        // Load Fork Mode
+        config.varString(CONF_FORK_MODE).ifPresent(s -> {
+            if (TextUtil.matchesFlexible("EXCLUSIVE", s)) {
+                this.forkMode = ForkMode.EXCLUSIVE;
+            } else {
+                this.forkMode = ForkMode.INCLUSIVE;
+            }
+        });
 
         // Detect expression parser OR script engine
         config.varString(CONF_PARSER).ifPresent(s -> {
@@ -77,7 +95,6 @@ public class ForkComponent implements LocalComponentRuntime {
         }
     }
 
-
     // ────────────────────────────────────────────────
     // CAN ACTIVATE
     // ────────────────────────────────────────────────
@@ -85,7 +102,6 @@ public class ForkComponent implements LocalComponentRuntime {
     public void canActivate(Context context, ComponentUpdateEmitter emitter) {
         emitter.success(context);
     }
-
 
     // ────────────────────────────────────────────────
     // RUN()
@@ -96,9 +112,17 @@ public class ForkComponent implements LocalComponentRuntime {
         Map<String, Boolean> optionNodes = new HashMap<>();
         Map<String, Object> evalContext = new HashMap<>(context.getData());
 
+        boolean exclusiveMatchFound = false;
+
         for (Map.Entry<String, String> entry : conditionMap.entrySet()) {
             String node = entry.getKey();
             String expr = entry.getValue();
+
+            // In EXCLUSIVE mode, if we already found a match, all subsequent are false
+            if (forkMode == ForkMode.EXCLUSIVE && exclusiveMatchFound) {
+                optionNodes.put(node, false);
+                continue;
+            }
 
             boolean result = false;
 
@@ -114,12 +138,15 @@ public class ForkComponent implements LocalComponentRuntime {
                     Object val = scriptRunner.eval(expr, evalContext);
                     result = Boolean.TRUE.equals(val);
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 emitter.logger().error("Condition '{}' failed: {}", node, e.getMessage());
             }
 
             optionNodes.put(node, result);
+
+            if (result && forkMode == ForkMode.EXCLUSIVE) {
+                exclusiveMatchFound = true;
+            }
         }
 
         // Store decision result

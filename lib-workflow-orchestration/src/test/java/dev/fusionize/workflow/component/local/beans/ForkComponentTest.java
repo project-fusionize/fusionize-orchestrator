@@ -219,4 +219,39 @@ class ForkComponentTest {
                 /* ignore */ };
         }
     }
+
+    // ────────────────────────────────────────────────
+    // EXCLUSIVE MODE TEST
+    // ────────────────────────────────────────────────
+    @Test
+    void testRun_EvaluatesRoutes_Exclusive() {
+        // Use LinkedHashMap to ensure order
+        Map<String, String> routeMap = new java.util.LinkedHashMap<>();
+        routeMap.put("routeA", "#value > 10"); // true
+        routeMap.put("routeB", "#value > 5"); // also true, but should be skipped/false in exclusive
+        routeMap.put("routeC", "true"); // also true, but should be skipped/false
+
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set(ForkComponent.CONF_CONDITIONS, routeMap);
+        config.set(ForkComponent.CONF_FORK_MODE, "EXCLUSIVE");
+        config.set(ForkComponent.CONF_PARSER, "spel");
+
+        forkComponent.configure(config);
+
+        context.set("value", 15);
+
+        WorkflowDecision decision = new WorkflowDecision();
+        decision.setDecisionNode("forkNode");
+        context.getDecisions().add(decision);
+
+        forkComponent.run(context, emitter);
+
+        assertTrue(emitter.successCalled);
+
+        Map<String, Boolean> options = context.getDecisions().getFirst().getOptionNodes();
+
+        assertEquals(true, options.get("routeA"), "First match should be true");
+        assertEquals(false, options.get("routeB"), "Second match should be false in exclusive mode");
+        assertEquals(false, options.get("routeC"), "Subsequent match should be false in exclusive mode");
+    }
 }

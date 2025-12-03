@@ -25,7 +25,7 @@
 
         <sequenceFlow sourceRef="extractFields" targetRef="forkRoute"/>
 
-        <exclusiveGateway id="forkRoute" name="Fork Route" default="salesRoute"/>
+        <inclusiveGateway id="forkRoute" name="Fork Route" default="salesRoute"/>
 
         <sequenceFlow sourceRef="forkRoute" targetRef="billingRoute">
             <conditionExpression xsi:type="tFormalExpression"><![CDATA[#isBilling == true]]></conditionExpression>
