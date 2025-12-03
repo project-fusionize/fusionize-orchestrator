@@ -88,9 +88,11 @@ public class JoinComponent implements LocalComponentRuntime {
             return;
         }
 
+        String nodeId = context.getRuntimeData().getWorkflowNodeId();
+
         // Check if any of the awaited nodes are in the history of the current nodes
         boolean anyAwaitedNodeFound = context.currentNodes().stream()
-                .anyMatch(node -> isNodeInHistory(node, awaits));
+                .anyMatch(node -> isNodeInHistory(node, awaits, nodeId));
 
         if (anyAwaitedNodeFound) {
             emitter.success(context);
@@ -133,7 +135,7 @@ public class JoinComponent implements LocalComponentRuntime {
 
             // Collect awaited nodes found in this execution's history
             for (WorkflowGraphNodeRecursive node : ctx.currentNodes()) {
-                collectFoundAwaitedNodes(node, awaits, satisfiedAwaits);
+                collectFoundAwaitedNodes(node, awaits, satisfiedAwaits, nodeId);
             }
 
             // Check if condition is met with the accumulated executions so far
@@ -239,7 +241,13 @@ public class JoinComponent implements LocalComponentRuntime {
         return mergedContext;
     }
 
-    private boolean isNodeInHistory(WorkflowGraphNodeRecursive node, List<String> targets) {
+    private boolean isNodeInHistory(WorkflowGraphNodeRecursive node, List<String> targets,
+            String currentWorkflowNodeId) {
+        // Stop recursion if we hit the current node ID (previous cycle)
+        if (node.getNode().equals(currentWorkflowNodeId)) {
+            return false;
+        }
+
         if (targets.contains(node.getNode())) {
             return true;
         }
@@ -247,20 +255,26 @@ public class JoinComponent implements LocalComponentRuntime {
             return false;
         }
         for (WorkflowGraphNodeRecursive parent : node.getParents()) {
-            if (isNodeInHistory(parent, targets)) {
+            if (isNodeInHistory(parent, targets, currentWorkflowNodeId)) {
                 return true;
             }
         }
         return false;
     }
 
-    private void collectFoundAwaitedNodes(WorkflowGraphNodeRecursive node, List<String> targets, List<String> found) {
+    private void collectFoundAwaitedNodes(WorkflowGraphNodeRecursive node, List<String> targets, List<String> found,
+            String currentWorkflowNodeId) {
+        // Stop recursion if we hit the current node ID (previous cycle)
+        if (node.getNode().equals(currentWorkflowNodeId)) {
+            return;
+        }
+
         if (targets.contains(node.getNode())) {
             found.add(node.getNode());
         }
         if (node.getParents() != null) {
             for (WorkflowGraphNodeRecursive parent : node.getParents()) {
-                collectFoundAwaitedNodes(parent, targets, found);
+                collectFoundAwaitedNodes(parent, targets, found, currentWorkflowNodeId);
             }
         }
     }

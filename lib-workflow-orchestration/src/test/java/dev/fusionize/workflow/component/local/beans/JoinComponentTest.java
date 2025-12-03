@@ -254,4 +254,34 @@ class JoinComponentTest {
             };
         }
     }
+
+    @Test
+    void testRun_CircularDependency_IgnoresPreviousCycle() {
+        String joinNodeId = "joinNode";
+        String awaitedNodeId = "awaitedNode";
+
+        configureComponent(List.of(awaitedNodeId));
+
+        Context ctx = new Context();
+        dev.fusionize.workflow.context.ContextRuntimeData runtimeData = new dev.fusionize.workflow.context.ContextRuntimeData();
+        runtimeData.setWorkflowExecutionId("exec-circular");
+        runtimeData.setWorkflowNodeId(joinNodeId);
+        runtimeData.setWorkflowNodeExecutionId("exec-2");
+        ctx.setRuntimeData(runtimeData);
+
+        // Build Graph
+        // Awaited Node (from previous cycle)
+        addNodeToContext(ctx, awaitedNodeId, Collections.emptyList());
+        // Join Node (previous execution) -> depends on Awaited Node
+        addNodeToContext(ctx, joinNodeId, List.of(awaitedNodeId));
+        // Intermediate Node -> depends on Join Node
+        addNodeToContext(ctx, "intermediate", List.of(joinNodeId));
+
+        registerExecution(ctx);
+
+        joinComponent.run(ctx, emitter);
+
+        assertFalse(emitter.successCalled,
+                "Should not succeed because awaited node is behind the previous execution of the join node");
+    }
 }
