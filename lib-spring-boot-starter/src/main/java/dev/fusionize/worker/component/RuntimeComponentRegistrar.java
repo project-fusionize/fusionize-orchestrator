@@ -2,8 +2,8 @@ package dev.fusionize.worker.component;
 
 import dev.fusionize.worker.component.annotations.RuntimeComponentDefinition;
 import dev.fusionize.workflow.component.WorkflowComponent;
+import dev.fusionize.workflow.component.registery.WorkflowComponentRegistry;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
-import dev.fusionize.workflow.registry.WorkflowComponentRegistry;
 
 public class RuntimeComponentRegistrar {
     private final WorkflowComponentRegistry componentRegistry;

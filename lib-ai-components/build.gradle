@@ -18,6 +18,7 @@ dependencies {
     implementation project(':lib-user')
     implementation project(':lib-ai')
     implementation project(':lib-workflow')
+    implementation project(':lib-workflow-components')
     implementation project(':lib-spring-boot-starter')
 
     implementation 'org.springframework.boot:spring-boot-starter-web'

@@ -1,7 +1,7 @@
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 
 plugins {
-    id 'java'
+    id 'java-library'
     id 'org.springframework.boot' version "${springBootVersion}" apply false
     id 'io.spring.dependency-management' version "${springBootDependencyMangementVersion}"
 }
@@ -15,8 +15,9 @@ dependencyManagement {
 dependencies {
     implementation project(':lib-common')
     implementation project(':lib-user')
-    implementation project(':lib-workflow')
-    implementation project(':lib-workflow-orchestration')
+    api project(':lib-workflow')
+    api project(':lib-workflow-components')
+    api project(':lib-workflow-orchestration')
 
     implementation 'commons-io:commons-io:2.20.0'
 
