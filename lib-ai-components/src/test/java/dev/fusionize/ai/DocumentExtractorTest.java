@@ -62,43 +62,20 @@ class DocumentExtractorTest {
         context.set("document", docBytes);
 
         // Mock AI response
-        String jsonResponse = "{\"key\": \"extractedValue\"}";
-        when(responseSpec.content()).thenReturn(jsonResponse);
+        DocumentExtractor.Response response = new DocumentExtractor.Response(Map.of(
+                "key", "extractedValue"));
+        when(responseSpec.entity(any(Class.class))).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
 
         // Verify success
         assertTrue(emitter.successCalled);
-        
+
         // Verify output
         Map<String, Object> result = (Map<String, Object>) context.getData().get("extractedData");
         assertNotNull(result);
         assertEquals("extractedValue", result.get("key"));
-    }
-
-    @Test
-    void testRun_HandlesMarkdownJson() {
-        // Configure
-        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
-        documentExtractor.configure(config);
-
-        // Setup context
-        context.set("document", "content".getBytes());
-
-        // Mock AI response with markdown
-        String jsonResponse = "```json\n{\"key\": \"value\"}\n```";
-        when(responseSpec.content()).thenReturn(jsonResponse);
-
-        // Run
-        documentExtractor.run(context, emitter);
-
-        // Verify success
-        assertTrue(emitter.successCalled);
-        
-        // Verify output
-        Map<String, Object> result = (Map<String, Object>) context.getData().get("extractedData");
-        assertEquals("value", result.get("key"));
     }
 
     @Test
@@ -108,12 +85,12 @@ class DocumentExtractorTest {
         documentExtractor.configure(config);
 
         // Setup context with PNG bytes
-        byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+        byte[] pngBytes = new byte[] { (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
         context.set("document", pngBytes);
 
         // Mock AI response
-        String jsonResponse = "{}";
-        when(responseSpec.content()).thenReturn(jsonResponse);
+        DocumentExtractor.Response response = new DocumentExtractor.Response(Map.of());
+        when(responseSpec.entity(any(Class.class))).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -123,10 +100,13 @@ class DocumentExtractorTest {
 
         // Verify correct MIME type passed
         verify(requestSpec).user(any(Consumer.class));
-        // Note: It's hard to verify the exact lambda passed to user(), but we can verify that the code runs without error
+        // Note: It's hard to verify the exact lambda passed to user(), but we can
+        // verify that the code runs without error
         // and that the mime type detection logic is exercised.
-        // Ideally we would capture the PromptUserSpec and verify the media call, but that requires more complex mocking.
-        // For now, we rely on the fact that if it didn't detect PNG, it would default to octet-stream,
+        // Ideally we would capture the PromptUserSpec and verify the media call, but
+        // that requires more complex mocking.
+        // For now, we rely on the fact that if it didn't detect PNG, it would default
+        // to octet-stream,
         // and if we were using a real ChatClient it would matter.
         // Since we are mocking, we just ensure it runs.
     }
@@ -138,13 +118,13 @@ class DocumentExtractorTest {
         documentExtractor.configure(config);
 
         // Setup context with Base64 encoded PNG
-        byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+        byte[] pngBytes = new byte[] { (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
         String base64Png = java.util.Base64.getEncoder().encodeToString(pngBytes);
         context.set("document", base64Png);
 
         // Mock AI response
-        String jsonResponse = "{}";
-        when(responseSpec.content()).thenReturn(jsonResponse);
+        DocumentExtractor.Response response = new DocumentExtractor.Response(Map.of());
+        when(responseSpec.entity(any(Class.class))).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -167,8 +147,8 @@ class DocumentExtractorTest {
         context.set("document", plainText);
 
         // Mock AI response
-        String jsonResponse = "{}";
-        when(responseSpec.content()).thenReturn(jsonResponse);
+        DocumentExtractor.Response response = new DocumentExtractor.Response(Map.of());
+        when(responseSpec.entity(any(Class.class))).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -176,7 +156,8 @@ class DocumentExtractorTest {
         // Verify success
         assertTrue(emitter.successCalled);
 
-        // Verify user prompt was called (we can't easily verify exact content without capturing, but we know it runs)
+        // Verify user prompt was called (we can't easily verify exact content without
+        // capturing, but we know it runs)
         verify(requestSpec).user(any(Consumer.class));
     }
 
@@ -186,13 +167,15 @@ class DocumentExtractorTest {
 
         @Override
         public void success(Context updatedContext) {
+            System.err.println("SUCCESS CALLED");
             successCalled = true;
         }
 
         @Override
         public void failure(Exception ex) {
+            System.err.println("FAILURE CALLED: " + ex.getMessage());
+            ex.printStackTrace(System.err);
             failureCalled = true;
-            ex.printStackTrace();
         }
 
         @Override

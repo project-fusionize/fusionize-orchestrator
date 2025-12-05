@@ -59,7 +59,8 @@ class ComplexGatewayConverterTest {
 
         dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig config = node.getComponentConfig();
         assertEquals("pickLast", config.getConfig().get("mergeStrategy"));
-        assertEquals("any", config.getConfig().get("waitMode"));
+        assertEquals("threshold", config.getConfig().get("waitMode"));
+        assertEquals(1, config.getConfig().get("thresholdCount"));
 
         List<String> await = (List<String>) config.getConfig().get("await");
         assertNotNull(await);
