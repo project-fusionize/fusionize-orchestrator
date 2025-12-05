@@ -21,9 +21,10 @@ public class ParallelGatewayConverter extends GatewayConverter<ParallelGateway> 
         }
 
         WorkflowNodeDescription node = getJoinNode();
-        node.getComponentConfig().put(JoinComponent.CONF_AWAIT, getIncomingFlows(parallelGateway, model));
-        node.getComponentConfig().put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_LAST.toString());
-        node.getComponentConfig().put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.ALL.toString());
+        node.getConfig().put(JoinComponent.CONF_AWAIT, getIncomingFlows(parallelGateway, model));
+        node.getConfig().put(JoinComponent.CONF_MERGE_STRATEGY,
+                JoinComponent.MergeStrategy.PICK_LAST.toString());
+        node.getConfig().put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.ALL.toString());
         return node;
     }
 

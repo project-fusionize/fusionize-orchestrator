@@ -16,7 +16,7 @@ public class TimerEventDefinitionConverter extends ProcessEventConverter<TimerEv
     public WorkflowNodeDescription convert(TimerEventDefinition timerEventDefinition, BpmnModel model) {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
+        node.setConfig(config);
         node.setType(WorkflowNodeType.WAIT);
         node.setComponent(DelayComponent.NAME);
         if (timerEventDefinition.getTimeDuration() != null) {

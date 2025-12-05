@@ -17,7 +17,7 @@ import java.util.Map;
 
 import static dev.fusionize.process.ProcessConverter.buildKey;
 
-public abstract class GatewayConverter <G extends Gateway> extends ProcessNodeConverter<G> {
+public abstract class GatewayConverter<G extends Gateway> extends ProcessNodeConverter<G> {
     protected boolean isFork(G gateway) {
         return gateway.getOutgoingFlows().size() > 1;
     }
@@ -66,19 +66,19 @@ public abstract class GatewayConverter <G extends Gateway> extends ProcessNodeCo
         return conditions;
     }
 
-    protected WorkflowNodeDescription getForkNode(){
+    protected WorkflowNodeDescription getForkNode() {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
+        node.setConfig(config);
         node.setType(WorkflowNodeType.DECISION);
         node.setComponent(ForkComponent.NAME);
         return node;
     }
 
-    protected WorkflowNodeDescription getJoinNode(){
+    protected WorkflowNodeDescription getJoinNode() {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
+        node.setConfig(config);
         node.setType(WorkflowNodeType.WAIT);
         node.setComponent(JoinComponent.NAME);
         return node;

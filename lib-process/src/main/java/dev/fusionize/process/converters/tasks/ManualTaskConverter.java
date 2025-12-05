@@ -7,7 +7,6 @@ import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
 import org.flowable.bpmn.model.ManualTask;
 
-
 public class ManualTaskConverter extends ProcessNodeConverter<ManualTask> {
     @Override
     public WorkflowNodeDescription convert(ManualTask manualTask, BpmnModel model) {

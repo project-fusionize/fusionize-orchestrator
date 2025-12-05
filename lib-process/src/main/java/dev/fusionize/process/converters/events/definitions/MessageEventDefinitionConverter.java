@@ -22,7 +22,7 @@ public class MessageEventDefinitionConverter extends ProcessEventConverter<Messa
     public WorkflowNodeDescription convert(MessageEventDefinition definition, BpmnModel model) {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
+        node.setConfig(config);
         node.setType(nodeType);
         node.setComponent("message");
 

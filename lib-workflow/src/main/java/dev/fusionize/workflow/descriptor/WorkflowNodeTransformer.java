@@ -23,15 +23,20 @@ public class WorkflowNodeTransformer {
             return null;
         }
 
+        String fullComponent = nodeDescription.getComponent();
+        if (nodeDescription.getActor() != null && !nodeDescription.getActor().isEmpty()) {
+            fullComponent = nodeDescription.getActor() + ":" + nodeDescription.getComponent();
+        }
+
         WorkflowNode.Builder builder = WorkflowNode.builder()
                 .type(nodeDescription.getType())
-                .component(nodeDescription.getComponent())
+                .component(fullComponent)
                 .workflowNodeKey(workflowNodeKey);
 
-        // Transform componentConfig from Map to WorkflowComponentConfig
-        if (nodeDescription.getComponentConfig() != null && !nodeDescription.getComponentConfig().isEmpty()) {
+        // Transform config from Map to WorkflowComponentConfig
+        if (nodeDescription.getConfig() != null && !nodeDescription.getConfig().isEmpty()) {
             ComponentConfig componentConfig = ComponentConfig.builder()
-                    .withConfig(nodeDescription.getComponentConfig())
+                    .withConfig(nodeDescription.getConfig())
                     .build();
             builder.componentConfig(componentConfig);
         }
@@ -55,16 +60,24 @@ public class WorkflowNodeTransformer {
 
         WorkflowNodeDescription description = new WorkflowNodeDescription();
         description.setType(workflowNode.getType());
-        description.setComponent(workflowNode.getComponent());
+
+        String fullComponent = workflowNode.getComponent();
+        if (fullComponent != null && fullComponent.contains(":")) {
+            String[] parts = fullComponent.split(":", 2);
+            description.setActor(parts[0]);
+            description.setComponent(parts[1]);
+        } else {
+            description.setComponent(fullComponent);
+        }
 
         // Transform componentConfig from WorkflowComponentConfig to Map
-        if (workflowNode.getComponentConfig() != null 
+        if (workflowNode.getComponentConfig() != null
                 && workflowNode.getComponentConfig().getConfig() != null
                 && !workflowNode.getComponentConfig().getConfig().isEmpty()) {
             Map<String, Object> configMap = new HashMap<>(workflowNode.getComponentConfig().getConfig());
-            description.setComponentConfig(configMap);
+            description.setConfig(configMap);
         } else {
-            description.setComponentConfig(new HashMap<>());
+            description.setConfig(new HashMap<>());
         }
 
         // Transform children to "next" field containing the keys of child nodes
@@ -81,4 +94,3 @@ public class WorkflowNodeTransformer {
         return description;
     }
 }
-

@@ -10,22 +10,23 @@
   "nodes": {
     "start": {
       "type": "START",
-      "component": "start:test.start",
-      "componentConfig": {},
+      "component": "test.start",
+      "config": {},
       "next": ["task"]
     },
     "task": {
       "type": "TASK",
-      "component": "task:test.task",
-      "componentConfig": {
+      "component": "test.task",
+      "actor": "ai",
+      "config": {
         "timeout": 5000
       },
       "next": ["end"]
     },
     "end": {
       "type": "END",
-      "component": "end:test.end",
-      "componentConfig": {},
+      "component": "test.end",
+      "config": {},
       "next": []
     }
   }

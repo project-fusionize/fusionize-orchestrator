@@ -2,7 +2,10 @@ package dev.fusionize.workflow.component;
 
 import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.user.activity.DomainEntity;
-import dev.fusionize.workflow.WorkflowNodeType;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -14,23 +17,27 @@ public class WorkflowComponent extends DomainEntity {
     @Indexed(unique = true)
     private String componentId;
     private String description;
-    private WorkflowNodeType compatible;
+    private Set<Actor> actors = new HashSet<>();
 
     public static Builder builder(String parentDomain) {
         return new Builder(parentDomain);
     }
 
     public void mergeFrom(WorkflowComponent other) {
-        if (other == null) return;
-        if (other.getName() != null) this.setName(other.getName());
-        if (other.getDescription() != null) this.setDescription(other.getDescription());
-        if (other.getCompatible() != null) this.setCompatible(other.getCompatible());
+        if (other == null)
+            return;
+        if (other.getName() != null)
+            this.setName(other.getName());
+        if (other.getDescription() != null)
+            this.setDescription(other.getDescription());
+        if (other.getActors() != null && !other.getActors().isEmpty())
+            this.setActors(other.getActors());
     }
 
     public static class Builder extends DomainEntity.Builder<Builder> {
         private String componentId;
         private String description;
-        private WorkflowNodeType compatible;
+        private Set<Actor> actors = new HashSet<>();
 
         private Builder(String parentDomain) {
             super(parentDomain, KeyUtil.getFlatUUID());
@@ -46,21 +53,26 @@ public class WorkflowComponent extends DomainEntity {
             return this;
         }
 
-        public Builder withCompatible(WorkflowNodeType compatible) {
-            this.compatible = compatible;
+        public Builder withActor(Actor actor) {
+            this.actors.add(actor);
+            return this;
+        }
+
+        public Builder withActors(Set<Actor> actors) {
+            this.actors.addAll(actors);
             return this;
         }
 
         public WorkflowComponent build() {
             WorkflowComponent component = new WorkflowComponent();
             component.load(super.build());
-            if(componentId == null) {
+            if (componentId == null) {
                 component.setComponentId(KeyUtil.getTimestampId("COMP"));
-            }else {
+            } else {
                 component.setComponentId(this.componentId);
             }
             component.setDescription(this.description);
-            component.setCompatible(this.compatible);
+            component.setActors(this.actors);
             return component;
         }
     }
@@ -89,11 +101,11 @@ public class WorkflowComponent extends DomainEntity {
         this.description = description;
     }
 
-    public WorkflowNodeType getCompatible() {
-        return compatible;
+    public Set<Actor> getActors() {
+        return actors;
     }
 
-    public void setCompatible(WorkflowNodeType compatible) {
-        this.compatible = compatible;
+    public void setActors(Set<Actor> actors) {
+        this.actors = actors;
     }
 }

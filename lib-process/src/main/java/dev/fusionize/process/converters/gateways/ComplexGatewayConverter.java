@@ -8,6 +8,8 @@ import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.ComplexGateway;
 import org.flowable.bpmn.model.FlowElement;
 
+import java.util.HashMap;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +20,7 @@ public class ComplexGatewayConverter extends GatewayConverter<ComplexGateway> {
     public WorkflowNodeDescription convert(ComplexGateway complexGateway, BpmnModel model) {
         if (isJoin(complexGateway)) {
             WorkflowNodeDescription node = getJoinNode();
-            Map<String, Object> config = node.getComponentConfig();
+            Map<String, Object> config = node.getConfig();
             List<String> await = getIncomingFlows(complexGateway, model);
             config.put(JoinComponent.CONF_AWAIT, await);
             config.put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_LAST.toString());
@@ -28,7 +30,7 @@ public class ComplexGatewayConverter extends GatewayConverter<ComplexGateway> {
         }
 
         WorkflowNodeDescription node = getForkNode();
-        Map<String, Object> config = node.getComponentConfig();
+        Map<String, Object> config = node.getConfig();
         String defaultFlow = getDefaultFlow(complexGateway, model);
         if (defaultFlow != null) {
             config.put(ForkComponent.CONF_DEFAULT_PATH, defaultFlow);

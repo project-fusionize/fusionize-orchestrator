@@ -30,8 +30,9 @@ class ProcessConverterTest {
         URL bpmnUrl = this.getClass().getResource("/master_diagram.bpmn");
         assertNotNull(bpmnUrl);
         String xml = Files.readString(new File(bpmnUrl.getFile()).toPath());
-        Process process = new ProcessConverter().convert(xml);
-        Workflow workflow = processConverter.convertToWorkflow(process);
+        ProcessConverter localConverter = new ProcessConverter();
+        Process process = localConverter.convert(xml);
+        Workflow workflow = localConverter.convertToWorkflow(process);
         assertNotNull(workflow);
 
         // Verify Start Event (Message)

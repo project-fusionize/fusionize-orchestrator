@@ -10,14 +10,13 @@ import org.flowable.bpmn.model.InclusiveGateway;
 
 import java.util.Map;
 
-
 public class InclusiveGatewayConverter extends GatewayConverter<InclusiveGateway> {
 
     @Override
     public WorkflowNodeDescription convert(InclusiveGateway inclusiveGateway, BpmnModel model) {
         if (isJoin(inclusiveGateway)) {
             WorkflowNodeDescription node = getJoinNode();
-            Map<String, Object> config = node.getComponentConfig();
+            Map<String, Object> config = node.getConfig();
             config.put(JoinComponent.CONF_AWAIT, getIncomingFlows(inclusiveGateway, model));
             config.put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_LAST.toString());
             config.put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.ALL.toString());
@@ -25,7 +24,7 @@ public class InclusiveGatewayConverter extends GatewayConverter<InclusiveGateway
         }
 
         WorkflowNodeDescription node = getForkNode();
-        Map<String, Object> config = node.getComponentConfig();
+        Map<String, Object> config = node.getConfig();
         config.put(ForkComponent.CONF_FORK_MODE, ForkComponent.ForkMode.INCLUSIVE.toString());
         String defaultFlow = getDefaultFlow(inclusiveGateway, model);
         if (defaultFlow != null) {

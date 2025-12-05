@@ -16,7 +16,7 @@ public class ExclusiveGatewayConverter extends GatewayConverter<ExclusiveGateway
     public WorkflowNodeDescription convert(ExclusiveGateway exclusiveGateway, BpmnModel model) {
         if (isJoin(exclusiveGateway)) {
             WorkflowNodeDescription node = getJoinNode();
-            Map<String, Object> config = node.getComponentConfig();
+            Map<String, Object> config = node.getConfig();
             config.put(JoinComponent.CONF_AWAIT, getIncomingFlows(exclusiveGateway, model));
             config.put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_FIRST.toString());
             config.put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.ANY);
@@ -24,7 +24,7 @@ public class ExclusiveGatewayConverter extends GatewayConverter<ExclusiveGateway
         }
 
         WorkflowNodeDescription node = getForkNode();
-        Map<String, Object> config = node.getComponentConfig();
+        Map<String, Object> config = node.getConfig();
         config.put(ForkComponent.CONF_FORK_MODE, ForkComponent.ForkMode.EXCLUSIVE);
         String defaultFlow = getDefaultFlow(exclusiveGateway, model);
         if (defaultFlow != null) {

@@ -15,9 +15,10 @@ public class ServiceTaskConverter extends ProcessNodeConverter<ServiceTask> {
     public WorkflowNodeDescription convert(ServiceTask serviceTask, BpmnModel model) {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
+        node.setConfig(config);
         node.setType(WorkflowNodeType.TASK);
-        node.setComponent(serviceTask.getImplementation());
+        String implementation = serviceTask.getImplementation();
+        node.setComponent(implementation != null ? implementation : "noop");
         return node;
     }
 

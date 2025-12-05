@@ -10,11 +10,13 @@ import java.util.Map;
 
 public class WorkflowNodeDescription extends Description {
     private WorkflowNodeType type;
+    private String actor;
     private String component;
-    private Map<String,Object> componentConfig = new HashMap<>();
+    private Map<String, Object> config = new HashMap<>();
     private List<String> next = new ArrayList<>();
 
-    public WorkflowNodeDescription() {}
+    public WorkflowNodeDescription() {
+    }
 
     public WorkflowNodeType getType() {
         return type;
@@ -22,6 +24,14 @@ public class WorkflowNodeDescription extends Description {
 
     public void setType(WorkflowNodeType type) {
         this.type = type;
+    }
+
+    public String getActor() {
+        return actor;
+    }
+
+    public void setActor(String actor) {
+        this.actor = actor;
     }
 
     public String getComponent() {
@@ -32,12 +42,12 @@ public class WorkflowNodeDescription extends Description {
         this.component = component;
     }
 
-    public Map<String, Object> getComponentConfig() {
-        return componentConfig;
+    public Map<String, Object> getConfig() {
+        return config;
     }
 
-    public void setComponentConfig(Map<String, Object> componentConfig) {
-        this.componentConfig = componentConfig;
+    public void setConfig(Map<String, Object> config) {
+        this.config = config;
     }
 
     public List<String> getNext() {

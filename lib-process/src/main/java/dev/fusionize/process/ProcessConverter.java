@@ -140,14 +140,17 @@ public class ProcessConverter {
                 if (override.getComponent() != null) {
                     existing.setComponent(override.getComponent());
                 }
+                if (override.getActor() != null) {
+                    existing.setActor(override.getActor());
+                }
                 if (override.getType() != null) {
                     existing.setType(override.getType());
                 }
-                if (override.getComponentConfig() != null && !override.getComponentConfig().isEmpty()) {
-                    if (existing.getComponentConfig() == null) {
-                        existing.setComponentConfig(new HashMap<>());
+                if (override.getConfig() != null && !override.getConfig().isEmpty()) {
+                    if (existing.getConfig() == null) {
+                        existing.setConfig(new HashMap<>());
                     }
-                    existing.getComponentConfig().putAll(override.getComponentConfig());
+                    existing.getConfig().putAll(override.getConfig());
                 }
             }
         }
@@ -164,7 +167,10 @@ public class ProcessConverter {
 
             List<String> next = new ArrayList<>();
             for (org.flowable.bpmn.model.SequenceFlow sf : flowNode.getOutgoingFlows()) {
-                next.add(elementMap.get(sf.getTargetRef()));
+                String targetKey = elementMap.get(sf.getTargetRef());
+                if (targetKey != null) {
+                    next.add(targetKey);
+                }
             }
 
             currentNode.setNext(next);

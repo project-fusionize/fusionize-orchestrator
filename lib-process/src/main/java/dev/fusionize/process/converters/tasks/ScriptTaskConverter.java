@@ -16,7 +16,7 @@ public class ScriptTaskConverter extends ProcessNodeConverter<ScriptTask> {
     public WorkflowNodeDescription convert(ScriptTask scriptTask, BpmnModel model) {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
+        node.setConfig(config);
         node.setType(WorkflowNodeType.TASK);
         node.setComponent(ScriptComponent.NAME);
         config.put(ScriptComponent.CONF_PARSER, scriptTask.getScriptFormat());
