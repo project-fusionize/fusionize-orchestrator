@@ -3,8 +3,6 @@ package dev.fusionize.orchestrator.components;
 import dev.fusionize.worker.component.annotations.RuntimeComponentDefinition;
 import dev.fusionize.workflow.WorkflowNodeType;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
-import dev.fusionize.workflow.events.Event;
-import dev.fusionize.workflow.events.EventPublisher;
 import org.springframework.stereotype.Component;
 
 @Component

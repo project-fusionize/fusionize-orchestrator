@@ -1,6 +1,8 @@
 package dev.fusionize.process.converters.gateways;
 
 import dev.fusionize.process.converters.GatewayConverter;
+import dev.fusionize.workflow.component.local.beans.ForkComponent;
+import dev.fusionize.workflow.component.local.beans.JoinComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.ExclusiveGateway;
@@ -15,20 +17,20 @@ public class ExclusiveGatewayConverter extends GatewayConverter<ExclusiveGateway
         if (isJoin(exclusiveGateway)) {
             WorkflowNodeDescription node = getJoinNode();
             Map<String, Object> config = node.getComponentConfig();
-            config.put("await", getIncomingFlows(exclusiveGateway, model));
-            config.put("mergeStrategy", "pickFirst");
-            config.put("waitMode", "any");
+            config.put(JoinComponent.CONF_AWAIT, getIncomingFlows(exclusiveGateway, model));
+            config.put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_FIRST.toString());
+            config.put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.ANY);
             return node;
         }
 
         WorkflowNodeDescription node = getForkNode();
         Map<String, Object> config = node.getComponentConfig();
-        config.put("forkMode", "exclusive");
+        config.put(ForkComponent.CONF_FORK_MODE, ForkComponent.ForkMode.EXCLUSIVE);
         String defaultFlow = getDefaultFlow(exclusiveGateway, model);
         if (defaultFlow != null) {
-            config.put("default", defaultFlow);
+            config.put(ForkComponent.CONF_DEFAULT_PATH, defaultFlow);
         }
-        config.put("conditions", getOutgoingFlows(exclusiveGateway, model));
+        config.put(ForkComponent.CONF_CONDITIONS, getOutgoingFlows(exclusiveGateway, model));
         return node;
     }
 

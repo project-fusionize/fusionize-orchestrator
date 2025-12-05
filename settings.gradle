@@ -13,4 +13,5 @@ include 'lib-process'
 include 'lib-ai'
 include 'lib-ai-components'
 include 'lib-storage'
+include 'lib-workflow-components'
 

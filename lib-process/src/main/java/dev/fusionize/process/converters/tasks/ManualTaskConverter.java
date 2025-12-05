@@ -7,15 +7,11 @@ import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
 import org.flowable.bpmn.model.ManualTask;
 
-import java.util.HashMap;
-import java.util.Map;
 
 public class ManualTaskConverter extends ProcessNodeConverter<ManualTask> {
     @Override
     public WorkflowNodeDescription convert(ManualTask manualTask, BpmnModel model) {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
-        Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
         node.setType(WorkflowNodeType.TASK);
         return node;
     }

@@ -5,6 +5,7 @@ import dev.fusionize.process.ProcessNodeConverter;
 import dev.fusionize.process.converters.events.definitions.MessageEventDefinitionConverter;
 import dev.fusionize.process.converters.events.definitions.SignalEventDefinitionConverter;
 import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.local.beans.NoopComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
@@ -27,7 +28,7 @@ public class StartEventConverter extends ProcessNodeConverter<StartEvent> {
 
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         node.setType(WorkflowNodeType.START);
-        node.setComponent("start");
+        node.setComponent(NoopComponent.NAME);
         return node;
     }
 

@@ -2,6 +2,8 @@ package dev.fusionize.process.converters;
 
 import dev.fusionize.process.ProcessNodeConverter;
 import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.local.beans.ForkComponent;
+import dev.fusionize.workflow.component.local.beans.JoinComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
@@ -69,7 +71,7 @@ public abstract class GatewayConverter <G extends Gateway> extends ProcessNodeCo
         Map<String, Object> config = new HashMap<>();
         node.setComponentConfig(config);
         node.setType(WorkflowNodeType.DECISION);
-        node.setComponent("fork");
+        node.setComponent(ForkComponent.NAME);
         return node;
     }
 
@@ -78,7 +80,7 @@ public abstract class GatewayConverter <G extends Gateway> extends ProcessNodeCo
         Map<String, Object> config = new HashMap<>();
         node.setComponentConfig(config);
         node.setType(WorkflowNodeType.WAIT);
-        node.setComponent("join");
+        node.setComponent(JoinComponent.NAME);
         return node;
     }
 }

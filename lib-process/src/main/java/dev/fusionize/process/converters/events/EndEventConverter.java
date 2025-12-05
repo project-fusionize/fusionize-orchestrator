@@ -5,6 +5,7 @@ import dev.fusionize.process.ProcessNodeConverter;
 import dev.fusionize.process.converters.events.definitions.MessageEventDefinitionConverter;
 import dev.fusionize.process.converters.events.definitions.SignalEventDefinitionConverter;
 import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.local.beans.NoopComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.EndEvent;
@@ -28,7 +29,7 @@ public class EndEventConverter extends ProcessNodeConverter<EndEvent> {
 
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         node.setType(WorkflowNodeType.END);
-        node.setComponent("end");
+        node.setComponent(NoopComponent.NAME);
         return node;
     }
 

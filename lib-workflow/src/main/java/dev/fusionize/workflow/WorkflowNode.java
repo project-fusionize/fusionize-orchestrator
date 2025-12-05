@@ -1,7 +1,7 @@
 package dev.fusionize.workflow;
 
 import dev.fusionize.common.utility.KeyUtil;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.workflow.component.ComponentConfig;
 import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ public class WorkflowNode {
     private String workflowNodeId;
     private String workflowNodeKey;
     private String component;
-    private ComponentRuntimeConfig componentConfig;
+    private ComponentConfig componentConfig;
     @Transient
     private List<WorkflowNode> children = new ArrayList<>();
 
@@ -30,11 +30,8 @@ public class WorkflowNode {
     private WorkflowNode(Builder builder) {
         this.children = builder.children;
         this.type = builder.type;
-        if(builder.workflowNodeId != null) {
-            this.workflowNodeId = builder.workflowNodeId;
-        }else{
-            this.workflowNodeId = KeyUtil.getTimestampId("WNOD");
-        }
+        this.workflowNodeId = Objects.requireNonNullElseGet(
+                builder.workflowNodeId, () -> KeyUtil.getTimestampId("WNOD"));
         this.workflowNodeKey = builder.workflowNodeKey;
         this.component = builder.component;
         this.componentConfig = builder.componentConfig;
@@ -88,11 +85,11 @@ public class WorkflowNode {
         this.component = component;
     }
 
-    public ComponentRuntimeConfig getComponentConfig() {
+    public ComponentConfig getComponentConfig() {
         return componentConfig;
     }
 
-    public void setComponentConfig(ComponentRuntimeConfig componentConfig) {
+    public void setComponentConfig(ComponentConfig componentConfig) {
         this.componentConfig = componentConfig;
     }
 
@@ -106,7 +103,7 @@ public class WorkflowNode {
         private String workflowNodeId;
         private String workflowNodeKey;
         private String component;
-        private ComponentRuntimeConfig componentConfig;
+        private ComponentConfig componentConfig;
 
         public Builder children(List<WorkflowNode> children) {
             this.children = children != null ? new ArrayList<>(children) : new ArrayList<>();
@@ -140,7 +137,7 @@ public class WorkflowNode {
             return this;
         }
 
-        public Builder componentConfig(ComponentRuntimeConfig componentConfig) {
+        public Builder componentConfig(ComponentConfig componentConfig) {
             this.componentConfig = componentConfig;
             return this;
         }

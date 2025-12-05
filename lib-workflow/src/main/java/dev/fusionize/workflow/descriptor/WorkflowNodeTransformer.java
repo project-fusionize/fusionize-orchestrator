@@ -1,7 +1,7 @@
 package dev.fusionize.workflow.descriptor;
 
 import dev.fusionize.workflow.WorkflowNode;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.workflow.component.ComponentConfig;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +30,7 @@ public class WorkflowNodeTransformer {
 
         // Transform componentConfig from Map to WorkflowComponentConfig
         if (nodeDescription.getComponentConfig() != null && !nodeDescription.getComponentConfig().isEmpty()) {
-            ComponentRuntimeConfig componentConfig = ComponentRuntimeConfig.builder()
+            ComponentConfig componentConfig = ComponentConfig.builder()
                     .withConfig(nodeDescription.getComponentConfig())
                     .build();
             builder.componentConfig(componentConfig);

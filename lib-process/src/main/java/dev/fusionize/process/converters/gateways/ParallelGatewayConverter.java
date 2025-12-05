@@ -1,6 +1,9 @@
 package dev.fusionize.process.converters.gateways;
 
 import dev.fusionize.process.converters.GatewayConverter;
+import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.local.beans.JoinComponent;
+import dev.fusionize.workflow.component.local.beans.NoopComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
@@ -12,15 +15,15 @@ public class ParallelGatewayConverter extends GatewayConverter<ParallelGateway> 
     public WorkflowNodeDescription convert(ParallelGateway parallelGateway, BpmnModel model) {
         if (isFork(parallelGateway)) {
             WorkflowNodeDescription node = new WorkflowNodeDescription();
-            node.setType(dev.fusionize.workflow.WorkflowNodeType.TASK);
-            node.setComponent("noop");
+            node.setType(WorkflowNodeType.TASK);
+            node.setComponent(NoopComponent.NAME);
             return node;
         }
 
         WorkflowNodeDescription node = getJoinNode();
-        node.getComponentConfig().put("await", getIncomingFlows(parallelGateway, model));
-        node.getComponentConfig().put("mergeStrategy", "pickLast");
-        node.getComponentConfig().put("waitMode", "all");
+        node.getComponentConfig().put(JoinComponent.CONF_AWAIT, getIncomingFlows(parallelGateway, model));
+        node.getComponentConfig().put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_LAST.toString());
+        node.getComponentConfig().put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.ALL.toString());
         return node;
     }
 

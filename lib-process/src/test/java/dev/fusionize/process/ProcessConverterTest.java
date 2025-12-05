@@ -4,6 +4,7 @@ import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowNode;
 
 import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.local.beans.NoopComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +52,7 @@ class ProcessConverterTest {
         WorkflowNode endNode = findNode(workflow, "endEvent#Event_0vlopqs");
         assertNotNull(endNode);
         assertEquals(WorkflowNodeType.END, endNode.getType());
-        assertEquals("end", endNode.getComponent());
+        assertEquals(NoopComponent.NAME, endNode.getComponent());
 
         // Verify Script Task
         WorkflowNode scriptNode = findNode(workflow, "scriptTask#Activity_1puc8u1");

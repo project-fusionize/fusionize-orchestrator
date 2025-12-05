@@ -1,7 +1,8 @@
 package dev.fusionize.process.converters.gateways;
 
 import dev.fusionize.process.converters.GatewayConverter;
-import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.local.beans.ForkComponent;
+import dev.fusionize.workflow.component.local.beans.JoinComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
@@ -17,20 +18,20 @@ public class InclusiveGatewayConverter extends GatewayConverter<InclusiveGateway
         if (isJoin(inclusiveGateway)) {
             WorkflowNodeDescription node = getJoinNode();
             Map<String, Object> config = node.getComponentConfig();
-            config.put("await", getIncomingFlows(inclusiveGateway, model));
-            config.put("mergeStrategy", "pickLast");
-            config.put("waitMode", "all");
+            config.put(JoinComponent.CONF_AWAIT, getIncomingFlows(inclusiveGateway, model));
+            config.put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_LAST.toString());
+            config.put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.ALL.toString());
             return node;
         }
 
         WorkflowNodeDescription node = getForkNode();
         Map<String, Object> config = node.getComponentConfig();
-        config.put("forkMode", "inclusive");
+        config.put(ForkComponent.CONF_FORK_MODE, ForkComponent.ForkMode.INCLUSIVE.toString());
         String defaultFlow = getDefaultFlow(inclusiveGateway, model);
         if (defaultFlow != null) {
-            config.put("default", defaultFlow);
+            config.put(ForkComponent.CONF_DEFAULT_PATH, defaultFlow);
         }
-        config.put("conditions", getOutgoingFlows(inclusiveGateway, model));
+        config.put(ForkComponent.CONF_CONDITIONS, getOutgoingFlows(inclusiveGateway, model));
         return node;
     }
 

@@ -3,7 +3,7 @@ package dev.fusionize.workflow.descriptor;
 import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.workflow.component.ComponentConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -349,7 +349,7 @@ class WorkflowDescriptorTest {
                 .type(WorkflowNodeType.TASK)
                 .component("task:test.task")
                 .workflowNodeKey("task1")
-                .componentConfig(ComponentRuntimeConfig.builder()
+                .componentConfig(ComponentConfig.builder()
                         .put("address", "test@example.com")
                         .put("retryCount", 3)
                         .build())
@@ -464,7 +464,7 @@ class WorkflowDescriptorTest {
                 .type(WorkflowNodeType.TASK)
                 .component("task:test.task")
                 .workflowNodeKey("task1")
-                .componentConfig(ComponentRuntimeConfig.builder()
+                .componentConfig(ComponentConfig.builder()
                         .put("address", "test@example.com")
                         .build())
                 .addChild(endNode)

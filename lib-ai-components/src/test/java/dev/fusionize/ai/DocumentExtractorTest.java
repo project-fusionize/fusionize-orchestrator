@@ -5,13 +5,9 @@ import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitte
 import dev.fusionize.workflow.context.Context;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ChatClient.CallResponseSpec;
 import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
-import org.springframework.ai.chat.client.ChatClient.PromptUserSpec;
-import org.springframework.core.io.Resource;
-import org.springframework.util.MimeType;
 
 import java.util.HashMap;
 import java.util.Map;

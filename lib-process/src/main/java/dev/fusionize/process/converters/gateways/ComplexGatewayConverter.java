@@ -1,6 +1,8 @@
 package dev.fusionize.process.converters.gateways;
 
 import dev.fusionize.process.converters.GatewayConverter;
+import dev.fusionize.workflow.component.local.beans.ForkComponent;
+import dev.fusionize.workflow.component.local.beans.JoinComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.ComplexGateway;
@@ -18,10 +20,10 @@ public class ComplexGatewayConverter extends GatewayConverter<ComplexGateway> {
             WorkflowNodeDescription node = getJoinNode();
             Map<String, Object> config = node.getComponentConfig();
             List<String> await = getIncomingFlows(complexGateway, model);
-            config.put("await", await);
-            config.put("mergeStrategy", "pickLast");
-            config.put("waitMode", "threshold");
-            config.put("thresholdCount", await.size() / 2);
+            config.put(JoinComponent.CONF_AWAIT, await);
+            config.put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_LAST.toString());
+            config.put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.THRESHOLD.toString());
+            config.put(JoinComponent.CONF_THRESHOLD_CT, await.size() / 2);
             return node;
         }
 
@@ -29,9 +31,9 @@ public class ComplexGatewayConverter extends GatewayConverter<ComplexGateway> {
         Map<String, Object> config = node.getComponentConfig();
         String defaultFlow = getDefaultFlow(complexGateway, model);
         if (defaultFlow != null) {
-            config.put("default", defaultFlow);
+            config.put(ForkComponent.CONF_DEFAULT_PATH, defaultFlow);
         }
-        config.put("conditions", getOutgoingFlows(complexGateway, model));
+        config.put(ForkComponent.CONF_CONDITIONS, getOutgoingFlows(complexGateway, model));
         return node;
     }
 
