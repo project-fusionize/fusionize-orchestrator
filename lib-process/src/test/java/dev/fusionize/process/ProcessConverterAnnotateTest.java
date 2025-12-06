@@ -19,14 +19,16 @@ class ProcessConverterAnnotateTest {
 
         String yaml = """
                 startEvent#start:
-                  component: start:test.receivedIncomingEmail
-                  componentConfig:
+                  actor: start
+                  component: test.receivedIncomingEmail
+                  config:
                     address: incoming@fusionize.dev
                     address2: incoming2@fusionize.dev
 
                 serviceTask#salesRoute:
-                  component: task:test.sendEmail
-                  componentConfig:
+                  actor: task
+                  component: test.sendEmail
+                  config:
                     address: sales-team@fusionize.dev
                 """;
 
@@ -41,13 +43,15 @@ class ProcessConverterAnnotateTest {
         assertTrue(definitions.containsKey("serviceTask#salesRoute"));
 
         WorkflowNodeDescription startNode = definitions.get("startEvent#start");
-        assertEquals("start:test.receivedIncomingEmail", startNode.getComponent());
-        assertEquals("incoming@fusionize.dev", startNode.getComponentConfig().get("address"));
-        assertEquals("incoming2@fusionize.dev", startNode.getComponentConfig().get("address2"));
+        assertEquals("start", startNode.getActor());
+        assertEquals("test.receivedIncomingEmail", startNode.getComponent());
+        assertEquals("incoming@fusionize.dev", startNode.getConfig().get("address"));
+        assertEquals("incoming2@fusionize.dev", startNode.getConfig().get("address2"));
 
         WorkflowNodeDescription salesNode = definitions.get("serviceTask#salesRoute");
-        assertEquals("task:test.sendEmail", salesNode.getComponent());
-        assertEquals("sales-team@fusionize.dev", salesNode.getComponentConfig().get("address"));
+        assertEquals("task", salesNode.getActor());
+        assertEquals("test.sendEmail", salesNode.getComponent());
+        assertEquals("sales-team@fusionize.dev", salesNode.getConfig().get("address"));
     }
 
     @Test
@@ -90,8 +94,9 @@ class ProcessConverterAnnotateTest {
 
         String yaml = """
                 startEvent#start:
-                  component: start:test.overridden
-                  componentConfig:
+                  actor: start
+                  component: test.overridden
+                  config:
                     key: value
                 """;
 

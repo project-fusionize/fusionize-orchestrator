@@ -3,7 +3,7 @@ package dev.fusionize.workflow.descriptor;
 import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.workflow.component.ComponentConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -66,10 +66,13 @@ class WorkflowTransformerTest {
     void toWorkflow_WithSimpleNodeHierarchy_ShouldBuildCorrectRelationships() {
         // Given: start -> task -> end
         WorkflowDescription description = createSimpleWorkflowDescription();
-        
-        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start", List.of("task1"));
-        WorkflowNodeDescription taskNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.task", List.of("end1"));
-        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end", new ArrayList<>());
+
+        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start",
+                List.of("task1"));
+        WorkflowNodeDescription taskNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.task",
+                List.of("end1"));
+        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end",
+                new ArrayList<>());
 
         Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
         nodes.put("start1", startNode);
@@ -84,15 +87,15 @@ class WorkflowTransformerTest {
         assertNotNull(workflow);
         assertNotNull(workflow.getNodes());
         assertEquals(1, workflow.getNodes().size()); // Only root node (start1)
-        
+
         WorkflowNode rootNode = workflow.getNodes().get(0);
         assertEquals("start1", rootNode.getWorkflowNodeKey());
         assertEquals(1, rootNode.getChildren().size());
-        
+
         WorkflowNode taskNodeResult = rootNode.getChildren().get(0);
         assertEquals("task1", taskNodeResult.getWorkflowNodeKey());
         assertEquals(1, taskNodeResult.getChildren().size());
-        
+
         WorkflowNode endNodeResult = taskNodeResult.getChildren().get(0);
         assertEquals("end1", endNodeResult.getWorkflowNodeKey());
         assertTrue(endNodeResult.getChildren().isEmpty());
@@ -102,12 +105,17 @@ class WorkflowTransformerTest {
     void toWorkflow_WithComplexNodeHierarchy_ShouldBuildCorrectRelationships() {
         // Given: start -> decision -> (task1, task2) -> end
         WorkflowDescription description = createSimpleWorkflowDescription();
-        
-        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start", List.of("decision1"));
-        WorkflowNodeDescription decisionNode = createNodeDescription(WorkflowNodeType.DECISION, "decision:test.decision", List.of("task1", "task2"));
-        WorkflowNodeDescription task1Node = createNodeDescription(WorkflowNodeType.TASK, "task:test.task1", List.of("end1"));
-        WorkflowNodeDescription task2Node = createNodeDescription(WorkflowNodeType.TASK, "task:test.task2", List.of("end1"));
-        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end", new ArrayList<>());
+
+        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start",
+                List.of("decision1"));
+        WorkflowNodeDescription decisionNode = createNodeDescription(WorkflowNodeType.DECISION,
+                "decision:test.decision", List.of("task1", "task2"));
+        WorkflowNodeDescription task1Node = createNodeDescription(WorkflowNodeType.TASK, "task:test.task1",
+                List.of("end1"));
+        WorkflowNodeDescription task2Node = createNodeDescription(WorkflowNodeType.TASK, "task:test.task2",
+                List.of("end1"));
+        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end",
+                new ArrayList<>());
 
         Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
         nodes.put("start1", startNode);
@@ -123,21 +131,21 @@ class WorkflowTransformerTest {
         // Then
         assertNotNull(workflow);
         assertEquals(1, workflow.getNodes().size()); // Only root node
-        
+
         WorkflowNode root = workflow.getNodes().get(0);
         assertEquals("start1", root.getWorkflowNodeKey());
         assertEquals(1, root.getChildren().size());
-        
+
         WorkflowNode decision = root.getChildren().get(0);
         assertEquals("decision1", decision.getWorkflowNodeKey());
         assertEquals(2, decision.getChildren().size());
-        
+
         List<String> taskKeys = decision.getChildren().stream()
                 .map(WorkflowNode::getWorkflowNodeKey)
                 .toList();
         assertTrue(taskKeys.contains("task1"));
         assertTrue(taskKeys.contains("task2"));
-        
+
         // Both tasks should point to the same end node
         WorkflowNode task1 = decision.getChildren().stream()
                 .filter(n -> "task1".equals(n.getWorkflowNodeKey()))
@@ -151,11 +159,15 @@ class WorkflowTransformerTest {
     void toWorkflow_WithMultipleRootNodes_ShouldHandleMultipleRoots() {
         // Given: Two independent workflows (node1 and node2 are both roots)
         WorkflowDescription description = createSimpleWorkflowDescription();
-        
-        WorkflowNodeDescription node1 = createNodeDescription(WorkflowNodeType.START, "start:test.start1", List.of("task1"));
-        WorkflowNodeDescription node2 = createNodeDescription(WorkflowNodeType.START, "start:test.start2", List.of("task2"));
-        WorkflowNodeDescription task1 = createNodeDescription(WorkflowNodeType.TASK, "task:test.task1", new ArrayList<>());
-        WorkflowNodeDescription task2 = createNodeDescription(WorkflowNodeType.TASK, "task:test.task2", new ArrayList<>());
+
+        WorkflowNodeDescription node1 = createNodeDescription(WorkflowNodeType.START, "start:test.start1",
+                List.of("task1"));
+        WorkflowNodeDescription node2 = createNodeDescription(WorkflowNodeType.START, "start:test.start2",
+                List.of("task2"));
+        WorkflowNodeDescription task1 = createNodeDescription(WorkflowNodeType.TASK, "task:test.task1",
+                new ArrayList<>());
+        WorkflowNodeDescription task2 = createNodeDescription(WorkflowNodeType.TASK, "task:test.task2",
+                new ArrayList<>());
 
         Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
         nodes.put("start1", node1);
@@ -232,21 +244,21 @@ class WorkflowTransformerTest {
         assertNotNull(description);
         assertNotNull(description.getNodes());
         assertEquals(3, description.getNodes().size());
-        
+
         // All nodes should be in the map
         assertTrue(description.getNodes().containsKey("start1"));
         assertTrue(description.getNodes().containsKey("task1"));
         assertTrue(description.getNodes().containsKey("end1"));
-        
+
         // Verify relationships
         WorkflowNodeDescription startDesc = description.getNodes().get("start1");
         assertEquals(1, startDesc.getNext().size());
         assertTrue(startDesc.getNext().contains("task1"));
-        
+
         WorkflowNodeDescription taskDesc = description.getNodes().get("task1");
         assertEquals(1, taskDesc.getNext().size());
         assertTrue(taskDesc.getNext().contains("end1"));
-        
+
         WorkflowNodeDescription endDesc = description.getNodes().get("end1");
         assertTrue(endDesc.getNext().isEmpty());
     }
@@ -298,17 +310,17 @@ class WorkflowTransformerTest {
         // Then
         assertNotNull(description);
         assertEquals(5, description.getNodes().size());
-        
+
         WorkflowNodeDescription decisionDesc = description.getNodes().get("decision1");
         assertEquals(2, decisionDesc.getNext().size());
         assertTrue(decisionDesc.getNext().contains("task1"));
         assertTrue(decisionDesc.getNext().contains("task2"));
-        
+
         // Both tasks should point to end
         WorkflowNodeDescription task1Desc = description.getNodes().get("task1");
         assertEquals(1, task1Desc.getNext().size());
         assertTrue(task1Desc.getNext().contains("end1"));
-        
+
         WorkflowNodeDescription task2Desc = description.getNodes().get("task2");
         assertEquals(1, task2Desc.getNext().size());
         assertTrue(task2Desc.getNext().contains("end1"));
@@ -321,7 +333,7 @@ class WorkflowTransformerTest {
                 .type(WorkflowNodeType.TASK)
                 .component("task:test.task")
                 .workflowNodeKey("task1")
-                .componentConfig(ComponentRuntimeConfig.builder()
+                .componentConfig(ComponentConfig.builder()
                         .put("address", "test@example.com")
                         .put("retryCount", 3)
                         .build())
@@ -335,23 +347,26 @@ class WorkflowTransformerTest {
 
         // Then
         WorkflowNodeDescription nodeDesc = description.getNodes().get("task1");
-        assertNotNull(nodeDesc.getComponentConfig());
-        assertEquals("test@example.com", nodeDesc.getComponentConfig().get("address"));
-        assertEquals(3, nodeDesc.getComponentConfig().get("retryCount"));
+        assertNotNull(nodeDesc.getConfig());
+        assertEquals("test@example.com", nodeDesc.getConfig().get("address"));
+        assertEquals(3, nodeDesc.getConfig().get("retryCount"));
     }
 
     @Test
     void roundTripTransformation_ShouldPreserveWorkflowData() {
         // Given
         WorkflowDescription original = createSimpleWorkflowDescription();
-        
-        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start", List.of("task1"));
-        WorkflowNodeDescription taskNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.task", List.of("end1"));
-        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end", new ArrayList<>());
+
+        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start",
+                List.of("task1"));
+        WorkflowNodeDescription taskNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.task",
+                List.of("end1"));
+        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end",
+                new ArrayList<>());
 
         Map<String, Object> taskConfig = new HashMap<>();
         taskConfig.put("address", "test@example.com");
-        taskNode.setComponentConfig(taskConfig);
+        taskNode.setConfig(taskConfig);
 
         Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
         nodes.put("start1", startNode);
@@ -372,25 +387,26 @@ class WorkflowTransformerTest {
         assertEquals(original.getVersion(), result.getVersion());
         assertEquals(original.isActive(), result.isActive());
         assertEquals(3, result.getNodes().size());
-        
+
         // Verify node relationships are preserved
         WorkflowNodeDescription resultStart = result.getNodes().get("start1");
         assertNotNull(resultStart);
         assertEquals(1, resultStart.getNext().size());
         assertTrue(resultStart.getNext().contains("task1"));
-        
+
         WorkflowNodeDescription resultTask = result.getNodes().get("task1");
         assertNotNull(resultTask);
-        assertEquals("test@example.com", resultTask.getComponentConfig().get("address"));
+        assertEquals("test@example.com", resultTask.getConfig().get("address"));
     }
 
     @Test
     void toWorkflow_WithNodesMissingInNextField_ShouldNotCrash() {
         // Given: A node references a non-existent node in its "next" field
         WorkflowDescription description = createSimpleWorkflowDescription();
-        
-        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start", List.of("nonExistentNode"));
-        
+
+        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start",
+                List.of("nonExistentNode"));
+
         Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
         nodes.put("start1", startNode);
         description.setNodes(nodes);
@@ -437,9 +453,15 @@ class WorkflowTransformerTest {
     private WorkflowNodeDescription createNodeDescription(WorkflowNodeType type, String component, List<String> next) {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         node.setType(type);
-        node.setComponent(component);
+        if (component.contains(":")) {
+            String[] parts = component.split(":", 2);
+            node.setActor(parts[0]);
+            node.setComponent(parts[1]);
+        } else {
+            node.setComponent(component);
+        }
         node.setNext(next != null ? new ArrayList<>(next) : new ArrayList<>());
-        node.setComponentConfig(new HashMap<>());
+        node.setConfig(new HashMap<>());
         return node;
     }
 
@@ -455,5 +477,3 @@ class WorkflowTransformerTest {
                 .build();
     }
 }
-
-

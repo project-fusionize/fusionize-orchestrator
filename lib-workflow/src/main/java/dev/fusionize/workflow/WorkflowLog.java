@@ -17,6 +17,10 @@ public class WorkflowLog {
     private String workflowExecutionId;
     @Indexed
     private String workflowNodeId;
+    @Indexed
+    private String workflowDomain;
+    @Indexed
+    private String nodeKey;
     private String component;
     private Instant timestamp;
     private LogLevel level;
@@ -27,22 +31,29 @@ public class WorkflowLog {
         INFO, WARN, ERROR, DEBUG
     }
 
-    public static WorkflowLog info(String workflowId, String workflowExecutionId, String workflowNodeId,
+    public static WorkflowLog info(String workflowId, String workflowDomain, String workflowExecutionId,
+            String workflowNodeId, String nodeKey,
             String component, String message) {
-        return create(workflowId, workflowExecutionId, workflowNodeId, component, LogLevel.INFO, message);
+        return create(workflowId, workflowDomain, workflowExecutionId, workflowNodeId, nodeKey, component,
+                LogLevel.INFO, message);
     }
 
-    public static WorkflowLog error(String workflowId, String workflowExecutionId, String workflowNodeId,
+    public static WorkflowLog error(String workflowId, String workflowDomain, String workflowExecutionId,
+            String workflowNodeId, String nodeKey,
             String component, String message) {
-        return create(workflowId, workflowExecutionId, workflowNodeId, component, LogLevel.ERROR, message);
+        return create(workflowId, workflowDomain, workflowExecutionId, workflowNodeId, nodeKey, component,
+                LogLevel.ERROR, message);
     }
 
-    public static WorkflowLog create(String workflowId, String workflowExecutionId, String workflowNodeId,
+    public static WorkflowLog create(String workflowId, String workflowDomain, String workflowExecutionId,
+            String workflowNodeId, String nodeKey,
             String component, LogLevel level, String message) {
         WorkflowLog log = new WorkflowLog();
         log.workflowId = workflowId;
+        log.workflowDomain = workflowDomain;
         log.workflowExecutionId = workflowExecutionId;
         log.workflowNodeId = workflowNodeId;
+        log.nodeKey = nodeKey;
         log.component = component;
         log.timestamp = Instant.now();
         log.level = level;
@@ -80,6 +91,22 @@ public class WorkflowLog {
 
     public void setWorkflowNodeId(String workflowNodeId) {
         this.workflowNodeId = workflowNodeId;
+    }
+
+    public String getWorkflowDomain() {
+        return workflowDomain;
+    }
+
+    public void setWorkflowDomain(String workflowDomain) {
+        this.workflowDomain = workflowDomain;
+    }
+
+    public String getNodeKey() {
+        return nodeKey;
+    }
+
+    public void setNodeKey(String nodeKey) {
+        this.nodeKey = nodeKey;
     }
 
     public String getComponent() {
@@ -122,10 +149,10 @@ public class WorkflowLog {
         this.context = context;
     }
 
-    @Override
     public String toString() {
-        String str = String.format("%s %s [%s] [%s] [%s] %s: %s",
-                timestamp, level, workflowId, workflowNodeId, workflowExecutionId, component, message);
+        String str = String.format("%s %-5s [%-25s] [%45s] %s: %s",
+                timestamp, level, workflowExecutionId, workflowDomain + ":" + nodeKey, component,
+                message);
         return context != null ? str + ": " + context : str;
     }
 }

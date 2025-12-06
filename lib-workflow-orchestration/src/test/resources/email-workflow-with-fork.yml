@@ -9,15 +9,16 @@ active: true
 nodes:
   start:
     type: START
-    component: start:test.receivedIncomingEmail
-    componentConfig:
+    actor: system
+    component: test.receivedIncomingEmail
+    config:
       address: incoming@email.com
     next: [emailDecision]
 
   emailDecision:
     type: DECISION
     component: fork
-    componentConfig:
+    config:
       default: outgoing1
       conditions:
         outgoing1: "#email_message.contains('route 1')"
@@ -26,26 +27,29 @@ nodes:
 
   outgoing1:
     type: TASK
-    component: task:test.sendEmail
-    componentConfig:
+    actor: ai
+    component: test.sendEmail
+    config:
       address: outgoing1@email.com
     next: [waiting]
 
   outgoing2:
     type: TASK
-    component: task:test.sendEmail
-    componentConfig:
+    actor: ai
+    component: test.sendEmail
+    config:
       address: outgoing2@email.com
     next: [waiting]
 
   waiting:
     type: WAIT
     component: delay
-    componentConfig:
+    config:
       delay: 500
     next: [ end ]
 
   end:
     type: END
-    component: end:test.endEmailWorkflow
+    actor: system
+    component: test.endEmailWorkflow
     next: []

@@ -1,7 +1,7 @@
 package dev.fusionize.process;
 
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.workflow.component.ComponentConfig;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.InclusiveGateway;
 import org.flowable.bpmn.model.SequenceFlow;
@@ -56,9 +56,9 @@ class InclusiveGatewayConverterTest {
         assertEquals(WorkflowNodeType.WAIT, node.getType());
         assertEquals("join", node.getComponent());
 
-        ComponentRuntimeConfig config = node.getComponentConfig();
-        assertEquals("pickLast", config.getConfig().get("mergeStrategy"));
-        assertEquals("all", config.getConfig().get("waitMode"));
+        ComponentConfig config = node.getComponentConfig();
+        assertEquals("PICK_LAST", config.getConfig().get("mergeStrategy"));
+        assertEquals("ALL", config.getConfig().get("waitMode"));
 
         List<String> await = (List<String>) config.getConfig().get("await");
         assertNotNull(await);
@@ -110,7 +110,7 @@ class InclusiveGatewayConverterTest {
         assertEquals(WorkflowNodeType.DECISION, node.getType());
         assertEquals("fork", node.getComponent());
 
-        ComponentRuntimeConfig config = node.getComponentConfig();
+        ComponentConfig config = node.getComponentConfig();
         Map<String, String> conditions = (Map<String, String>) config.getConfig().get("conditions");
         assertNotNull(conditions);
         assertEquals("${var > 10}", conditions.get("manualTask#task1"));

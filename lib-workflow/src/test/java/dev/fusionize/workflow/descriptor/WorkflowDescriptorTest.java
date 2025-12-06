@@ -3,7 +3,7 @@ package dev.fusionize.workflow.descriptor;
 import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.workflow.component.ComponentConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -347,9 +347,9 @@ class WorkflowDescriptorTest {
         // Given
         WorkflowNode node = WorkflowNode.builder()
                 .type(WorkflowNodeType.TASK)
-                .component("task:test.task")
+                .component("ai:test.task")
                 .workflowNodeKey("task1")
-                .componentConfig(ComponentRuntimeConfig.builder()
+                .componentConfig(ComponentConfig.builder()
                         .put("address", "test@example.com")
                         .put("retryCount", 3)
                         .build())
@@ -372,6 +372,7 @@ class WorkflowDescriptorTest {
         // Then
         assertNotNull(parsed);
         WorkflowNode parsedNode = parsed.getNodes().get(0);
+        assertEquals("ai:test.task", parsedNode.getComponent());
         assertNotNull(parsedNode.getComponentConfig());
         assertEquals("test@example.com", parsedNode.getComponentConfig().getConfig().get("address"));
         assertEquals(3.0, parsedNode.getComponentConfig().getConfig().get("retryCount"));
@@ -462,9 +463,9 @@ class WorkflowDescriptorTest {
 
         WorkflowNode taskNode = WorkflowNode.builder()
                 .type(WorkflowNodeType.TASK)
-                .component("task:test.task")
+                .component("system:test.task")
                 .workflowNodeKey("task1")
-                .componentConfig(ComponentRuntimeConfig.builder()
+                .componentConfig(ComponentConfig.builder()
                         .put("address", "test@example.com")
                         .build())
                 .addChild(endNode)
@@ -472,7 +473,7 @@ class WorkflowDescriptorTest {
 
         WorkflowNode startNode = WorkflowNode.builder()
                 .type(WorkflowNodeType.START)
-                .component("start:test.start")
+                .component("system:test.start")
                 .workflowNodeKey("start1")
                 .addChild(taskNode)
                 .build();

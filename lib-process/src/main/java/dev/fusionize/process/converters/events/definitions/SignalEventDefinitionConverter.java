@@ -22,7 +22,7 @@ public class SignalEventDefinitionConverter extends ProcessEventConverter<Signal
     public WorkflowNodeDescription convert(SignalEventDefinition definition, BpmnModel model) {
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
+        node.setConfig(config);
         node.setType(nodeType);
         node.setComponent("signal");
 

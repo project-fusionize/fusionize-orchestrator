@@ -9,62 +9,67 @@ active: true
 nodes:
   start:
     type: START
-    component: start:test.receivedIncomingEmail
-    componentConfig:
+    actor: system
+    component: test.receivedIncomingEmail
+    config:
       address: incoming@email.com
     next: [outgoing1, outgoing2, outgoing3]
 
   outgoing1:
     type: TASK
-    component: task:test.sendEmail
-    componentConfig:
+    actor: ai
+    component: test.sendEmail
+    config:
       address: outgoing1@email.com
     next: [waiting1 ]
 
   outgoing2:
     type: TASK
-    component: task:test.sendEmail
-    componentConfig:
+    actor: ai
+    component: test.sendEmail
+    config:
       address: outgoing2@email.com
     next: [waiting2 ]
 
   outgoing3:
     type: TASK
-    component: task:test.sendEmail
-    componentConfig:
+    actor: ai
+    component: test.sendEmail
+    config:
       address: outgoing3@email.com
     next: [ waiting3 ]
 
   waiting1:
     type: WAIT
     component: delay
-    componentConfig:
+    config:
       delay: 120
     next: [ waitFor123 ]
 
   waiting2:
     type: WAIT
     component: delay
-    componentConfig:
+    config:
       delay: 230
     next: [ waitFor123 ]
 
   waiting3:
     type: WAIT
     component: delay
-    componentConfig:
+    config:
       delay: 300
     next: [ waitFor123 ]
 
   waitFor123:
     type: WAIT
     component: join
-    componentConfig:
+    config:
       mergeStrategy: pickFirst
       await: [waiting1, waiting2, waiting3]
     next: [ end ]
 
   end:
     type: END
-    component: end:test.endEmailWorkflow
+    actor: system
+    component: test.endEmailWorkflow
     next: []

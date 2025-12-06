@@ -1,79 +1,41 @@
 package dev.fusionize.process.converters.gateways;
 
-import dev.fusionize.process.ProcessNodeConverter;
-import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.process.converters.GatewayConverter;
+import dev.fusionize.workflow.component.local.beans.ForkComponent;
+import dev.fusionize.workflow.component.local.beans.JoinComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.ComplexGateway;
 import org.flowable.bpmn.model.FlowElement;
-import org.flowable.bpmn.model.SequenceFlow;
+
+import java.util.HashMap;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static dev.fusionize.process.ProcessConverter.buildKey;
-
-public class ComplexGatewayConverter extends ProcessNodeConverter<ComplexGateway> {
+public class ComplexGatewayConverter extends GatewayConverter<ComplexGateway> {
 
     @Override
     public WorkflowNodeDescription convert(ComplexGateway complexGateway, BpmnModel model) {
-        WorkflowNodeDescription node = new WorkflowNodeDescription();
-        Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
-
-        // If it has multiple incoming flows, treat as a Join
-        if (complexGateway.getIncomingFlows().size() > 1) {
-            node.setType(WorkflowNodeType.WAIT);
-            node.setComponent("join");
-            List<String> await = new ArrayList<>();
-            for (SequenceFlow flow : complexGateway.getIncomingFlows()) {
-                FlowElement sourceElement = model.getMainProcess().getFlowElement(flow.getSourceRef());
-                if (sourceElement != null) {
-                    await.add(buildKey(sourceElement));
-                }
-            }
-            config.put("await", await);
-            // Defaulting to 'any' for complex gateway as it often implies complex merge
-            // logic not strictly 'all'
-            // But 'pickLast' is a safe default for data merging
-            config.put("mergeStrategy", "pickLast");
-            config.put("waitMode", "any");
+        if (isJoin(complexGateway)) {
+            WorkflowNodeDescription node = getJoinNode();
+            Map<String, Object> config = node.getConfig();
+            List<String> await = getIncomingFlows(complexGateway, model);
+            config.put(JoinComponent.CONF_AWAIT, await);
+            config.put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_LAST.toString());
+            config.put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.THRESHOLD.toString());
+            config.put(JoinComponent.CONF_THRESHOLD_CT, await.size() / 2);
             return node;
         }
 
-        // If it has multiple outgoing flows, treat as a Fork (Decision)
-        if (complexGateway.getOutgoingFlows().size() > 1) {
-            node.setType(WorkflowNodeType.DECISION);
-            node.setComponent("fork");
-
-            if (complexGateway.getDefaultFlow() != null) {
-                FlowElement defaultFlow = model.getMainProcess().getFlowElement(complexGateway.getDefaultFlow());
-                if (defaultFlow instanceof SequenceFlow sequenceFlow) {
-                    FlowElement targetElement = model.getMainProcess().getFlowElement(sequenceFlow.getTargetRef());
-                    if (targetElement != null) {
-                        config.put("default", buildKey(targetElement));
-                    }
-                }
-            }
-
-            Map<String, String> conditions = new HashMap<>();
-            for (SequenceFlow flow : complexGateway.getOutgoingFlows()) {
-                if (flow.getConditionExpression() != null) {
-                    FlowElement targetElement = model.getMainProcess().getFlowElement(flow.getTargetRef());
-                    if (targetElement != null) {
-                        conditions.put(buildKey(targetElement), flow.getConditionExpression());
-                    }
-                }
-            }
-            config.put("conditions", conditions);
-            return node;
+        WorkflowNodeDescription node = getForkNode();
+        Map<String, Object> config = node.getConfig();
+        String defaultFlow = getDefaultFlow(complexGateway, model);
+        if (defaultFlow != null) {
+            config.put(ForkComponent.CONF_DEFAULT_PATH, defaultFlow);
         }
-
-        // Fallback: No-op task
-        node.setType(WorkflowNodeType.TASK);
-        node.setComponent("noop");
+        config.put(ForkComponent.CONF_CONDITIONS, getOutgoingFlows(complexGateway, model));
         return node;
     }
 

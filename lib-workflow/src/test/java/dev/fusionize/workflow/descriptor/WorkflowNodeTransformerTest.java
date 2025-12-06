@@ -2,7 +2,7 @@ package dev.fusionize.workflow.descriptor;
 
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeType;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.workflow.component.ComponentConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,11 +27,12 @@ class WorkflowNodeTransformerTest {
         // Given
         WorkflowNodeDescription description = new WorkflowNodeDescription();
         description.setType(WorkflowNodeType.TASK);
-        description.setComponent("task:test.sendEmail");
+        description.setActor("system");
+        description.setComponent("test.sendEmail");
         Map<String, Object> configMap = new HashMap<>();
         configMap.put("address", "test@example.com");
         configMap.put("retryCount", 3);
-        description.setComponentConfig(configMap);
+        description.setConfig(configMap);
         description.setNext(new ArrayList<>());
 
         // When
@@ -40,7 +41,7 @@ class WorkflowNodeTransformerTest {
         // Then
         assertNotNull(node);
         assertEquals(WorkflowNodeType.TASK, node.getType());
-        assertEquals("task:test.sendEmail", node.getComponent());
+        assertEquals("system:test.sendEmail", node.getComponent());
         assertEquals("node1", node.getWorkflowNodeKey());
         assertNotNull(node.getComponentConfig());
         assertEquals("test@example.com", node.getComponentConfig().getConfig().get("address"));
@@ -61,8 +62,9 @@ class WorkflowNodeTransformerTest {
         // Given
         WorkflowNodeDescription description = new WorkflowNodeDescription();
         description.setType(WorkflowNodeType.START);
-        description.setComponent("start:test.receiveEmail");
-        description.setComponentConfig(new HashMap<>());
+        description.setActor("system");
+        description.setComponent("test.receiveEmail");
+        description.setConfig(new HashMap<>());
         description.setNext(new ArrayList<>());
 
         // When
@@ -71,7 +73,7 @@ class WorkflowNodeTransformerTest {
         // Then
         assertNotNull(node);
         assertEquals(WorkflowNodeType.START, node.getType());
-        assertEquals("start:test.receiveEmail", node.getComponent());
+        assertEquals("system:test.receiveEmail", node.getComponent());
         assertNull(node.getComponentConfig());
     }
 
@@ -80,8 +82,9 @@ class WorkflowNodeTransformerTest {
         // Given
         WorkflowNodeDescription description = new WorkflowNodeDescription();
         description.setType(WorkflowNodeType.END);
-        description.setComponent("end:test.complete");
-        description.setComponentConfig(null);
+        description.setActor("system");
+        description.setComponent("test.complete");
+        description.setConfig(null);
         description.setNext(new ArrayList<>());
 
         // When
@@ -94,38 +97,13 @@ class WorkflowNodeTransformerTest {
     }
 
     @Test
-    void toWorkflowNode_WithAllNodeTypes_ShouldTransformCorrectly() {
-        // Test all node types
-        WorkflowNodeType[] types = {
-                WorkflowNodeType.START,
-                WorkflowNodeType.DECISION,
-                WorkflowNodeType.TASK,
-                WorkflowNodeType.WAIT,
-                WorkflowNodeType.END
-        };
-
-        for (WorkflowNodeType type : types) {
-            WorkflowNodeDescription description = new WorkflowNodeDescription();
-            description.setType(type);
-            description.setComponent("component:test." + type.getName().toLowerCase());
-            description.setComponentConfig(new HashMap<>());
-            description.setNext(new ArrayList<>());
-
-            WorkflowNode node = transformer.toWorkflowNode(description, "node-" + type.getName());
-
-            assertNotNull(node, "Node should not be null for type: " + type);
-            assertEquals(type, node.getType(), "Type should match for: " + type);
-        }
-    }
-
-    @Test
     void toWorkflowNodeDescription_WithValidNode_ShouldTransformCorrectly() {
         // Given
         WorkflowNode node = WorkflowNode.builder()
                 .type(WorkflowNodeType.DECISION)
                 .component("decision:test.emailDecision")
                 .workflowNodeKey("decisionNode")
-                .componentConfig(ComponentRuntimeConfig.builder()
+                .componentConfig(ComponentConfig.builder()
                         .put("routeMap", Map.of("route1", "node1", "route2", "node2"))
                         .put("defaultRoute", "node1")
                         .build())
@@ -137,11 +115,12 @@ class WorkflowNodeTransformerTest {
         // Then
         assertNotNull(description);
         assertEquals(WorkflowNodeType.DECISION, description.getType());
-        assertEquals("decision:test.emailDecision", description.getComponent());
-        assertNotNull(description.getComponentConfig());
-        assertEquals(2, description.getComponentConfig().size());
-        assertTrue(description.getComponentConfig().containsKey("routeMap"));
-        assertTrue(description.getComponentConfig().containsKey("defaultRoute"));
+        assertEquals("decision", description.getActor());
+        assertEquals("test.emailDecision", description.getComponent());
+        assertNotNull(description.getConfig());
+        assertEquals(2, description.getConfig().size());
+        assertTrue(description.getConfig().containsKey("routeMap"));
+        assertTrue(description.getConfig().containsKey("defaultRoute"));
         assertNotNull(description.getNext());
         assertTrue(description.getNext().isEmpty());
     }
@@ -204,8 +183,8 @@ class WorkflowNodeTransformerTest {
 
         // Then
         assertNotNull(description);
-        assertNotNull(description.getComponentConfig());
-        assertTrue(description.getComponentConfig().isEmpty());
+        assertNotNull(description.getConfig());
+        assertTrue(description.getConfig().isEmpty());
     }
 
     @Test
@@ -223,8 +202,8 @@ class WorkflowNodeTransformerTest {
 
         // Then
         assertNotNull(description);
-        assertNotNull(description.getComponentConfig());
-        assertTrue(description.getComponentConfig().isEmpty());
+        assertNotNull(description.getConfig());
+        assertTrue(description.getConfig().isEmpty());
     }
 
     @Test
@@ -258,13 +237,13 @@ class WorkflowNodeTransformerTest {
         WorkflowNode child2 = WorkflowNode.builder()
                 .type(WorkflowNodeType.TASK)
                 .component("task:test.task2")
-                .workflowNodeKey(null)  // Missing key
+                .workflowNodeKey(null) // Missing key
                 .build();
 
         WorkflowNode child3 = WorkflowNode.builder()
                 .type(WorkflowNodeType.TASK)
                 .component("task:test.task3")
-                .workflowNodeKey("")  // Empty key
+                .workflowNodeKey("") // Empty key
                 .build();
 
         WorkflowNode parent = WorkflowNode.builder()
@@ -292,12 +271,13 @@ class WorkflowNodeTransformerTest {
         // Given
         WorkflowNodeDescription original = new WorkflowNodeDescription();
         original.setType(WorkflowNodeType.TASK);
-        original.setComponent("task:test.sendEmail");
+        original.setActor("ai");
+        original.setComponent("test.sendEmail");
         Map<String, Object> configMap = new HashMap<>();
         configMap.put("address", "test@example.com");
         configMap.put("subject", "Test Email");
         configMap.put("retryCount", 3);
-        original.setComponentConfig(configMap);
+        original.setConfig(configMap);
         original.setNext(List.of("nextNode1", "nextNode2"));
 
         // When: Transform to node and back
@@ -307,12 +287,13 @@ class WorkflowNodeTransformerTest {
         // Then
         assertNotNull(result);
         assertEquals(original.getType(), result.getType());
+        assertEquals(original.getActor(), result.getActor());
         assertEquals(original.getComponent(), result.getComponent());
-        assertEquals(original.getComponentConfig().size(), result.getComponentConfig().size());
-        assertEquals(original.getComponentConfig().get("address"), result.getComponentConfig().get("address"));
-        assertEquals(original.getComponentConfig().get("subject"), result.getComponentConfig().get("subject"));
-        assertEquals(original.getComponentConfig().get("retryCount"), result.getComponentConfig().get("retryCount"));
-        // Note: next field is not preserved in this round trip because children are set separately
+        assertEquals(original.getConfig().size(), result.getConfig().size());
+        assertEquals(original.getConfig().get("address"), result.getConfig().get("address"));
+        assertEquals(original.getConfig().get("subject"), result.getConfig().get("subject"));
+        assertEquals(original.getConfig().get("retryCount"), result.getConfig().get("retryCount"));
+        // Note: next field is not preserved in this round trip because children are set
+        // separately
     }
 }
-

@@ -4,6 +4,7 @@ import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowNode;
 
 import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.local.beans.NoopComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,8 +30,9 @@ class ProcessConverterTest {
         URL bpmnUrl = this.getClass().getResource("/master_diagram.bpmn");
         assertNotNull(bpmnUrl);
         String xml = Files.readString(new File(bpmnUrl.getFile()).toPath());
-        Process process = new ProcessConverter().convert(xml);
-        Workflow workflow = processConverter.convertToWorkflow(process);
+        ProcessConverter localConverter = new ProcessConverter();
+        Process process = localConverter.convert(xml);
+        Workflow workflow = localConverter.convertToWorkflow(process);
         assertNotNull(workflow);
 
         // Verify Start Event (Message)
@@ -51,7 +53,7 @@ class ProcessConverterTest {
         WorkflowNode endNode = findNode(workflow, "endEvent#Event_0vlopqs");
         assertNotNull(endNode);
         assertEquals(WorkflowNodeType.END, endNode.getType());
-        assertEquals("end", endNode.getComponent());
+        assertEquals(NoopComponent.NAME, endNode.getComponent());
 
         // Verify Script Task
         WorkflowNode scriptNode = findNode(workflow, "scriptTask#Activity_1puc8u1");
@@ -78,11 +80,11 @@ class ProcessConverterTest {
         assertEquals("join", joinNode.getComponent());
     }
 
-    private WorkflowNode findNode(Workflow workflow, String key) {
+    public static WorkflowNode findNode(Workflow workflow, String key) {
         return findNodeRecursive(workflow.getNodes(), key);
     }
 
-    private WorkflowNode findNodeRecursive(List<WorkflowNode> nodes, String key) {
+    public static WorkflowNode findNodeRecursive(List<WorkflowNode> nodes, String key) {
         if (nodes == null)
             return null;
         for (WorkflowNode node : nodes) {

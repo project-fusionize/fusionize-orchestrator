@@ -17,9 +17,11 @@ public class WorkflowLogRepoLogger implements WorkflowLogger {
         this.repository = repository;
     }
 
-    public void log(String workflowId, String workflowExecutionId, String workflowNodeId, String component,
+    public void log(String workflowId, String workflowDomain, String workflowExecutionId, String workflowNodeId,
+            String nodeKey, String component,
             WorkflowLog.LogLevel level, String message) {
-        WorkflowLog log = WorkflowLog.create(workflowId, workflowExecutionId, workflowNodeId, component, level, message);
+        WorkflowLog log = WorkflowLog.create(workflowId, workflowDomain, workflowExecutionId, workflowNodeId, nodeKey,
+                component, level, message);
         Logger logger = LoggerFactory.getLogger(component);
         switch (level) {
             case INFO -> logger.info(message);

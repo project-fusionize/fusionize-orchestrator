@@ -6,6 +6,7 @@ import dev.fusionize.process.converters.events.definitions.MessageEventDefinitio
 import dev.fusionize.process.converters.events.definitions.SignalEventDefinitionConverter;
 import dev.fusionize.process.converters.events.definitions.TimerEventDefinitionConverter;
 import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.workflow.component.local.beans.NoopComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.FlowElement;
@@ -30,7 +31,7 @@ public class IntermediateCatchEventConverter extends ProcessNodeConverter<Interm
         // Fallback if no supported event definition is found
         WorkflowNodeDescription node = new WorkflowNodeDescription();
         node.setType(WorkflowNodeType.WAIT);
-        node.setComponent("noop");
+        node.setComponent(NoopComponent.NAME);
         return node;
     }
 

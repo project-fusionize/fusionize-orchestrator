@@ -33,6 +33,7 @@ subprojects {
         testLogging {
             showStandardStreams = true
         }
+        jvmArgs '-XX:+EnableDynamicAgentLoading'
     }
 }
 

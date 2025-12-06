@@ -1,55 +1,36 @@
 package dev.fusionize.process.converters.gateways;
 
-import dev.fusionize.process.ProcessNodeConverter;
-import dev.fusionize.workflow.WorkflowNodeType;
+import dev.fusionize.process.converters.GatewayConverter;
+import dev.fusionize.workflow.component.local.beans.ForkComponent;
+import dev.fusionize.workflow.component.local.beans.JoinComponent;
 import dev.fusionize.workflow.descriptor.WorkflowNodeDescription;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.ExclusiveGateway;
 import org.flowable.bpmn.model.FlowElement;
-import org.flowable.bpmn.model.SequenceFlow;
 
-import java.util.HashMap;
 import java.util.Map;
 
-import static dev.fusionize.process.ProcessConverter.buildKey;
-
-public class ExclusiveGatewayConverter extends ProcessNodeConverter<ExclusiveGateway> {
+public class ExclusiveGatewayConverter extends GatewayConverter<ExclusiveGateway> {
 
     @Override
     public WorkflowNodeDescription convert(ExclusiveGateway exclusiveGateway, BpmnModel model) {
-        WorkflowNodeDescription node = new WorkflowNodeDescription();
-        Map<String, Object> config = new HashMap<>();
-        node.setComponentConfig(config);
-
-        if(exclusiveGateway.getOutgoingFlows().size() <= 1){
-            node.setType(WorkflowNodeType.TASK);
-            node.setComponent("noop");
+        if (isJoin(exclusiveGateway)) {
+            WorkflowNodeDescription node = getJoinNode();
+            Map<String, Object> config = node.getConfig();
+            config.put(JoinComponent.CONF_AWAIT, getIncomingFlows(exclusiveGateway, model));
+            config.put(JoinComponent.CONF_MERGE_STRATEGY, JoinComponent.MergeStrategy.PICK_FIRST.toString());
+            config.put(JoinComponent.CONF_WAIT_MODE, JoinComponent.WaitMode.ANY);
             return node;
         }
 
-        node.setType(WorkflowNodeType.DECISION);
-        node.setComponent("fork");
-
-        if (exclusiveGateway.getDefaultFlow() != null) {
-            FlowElement defaultFlow = model.getMainProcess().getFlowElement(exclusiveGateway.getDefaultFlow());
-            if (defaultFlow instanceof SequenceFlow sequenceFlow) {
-                FlowElement targetElement = model.getMainProcess().getFlowElement(sequenceFlow.getTargetRef());
-                if (targetElement != null) {
-                    config.put("default", buildKey(targetElement));
-                }
-            }
+        WorkflowNodeDescription node = getForkNode();
+        Map<String, Object> config = node.getConfig();
+        config.put(ForkComponent.CONF_FORK_MODE, ForkComponent.ForkMode.EXCLUSIVE);
+        String defaultFlow = getDefaultFlow(exclusiveGateway, model);
+        if (defaultFlow != null) {
+            config.put(ForkComponent.CONF_DEFAULT_PATH, defaultFlow);
         }
-
-        Map<String, String> conditions = new HashMap<>();
-        for (SequenceFlow flow : exclusiveGateway.getOutgoingFlows()) {
-            if (flow.getConditionExpression() != null) {
-                FlowElement targetElement = model.getMainProcess().getFlowElement(flow.getTargetRef());
-                if (targetElement != null) {
-                    conditions.put(buildKey(targetElement), flow.getConditionExpression());
-                }
-            }
-        }
-        config.put("conditions", conditions);
+        config.put(ForkComponent.CONF_CONDITIONS, getOutgoingFlows(exclusiveGateway, model));
         return node;
     }
 

@@ -13,7 +13,7 @@ import dev.fusionize.workflow.events.EventListener;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.EventStore;
 import dev.fusionize.workflow.orchestrator.Orchestrator;
-import dev.fusionize.workflow.registry.WorkflowComponentRepoRegistry;
+import dev.fusionize.workflow.component.registry.WorkflowComponentRepoRegistry;
 import dev.fusionize.workflow.registry.WorkflowRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

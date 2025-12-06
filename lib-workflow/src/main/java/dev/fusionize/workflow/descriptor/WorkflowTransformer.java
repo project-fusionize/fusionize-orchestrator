@@ -61,8 +61,10 @@ public class WorkflowTransformer {
     }
 
     /**
-     * Transforms a map of node descriptions to a hierarchical list of WorkflowNodes.
-     * Uses the "next" field in each description to build parent-child relationships.
+     * Transforms a map of node descriptions to a hierarchical list of
+     * WorkflowNodes.
+     * Uses the "next" field in each description to build parent-child
+     * relationships.
      */
     private List<WorkflowNode> transformNodes(Map<String, WorkflowNodeDescription> nodeDescriptions) {
         if (nodeDescriptions == null || nodeDescriptions.isEmpty()) {
@@ -116,8 +118,10 @@ public class WorkflowTransformer {
     }
 
     /**
-     * Transforms a hierarchical list of WorkflowNodes to a flat map of WorkflowNodeDescriptions.
-     * The map key is the workflowNodeKey, and the "next" field contains the keys of child nodes.
+     * Transforms a hierarchical list of WorkflowNodes to a flat map of
+     * WorkflowNodeDescriptions.
+     * The map key is the workflowNodeKey, and the "next" field contains the keys of
+     * child nodes.
      */
     private Map<String, WorkflowNodeDescription> transformNodesToMap(List<WorkflowNode> nodes) {
         if (nodes == null || nodes.isEmpty()) {
@@ -136,9 +140,9 @@ public class WorkflowTransformer {
     /**
      * Recursively transforms nodes and their children.
      */
-    private void transformNodeRecursive(List<WorkflowNode> nodes, 
-                                       Map<String, WorkflowNodeDescription> nodeMap,
-                                       WorkflowNodeTransformer transformer) {
+    private void transformNodeRecursive(List<WorkflowNode> nodes,
+            Map<String, WorkflowNodeDescription> nodeMap,
+            WorkflowNodeTransformer transformer) {
         if (nodes == null) {
             return;
         }
@@ -154,4 +158,3 @@ public class WorkflowTransformer {
         }
     }
 }
-

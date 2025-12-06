@@ -10,16 +10,17 @@
   "nodes": {
     "start1": {
       "type": "START",
-      "component": "start:test.receivedIncomingEmail",
-      "componentConfig": {
+      "component": "test.receivedIncomingEmail",
+      "config": {
         "address": "incoming@email.com"
       },
       "next": ["decision1"]
     },
     "decision1": {
       "type": "DECISION",
-      "component": "decision:test.emailDecision",
-      "componentConfig": {
+      "actor": "human",
+      "component": "test.emailDecision",
+      "config": {
         "routeMap": {
           "route 1": "task1",
           "route 2": "task2"
@@ -29,8 +30,8 @@
     },
     "task1": {
       "type": "TASK",
-      "component": "task:test.sendEmail",
-      "componentConfig": {
+      "component": "test.sendEmail",
+      "config": {
         "address": "outgoing1@email.com",
         "retryCount": 3
       },
@@ -38,8 +39,8 @@
     },
     "task2": {
       "type": "TASK",
-      "component": "task:test.sendEmail",
-      "componentConfig": {
+      "component": "test.sendEmail",
+      "config": {
         "address": "outgoing2@email.com",
         "retryCount": 2
       },
@@ -47,8 +48,8 @@
     },
     "end1": {
       "type": "END",
-      "component": "end:test.endEmailWorkflow",
-      "componentConfig": {},
+      "component": "test.endEmailWorkflow",
+      "config": {},
       "next": []
     }
   }

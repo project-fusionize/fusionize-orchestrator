@@ -5,6 +5,8 @@ import dev.fusionize.workflow.WorkflowLogger;
 import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.component.local.LocalComponentRuntime;
 import dev.fusionize.workflow.component.local.LocalComponentRuntimeFactory;
+import dev.fusionize.workflow.component.local.beans.NoopComponent;
+import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.context.ContextRuntimeData;
@@ -45,13 +47,22 @@ public class OrchestratorComponentDispatcher {
         this.executor = executor;
     }
 
+    private Optional<LocalComponentRuntimeFactory<?>> checkForLocalComponent(WorkflowNodeExecution ne) {
+        String component = ne.getWorkflowNode().getComponent();
+        if (component == null || component.isEmpty()) {
+            return localComponentRuntimeFactories.stream().filter(
+                    f -> f.getName().equalsIgnoreCase(NoopComponent.NAME)).findFirst();
+        }
+        return localComponentRuntimeFactories.stream().filter(
+                f -> f.getName().equalsIgnoreCase(component)).findFirst();
+    }
+
     public void dispatchActivation(WorkflowExecution we, WorkflowNodeExecution ne,
             BiConsumer<WorkflowExecution, WorkflowNodeExecution> onSuccess,
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
-        Optional<LocalComponentRuntimeFactory<?>> optionalFactory = localComponentRuntimeFactories.stream().filter(
-                f -> f.getName().equalsIgnoreCase(ne.getWorkflowNode().getComponent())).findFirst();
-        if (optionalFactory.isPresent()) {
-            LocalComponentRuntimeFactory<?> localComponentBundle = optionalFactory.get();
+        Optional<LocalComponentRuntimeFactory<?>> optionalLocalFactory = checkForLocalComponent(ne);
+        if (optionalLocalFactory.isPresent()) {
+            LocalComponentRuntimeFactory<?> localComponentBundle = optionalLocalFactory.get();
             LocalComponentRuntime localComponentRuntime = localComponentBundle.create();
             requestLocalActivation(localComponentRuntime, we, ne, onSuccess, onFailure);
         } else {
@@ -62,10 +73,9 @@ public class OrchestratorComponentDispatcher {
     public void dispatchInvocation(WorkflowExecution we, WorkflowNodeExecution ne,
             BiConsumer<WorkflowExecution, WorkflowNodeExecution> onSuccess,
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
-        Optional<LocalComponentRuntimeFactory<?>> optionalFactory = localComponentRuntimeFactories.stream().filter(
-                f -> f.getName().equalsIgnoreCase(ne.getWorkflowNode().getComponent())).findFirst();
-        if (optionalFactory.isPresent()) {
-            LocalComponentRuntimeFactory<?> localComponentBundle = optionalFactory.get();
+        Optional<LocalComponentRuntimeFactory<?>> optionalLocalFactory = checkForLocalComponent(ne);
+        if (optionalLocalFactory.isPresent()) {
+            LocalComponentRuntimeFactory<?> localComponentBundle = optionalLocalFactory.get();
             LocalComponentRuntime localComponentRuntime = localComponentBundle.create();
             requestLocalInvocation(localComponentRuntime, we, ne, onSuccess, onFailure);
         } else {
@@ -77,7 +87,7 @@ public class OrchestratorComponentDispatcher {
             WorkflowExecution we, WorkflowNodeExecution ne,
             BiConsumer<WorkflowExecution, WorkflowNodeExecution> onSuccess,
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
-        localComponentRuntime.configure(ne.getWorkflowNode().getComponentConfig());
+        localComponentRuntime.configure(ComponentRuntimeConfig.from(ne.getWorkflowNode().getComponentConfig()));
         CompletableFuture.runAsync(
                 () -> localComponentRuntime.canActivate(getContext(we, ne), new ComponentUpdateEmitter() {
                     @Override
@@ -93,7 +103,9 @@ public class OrchestratorComponentDispatcher {
                     @Override
                     public Logger logger() {
                         return (message, level, throwable) -> workflowLogger.log(
-                                we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
+                                we.getWorkflowId(), we.getWorkflow().getDomain(), we.getWorkflowExecutionId(),
+                                ne.getWorkflowNodeId(),
+                                ne.getWorkflowNode().getWorkflowNodeKey(),
                                 ne.getWorkflowNode().getComponent(), level, message);
                     }
 
@@ -127,7 +139,7 @@ public class OrchestratorComponentDispatcher {
             WorkflowExecution we, WorkflowNodeExecution ne,
             BiConsumer<WorkflowExecution, WorkflowNodeExecution> onSuccess,
             BiConsumer<Exception, WorkflowNodeExecution> onFailure) {
-        localComponentRuntime.configure(ne.getWorkflowNode().getComponentConfig());
+        localComponentRuntime.configure(ComponentRuntimeConfig.from(ne.getWorkflowNode().getComponentConfig()));
         CompletableFuture
                 .runAsync(() -> localComponentRuntime.run(getContext(we, ne), new ComponentUpdateEmitter() {
                     @Override
@@ -144,7 +156,9 @@ public class OrchestratorComponentDispatcher {
                     @Override
                     public Logger logger() {
                         return (message, level, throwable) -> workflowLogger.log(
-                                we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
+                                we.getWorkflowId(), we.getWorkflow().getDomain(), we.getWorkflowExecutionId(),
+                                ne.getWorkflowNodeId(),
+                                ne.getWorkflowNode().getWorkflowNodeKey(),
                                 ne.getWorkflowNode().getComponent(), level, message);
                     }
                 }), executor).whenComplete((result, throwable) -> {
