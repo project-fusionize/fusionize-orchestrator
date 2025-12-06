@@ -80,11 +80,11 @@ class ProcessConverterTest {
         assertEquals("join", joinNode.getComponent());
     }
 
-    private WorkflowNode findNode(Workflow workflow, String key) {
+    public static WorkflowNode findNode(Workflow workflow, String key) {
         return findNodeRecursive(workflow.getNodes(), key);
     }
 
-    private WorkflowNode findNodeRecursive(List<WorkflowNode> nodes, String key) {
+    public static WorkflowNode findNodeRecursive(List<WorkflowNode> nodes, String key) {
         if (nodes == null)
             return null;
         for (WorkflowNode node : nodes) {

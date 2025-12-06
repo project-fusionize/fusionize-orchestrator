@@ -214,8 +214,7 @@ class OrchestratorTest {
 
         @Test
         void orchestrateWithScript() throws InterruptedException, IOException {
-                Workflow workflow = loadWorkflow("/email-workflow-with-script.yml");
-                Map<String, String> nodeKeyToId = getNodeKeyToIdMap(workflow);
+                loadWorkflow("/email-workflow-with-script.yml");
 
                 // Simulate asynchronous email arrivals
                 Thread.sleep(200);
@@ -271,123 +270,96 @@ class OrchestratorTest {
                 }
 
                 // First Run Assertions (Billing + Support)
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("extractFields"), List.of(
+                assertNodeLogs(firsRunLogs, "extractFields", List.of(
                                 "script: Script ran successfully {email_message=invoice help needed., isBilling=true, isSupport=true, isSales=false}"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("forkRoute"), List.of(
+                assertNodeLogs(firsRunLogs, "forkRoute", List.of(
                                 "fork: Evaluation results: {billingRoute=true, salesRoute=false, supportRoute=true}"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("billingRoute"), List.of(
+                assertNodeLogs(firsRunLogs, "billingRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to billing-team@fusionize.dev",
                                 "ai:test.sendEmail: BODY: invoice help needed."));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("supportRoute"), List.of(
+                assertNodeLogs(firsRunLogs, "supportRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to support-team@fusionize.dev",
                                 "ai:test.sendEmail: BODY: invoice help needed."));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("billingWait"), List.of(
+                assertNodeLogs(firsRunLogs, "billingWait", List.of(
                                 "delay: scheduling delay of 120 milliseconds"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("supportWait"), List.of(
+                assertNodeLogs(firsRunLogs, "supportWait", List.of(
                                 "delay: scheduling delay of 180 milliseconds"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("joinAll"), List.of(
+                assertNodeLogs(firsRunLogs, "joinAll", List.of(
                                 "join: Wait condition not yet met. Awaited: [billingWait, supportWait, salesWait], Found: [billingWait], Mode: THRESHOLD"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("end"), List.of(
+                assertNodeLogs(firsRunLogs, "end", List.of(
                                 "system:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 180"));
 
                 // Order assertions
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("extractFields"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("extractFields"), nodeKeyToId.get("forkRoute"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("forkRoute"), nodeKeyToId.get("billingRoute"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("forkRoute"), nodeKeyToId.get("supportRoute"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("billingRoute"), nodeKeyToId.get("billingWait"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("supportRoute"), nodeKeyToId.get("supportWait"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("joinAll"), nodeKeyToId.get("end"));
+                assertNodeOrder(firsRunLogs, "start", "extractFields");
+                assertNodeOrder(firsRunLogs, "extractFields", "forkRoute");
+                assertNodeOrder(firsRunLogs, "forkRoute", "billingRoute");
+                assertNodeOrder(firsRunLogs, "forkRoute", "supportRoute");
+                assertNodeOrder(firsRunLogs, "billingRoute", "billingWait");
+                assertNodeOrder(firsRunLogs, "supportRoute", "supportWait");
+                assertNodeOrder(firsRunLogs, "joinAll", "end");
 
                 // Last Run Assertions (Billing + Sales)
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("extractFields"), List.of(
+                assertNodeLogs(lastRunLogs, "extractFields", List.of(
                                 "script: Script ran successfully {email_message=submitted the invoice pricing., isBilling=true, isSupport=false, isSales=true}"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("forkRoute"), List.of(
+                assertNodeLogs(lastRunLogs, "forkRoute", List.of(
                                 "fork: Evaluation results: {billingRoute=true, salesRoute=true, supportRoute=false}"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("billingRoute"), List.of(
+                assertNodeLogs(lastRunLogs, "billingRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to billing-team@fusionize.dev",
                                 "ai:test.sendEmail: BODY: submitted the invoice pricing."));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("salesRoute"), List.of(
+                assertNodeLogs(lastRunLogs, "salesRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to sales-team@fusionize.dev",
                                 "ai:test.sendEmail: BODY: submitted the invoice pricing."));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("billingWait"), List.of(
+                assertNodeLogs(lastRunLogs, "billingWait", List.of(
                                 "delay: scheduling delay of 120 milliseconds"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("salesWait"), List.of(
+                assertNodeLogs(lastRunLogs, "salesWait", List.of(
                                 "delay: scheduling delay of 300 milliseconds"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("joinAll"), List.of(
+                assertNodeLogs(lastRunLogs, "joinAll", List.of(
                                 "join: Wait condition not yet met. Awaited: [billingWait, supportWait, salesWait], Found: [billingWait], Mode: THRESHOLD"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("end"), List.of(
+                assertNodeLogs(lastRunLogs, "end", List.of(
                                 "system:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 300"));
 
                 // Order assertions
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("extractFields"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("extractFields"), nodeKeyToId.get("forkRoute"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("forkRoute"), nodeKeyToId.get("billingRoute"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("forkRoute"), nodeKeyToId.get("salesRoute"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("billingRoute"), nodeKeyToId.get("billingWait"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("salesRoute"), nodeKeyToId.get("salesWait"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("joinAll"), nodeKeyToId.get("end"));
+                assertNodeOrder(lastRunLogs, "start", "extractFields");
+                assertNodeOrder(lastRunLogs, "extractFields", "forkRoute");
+                assertNodeOrder(lastRunLogs, "forkRoute", "billingRoute");
+                assertNodeOrder(lastRunLogs, "forkRoute", "salesRoute");
+                assertNodeOrder(lastRunLogs, "billingRoute", "billingWait");
+                assertNodeOrder(lastRunLogs, "salesRoute", "salesWait");
+                assertNodeOrder(lastRunLogs, "joinAll", "end");
         }
 
-        private Map<String, String> getNodeKeyToIdMap(Workflow workflow) {
-                Map<String, String> map = new HashMap<>();
-                Set<String> visited = new HashSet<>();
-                List<WorkflowNode> queue = new ArrayList<>(workflow.getNodes());
-
-                while (!queue.isEmpty()) {
-                        WorkflowNode node = queue.remove(0);
-                        if (visited.contains(node.getWorkflowNodeId())) {
-                                continue;
-                        }
-                        visited.add(node.getWorkflowNodeId());
-
-                        if (node.getWorkflowNodeKey() != null) {
-                                map.put(node.getWorkflowNodeKey(), node.getWorkflowNodeId());
-                        }
-                        if (node.getChildren() != null) {
-                                queue.addAll(node.getChildren());
-                        }
-                }
-                return map;
-        }
-
-        private String getNodeIdByKeyEnding(String keyEnding, Map<String, String> map) {
-                String key = map.keySet().stream().filter(k -> k.endsWith(keyEnding)).findFirst().orElse(null);
-                return key == null ? null : map.get(key);
-        }
-
-        private void assertNodeLogs(List<WorkflowLog> logs, String nodeId, List<String> expectedMessages) {
+        private void assertNodeLogs(List<WorkflowLog> logs, String nodeKey, List<String> expectedMessages) {
                 List<String> actualMessages = logs.stream()
-                                .filter(l -> nodeId.equals(l.getWorkflowNodeId()))
+                                .filter(l -> nodeKey.equals(l.getNodeKey()))
                                 .map(l -> l.getComponent() + ": " + l.getMessage())
                                 .toList();
 
-                assertEquals(expectedMessages.size(), actualMessages.size(), "Log count mismatch for node " + nodeId);
+                assertEquals(expectedMessages.size(), actualMessages.size(), "Log count mismatch for node " + nodeKey);
                 for (int i = 0; i < expectedMessages.size(); i++) {
                         String expected = expectedMessages.get(i);
                         String actual = actualMessages.get(i);
                         assertTrue(actual.endsWith(expected),
-                                        "Node " + nodeId + ": Expected log at index " + i + " to end with: " + expected
+                                        "Node " + nodeKey + ": Expected log at index " + i + " to end with: " + expected
                                                         + "\nActual: " + actual);
                 }
         }
 
-        private void assertNodeOrder(List<WorkflowLog> logs, String earlierNodeId, String laterNodeId) {
+        private void assertNodeOrder(List<WorkflowLog> logs, String earlierNodeKey, String laterNodeKey) {
                 int maxEarlierIndex = -1;
                 int minLaterIndex = Integer.MAX_VALUE;
 
                 for (int i = 0; i < logs.size(); i++) {
-                        String nodeId = logs.get(i).getWorkflowNodeId();
-                        if (earlierNodeId.equals(nodeId)) {
+                        String nodeKey = logs.get(i).getNodeKey();
+                        if (earlierNodeKey.equals(nodeKey)) {
                                 maxEarlierIndex = i;
                         }
-                        if (laterNodeId.equals(nodeId)) {
+                        if (laterNodeKey.equals(nodeKey)) {
                                 if (minLaterIndex == Integer.MAX_VALUE) {
                                         minLaterIndex = i;
                                 }
@@ -396,7 +368,7 @@ class OrchestratorTest {
 
                 if (maxEarlierIndex != -1 && minLaterIndex != Integer.MAX_VALUE) {
                         assertTrue(maxEarlierIndex < minLaterIndex,
-                                        "Expected node " + earlierNodeId + " to finish before node " + laterNodeId
+                                        "Expected node " + earlierNodeKey + " to finish before node " + laterNodeKey
                                                         + " starts.");
                 }
         }
@@ -603,8 +575,7 @@ class OrchestratorTest {
 
         @Test
         void orchestrateParallelPickLast() throws InterruptedException, IOException {
-                Workflow workflow = loadWorkflow("/email-workflow-parallel-pick-last.yml");
-                Map<String, String> nodeKeyToId = getNodeKeyToIdMap(workflow);
+                loadWorkflow("/email-workflow-parallel-pick-last.yml");
 
                 // Simulate asynchronous email arrivals
                 Thread.sleep(200);
@@ -659,78 +630,77 @@ class OrchestratorTest {
                 }
 
                 // First Run Assertions
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("outgoing1"), List.of(
+                assertNodeLogs(firsRunLogs, "outgoing1", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing1@email.com",
                                 "ai:test.sendEmail: BODY: First Email Content"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("outgoing2"), List.of(
+                assertNodeLogs(firsRunLogs, "outgoing2", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing2@email.com",
                                 "ai:test.sendEmail: BODY: First Email Content"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("outgoing3"), List.of(
+                assertNodeLogs(firsRunLogs, "outgoing3", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing3@email.com",
                                 "ai:test.sendEmail: BODY: First Email Content"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting1"), List.of(
+                assertNodeLogs(firsRunLogs, "waiting1", List.of(
                                 "delay: scheduling delay of 120 milliseconds"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting2"), List.of(
+                assertNodeLogs(firsRunLogs, "waiting2", List.of(
                                 "delay: scheduling delay of 230 milliseconds"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting3"), List.of(
+                assertNodeLogs(firsRunLogs, "waiting3", List.of(
                                 "delay: scheduling delay of 300 milliseconds"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("waitFor123"), List.of(
+                assertNodeLogs(firsRunLogs, "waitFor123", List.of(
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1], Mode: ALL",
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1, waiting2], Mode: ALL"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("end"), List.of(
+                assertNodeLogs(firsRunLogs, "end", List.of(
                                 "system:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 300"));
 
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing1"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing2"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing3"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("outgoing1"), nodeKeyToId.get("waiting1"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("outgoing2"), nodeKeyToId.get("waiting2"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("outgoing3"), nodeKeyToId.get("waiting3"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("waitFor123"), nodeKeyToId.get("end"));
+                assertNodeOrder(firsRunLogs, "start", "outgoing1");
+                assertNodeOrder(firsRunLogs, "start", "outgoing2");
+                assertNodeOrder(firsRunLogs, "start", "outgoing3");
+                assertNodeOrder(firsRunLogs, "outgoing1", "waiting1");
+                assertNodeOrder(firsRunLogs, "outgoing2", "waiting2");
+                assertNodeOrder(firsRunLogs, "outgoing3", "waiting3");
+                assertNodeOrder(firsRunLogs, "waitFor123", "end");
 
                 // Last Run Assertions
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("outgoing1"), List.of(
+                assertNodeLogs(lastRunLogs, "outgoing1", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing1@email.com",
                                 "ai:test.sendEmail: BODY: Second Email Content"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("outgoing2"), List.of(
+                assertNodeLogs(lastRunLogs, "outgoing2", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing2@email.com",
                                 "ai:test.sendEmail: BODY: Second Email Content"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("outgoing3"), List.of(
+                assertNodeLogs(lastRunLogs, "outgoing3", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing3@email.com",
                                 "ai:test.sendEmail: BODY: Second Email Content"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting1"), List.of(
+                assertNodeLogs(lastRunLogs, "waiting1", List.of(
                                 "delay: scheduling delay of 120 milliseconds"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting2"), List.of(
+                assertNodeLogs(lastRunLogs, "waiting2", List.of(
                                 "delay: scheduling delay of 230 milliseconds"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting3"), List.of(
+                assertNodeLogs(lastRunLogs, "waiting3", List.of(
                                 "delay: scheduling delay of 300 milliseconds"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("waitFor123"), List.of(
+                assertNodeLogs(lastRunLogs, "waitFor123", List.of(
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1], Mode: ALL",
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1, waiting2], Mode: ALL"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("end"), List.of(
+                assertNodeLogs(lastRunLogs, "end", List.of(
                                 "system:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 300"));
 
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing1"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing2"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing3"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("outgoing1"), nodeKeyToId.get("waiting1"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("outgoing2"), nodeKeyToId.get("waiting2"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("outgoing3"), nodeKeyToId.get("waiting3"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("waitFor123"), nodeKeyToId.get("end"));
+                assertNodeOrder(lastRunLogs, "start", "outgoing1");
+                assertNodeOrder(lastRunLogs, "start", "outgoing2");
+                assertNodeOrder(lastRunLogs, "start", "outgoing3");
+                assertNodeOrder(lastRunLogs, "outgoing1", "waiting1");
+                assertNodeOrder(lastRunLogs, "outgoing2", "waiting2");
+                assertNodeOrder(lastRunLogs, "outgoing3", "waiting3");
+                assertNodeOrder(lastRunLogs, "waitFor123", "end");
         }
 
         @Test
         void orchestrateParallelPickFirst() throws InterruptedException, IOException {
-                Workflow workflow = loadWorkflow("/email-workflow-parallel-pick-first.yml");
-                Map<String, String> nodeKeyToId = getNodeKeyToIdMap(workflow);
+                loadWorkflow("/email-workflow-parallel-pick-first.yml");
 
                 // Simulate asynchronous email arrivals
                 Thread.sleep(200);
@@ -784,72 +754,72 @@ class OrchestratorTest {
                 }
 
                 // First Run Assertions
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("outgoing1"), List.of(
+                assertNodeLogs(firsRunLogs, "outgoing1", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing1@email.com",
                                 "ai:test.sendEmail: BODY: First Email Content"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("outgoing2"), List.of(
+                assertNodeLogs(firsRunLogs, "outgoing2", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing2@email.com",
                                 "ai:test.sendEmail: BODY: First Email Content"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("outgoing3"), List.of(
+                assertNodeLogs(firsRunLogs, "outgoing3", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing3@email.com",
                                 "ai:test.sendEmail: BODY: First Email Content"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting1"), List.of(
+                assertNodeLogs(firsRunLogs, "waiting1", List.of(
                                 "delay: scheduling delay of 120 milliseconds"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting2"), List.of(
+                assertNodeLogs(firsRunLogs, "waiting2", List.of(
                                 "delay: scheduling delay of 230 milliseconds"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("waiting3"), List.of(
+                assertNodeLogs(firsRunLogs, "waiting3", List.of(
                                 "delay: scheduling delay of 300 milliseconds"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("waitFor123"), List.of(
+                assertNodeLogs(firsRunLogs, "waitFor123", List.of(
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1], Mode: ALL",
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1, waiting2], Mode: ALL"));
-                assertNodeLogs(firsRunLogs, nodeKeyToId.get("end"), List.of(
+                assertNodeLogs(firsRunLogs, "end", List.of(
                                 "system:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 120"));
 
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing1"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing2"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing3"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("outgoing1"), nodeKeyToId.get("waiting1"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("outgoing2"), nodeKeyToId.get("waiting2"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("outgoing3"), nodeKeyToId.get("waiting3"));
-                assertNodeOrder(firsRunLogs, nodeKeyToId.get("waitFor123"), nodeKeyToId.get("end"));
+                assertNodeOrder(firsRunLogs, "start", "outgoing1");
+                assertNodeOrder(firsRunLogs, "start", "outgoing2");
+                assertNodeOrder(firsRunLogs, "start", "outgoing3");
+                assertNodeOrder(firsRunLogs, "outgoing1", "waiting1");
+                assertNodeOrder(firsRunLogs, "outgoing2", "waiting2");
+                assertNodeOrder(firsRunLogs, "outgoing3", "waiting3");
+                assertNodeOrder(firsRunLogs, "waitFor123", "end");
 
                 // Last Run Assertions
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("outgoing1"), List.of(
+                assertNodeLogs(lastRunLogs, "outgoing1", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing1@email.com",
                                 "ai:test.sendEmail: BODY: Second Email Content"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("outgoing2"), List.of(
+                assertNodeLogs(lastRunLogs, "outgoing2", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing2@email.com",
                                 "ai:test.sendEmail: BODY: Second Email Content"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("outgoing3"), List.of(
+                assertNodeLogs(lastRunLogs, "outgoing3", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to outgoing3@email.com",
                                 "ai:test.sendEmail: BODY: Second Email Content"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting1"), List.of(
+                assertNodeLogs(lastRunLogs, "waiting1", List.of(
                                 "delay: scheduling delay of 120 milliseconds"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting2"), List.of(
+                assertNodeLogs(lastRunLogs, "waiting2", List.of(
                                 "delay: scheduling delay of 230 milliseconds"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("waiting3"), List.of(
+                assertNodeLogs(lastRunLogs, "waiting3", List.of(
                                 "delay: scheduling delay of 300 milliseconds"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("waitFor123"), List.of(
+                assertNodeLogs(lastRunLogs, "waitFor123", List.of(
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1], Mode: ALL",
                                 "join: Wait condition not yet met. Awaited: [waiting1, waiting2, waiting3], Found: [waiting1, waiting2], Mode: ALL"));
-                assertNodeLogs(lastRunLogs, nodeKeyToId.get("end"), List.of(
+                assertNodeLogs(lastRunLogs, "end", List.of(
                                 "system:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 120"));
 
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing1"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing2"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("start"), nodeKeyToId.get("outgoing3"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("outgoing1"), nodeKeyToId.get("waiting1"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("outgoing2"), nodeKeyToId.get("waiting2"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("outgoing3"), nodeKeyToId.get("waiting3"));
-                assertNodeOrder(lastRunLogs, nodeKeyToId.get("waitFor123"), nodeKeyToId.get("end"));
+                assertNodeOrder(lastRunLogs, "start", "outgoing1");
+                assertNodeOrder(lastRunLogs, "start", "outgoing2");
+                assertNodeOrder(lastRunLogs, "start", "outgoing3");
+                assertNodeOrder(lastRunLogs, "outgoing1", "waiting1");
+                assertNodeOrder(lastRunLogs, "outgoing2", "waiting2");
+                assertNodeOrder(lastRunLogs, "outgoing3", "waiting3");
+                assertNodeOrder(lastRunLogs, "waitFor123", "end");
         }
 
         @Test
@@ -868,7 +838,6 @@ class OrchestratorTest {
                 System.out.println(new WorkflowDescriptor().toYamlDescription(workflow));
                 // Start orchestrating the workflow
                 service.orchestrate(workflow.getWorkflowId());
-                Map<String, String> nodeKeyToId = getNodeKeyToIdMap(workflow);
 
                 // Simulate asynchronous email arrivals
                 Thread.sleep(200);
@@ -924,82 +893,68 @@ class OrchestratorTest {
                 }
 
                 // First Run Assertions (Billing + Support)
-                assertNodeLogs(firsRunLogs, getNodeIdByKeyEnding("extractFields", nodeKeyToId), List.of(
+                assertNodeLogs(firsRunLogs, "scriptTask#extractFields", List.of(
                                 "script: Script ran successfully {email_message=invoice help needed., isBilling=true, isSupport=true, isSales=false}"));
-                assertNodeLogs(firsRunLogs, getNodeIdByKeyEnding("forkRoute", nodeKeyToId), List.of(
+                assertNodeLogs(firsRunLogs, "inclusiveGateway#forkRoute", List.of(
                                 "fork: Evaluation results: {serviceTask#salesRoute=false, serviceTask#billingRoute=true, serviceTask#supportRoute=true}"));
-                assertNodeLogs(firsRunLogs, getNodeIdByKeyEnding("billingRoute", nodeKeyToId), List.of(
+                assertNodeLogs(firsRunLogs, "serviceTask#billingRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to billing-team@fusionize.dev",
                                 "ai:test.sendEmail: BODY: invoice help needed."));
-                assertNodeLogs(firsRunLogs, getNodeIdByKeyEnding("supportRoute", nodeKeyToId), List.of(
+                assertNodeLogs(firsRunLogs, "serviceTask#supportRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to support-team@fusionize.dev",
                                 "ai:test.sendEmail: BODY: invoice help needed."));
-                assertNodeLogs(firsRunLogs, getNodeIdByKeyEnding("billingWait", nodeKeyToId), List.of(
+                assertNodeLogs(firsRunLogs, "intermediateCatchEvent#billingWait", List.of(
                                 "delay: scheduling delay of 120 milliseconds"));
-                assertNodeLogs(firsRunLogs, getNodeIdByKeyEnding("supportWait", nodeKeyToId), List.of(
+                assertNodeLogs(firsRunLogs, "intermediateCatchEvent#supportWait", List.of(
                                 "delay: scheduling delay of 180 milliseconds"));
-                assertNodeLogs(firsRunLogs, getNodeIdByKeyEnding("joinAll", nodeKeyToId), List.of(
+                assertNodeLogs(firsRunLogs, "inclusiveGateway#joinAll", List.of(
                                 "join: Wait condition not yet met. Awaited: [intermediateCatchEvent#billingWait, intermediateCatchEvent#supportWait, intermediateCatchEvent#salesWait], Found: [intermediateCatchEvent#billingWait], Mode: THRESHOLD"));
-                assertNodeLogs(firsRunLogs, getNodeIdByKeyEnding("end", nodeKeyToId), List.of(
+                assertNodeLogs(firsRunLogs, "endEvent#end", List.of(
                                 "system:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 180"));
 
                 // Order assertions
-                assertNodeOrder(firsRunLogs, getNodeIdByKeyEnding("start", nodeKeyToId),
-                                getNodeIdByKeyEnding("extractFields", nodeKeyToId));
-                assertNodeOrder(firsRunLogs, getNodeIdByKeyEnding("extractFields", nodeKeyToId),
-                                getNodeIdByKeyEnding("forkRoute", nodeKeyToId));
-                assertNodeOrder(firsRunLogs, getNodeIdByKeyEnding("forkRoute", nodeKeyToId),
-                                getNodeIdByKeyEnding("billingRoute", nodeKeyToId));
-                assertNodeOrder(firsRunLogs, getNodeIdByKeyEnding("forkRoute", nodeKeyToId),
-                                getNodeIdByKeyEnding("supportRoute", nodeKeyToId));
-                assertNodeOrder(firsRunLogs, getNodeIdByKeyEnding("billingRoute", nodeKeyToId),
-                                getNodeIdByKeyEnding("billingWait", nodeKeyToId));
-                assertNodeOrder(firsRunLogs, getNodeIdByKeyEnding("supportRoute", nodeKeyToId),
-                                getNodeIdByKeyEnding("supportWait", nodeKeyToId));
-                assertNodeOrder(firsRunLogs, getNodeIdByKeyEnding("joinAll", nodeKeyToId),
-                                getNodeIdByKeyEnding("end", nodeKeyToId));
+                assertNodeOrder(firsRunLogs, "startEvent#startstart", "scriptTask#extractFields");
+                assertNodeOrder(firsRunLogs, "scriptTask#extractFields", "inclusiveGateway#forkRoute");
+                assertNodeOrder(firsRunLogs, "inclusiveGateway#forkRoute", "serviceTask#billingRoute");
+                assertNodeOrder(firsRunLogs, "inclusiveGateway#forkRoute", "serviceTask#supportRoute");
+                assertNodeOrder(firsRunLogs, "serviceTask#billingRoute", "intermediateCatchEvent#billingWait");
+                assertNodeOrder(firsRunLogs, "serviceTask#supportRoute", "intermediateCatchEvent#supportWait");
+                assertNodeOrder(firsRunLogs, "inclusiveGateway#joinAll", "endEvent#end");
 
                 // Last Run Assertions (Billing + Sales)
-                assertNodeLogs(lastRunLogs, getNodeIdByKeyEnding("extractFields", nodeKeyToId), List.of(
+                assertNodeLogs(lastRunLogs, "scriptTask#extractFields", List.of(
                                 "script: Script ran successfully {email_message=submitted the invoice pricing., isBilling=true, isSupport=false, isSales=true}"));
-                assertNodeLogs(lastRunLogs, getNodeIdByKeyEnding("forkRoute", nodeKeyToId), List.of(
+                assertNodeLogs(lastRunLogs, "inclusiveGateway#forkRoute", List.of(
                                 "fork: Evaluation results: {serviceTask#salesRoute=true, serviceTask#billingRoute=true, serviceTask#supportRoute=false}"));
-                assertNodeLogs(lastRunLogs, getNodeIdByKeyEnding("billingRoute", nodeKeyToId), List.of(
+                assertNodeLogs(lastRunLogs, "serviceTask#billingRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to billing-team@fusionize.dev",
                                 "ai:test.sendEmail: BODY: submitted the invoice pricing."));
-                assertNodeLogs(lastRunLogs, getNodeIdByKeyEnding("salesRoute", nodeKeyToId), List.of(
+                assertNodeLogs(lastRunLogs, "serviceTask#salesRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to sales-team@fusionize.dev",
                                 "ai:test.sendEmail: BODY: submitted the invoice pricing."));
-                assertNodeLogs(lastRunLogs, getNodeIdByKeyEnding("billingWait", nodeKeyToId), List.of(
+                assertNodeLogs(lastRunLogs, "intermediateCatchEvent#billingWait", List.of(
                                 "delay: scheduling delay of 120 milliseconds"));
-                assertNodeLogs(lastRunLogs, getNodeIdByKeyEnding("salesWait", nodeKeyToId), List.of(
+                assertNodeLogs(lastRunLogs, "intermediateCatchEvent#salesWait", List.of(
                                 "delay: scheduling delay of 300 milliseconds"));
-                assertNodeLogs(lastRunLogs, getNodeIdByKeyEnding("joinAll", nodeKeyToId), List.of(
+                assertNodeLogs(lastRunLogs, "inclusiveGateway#joinAll", List.of(
                                 "join: Wait condition not yet met. Awaited: [intermediateCatchEvent#billingWait, intermediateCatchEvent#supportWait, intermediateCatchEvent#salesWait], Found: [intermediateCatchEvent#billingWait], Mode: THRESHOLD"));
-                assertNodeLogs(lastRunLogs, getNodeIdByKeyEnding("end", nodeKeyToId), List.of(
+                assertNodeLogs(lastRunLogs, "endEvent#end", List.of(
                                 "system:test.endEmailWorkflow: MockEndEmailComponent activated",
                                 "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 300"));
 
                 // Order assertions
-                assertNodeOrder(lastRunLogs, getNodeIdByKeyEnding("start", nodeKeyToId),
-                                getNodeIdByKeyEnding("extractFields", nodeKeyToId));
-                assertNodeOrder(lastRunLogs, getNodeIdByKeyEnding("extractFields", nodeKeyToId),
-                                getNodeIdByKeyEnding("forkRoute", nodeKeyToId));
-                assertNodeOrder(lastRunLogs, getNodeIdByKeyEnding("forkRoute", nodeKeyToId),
-                                getNodeIdByKeyEnding("billingRoute", nodeKeyToId));
-                assertNodeOrder(lastRunLogs, getNodeIdByKeyEnding("forkRoute", nodeKeyToId),
-                                getNodeIdByKeyEnding("salesRoute", nodeKeyToId));
-                assertNodeOrder(lastRunLogs, getNodeIdByKeyEnding("billingRoute", nodeKeyToId),
-                                getNodeIdByKeyEnding("billingWait", nodeKeyToId));
-                assertNodeOrder(lastRunLogs, getNodeIdByKeyEnding("salesRoute", nodeKeyToId),
-                                getNodeIdByKeyEnding("salesWait", nodeKeyToId));
-                assertNodeOrder(lastRunLogs, getNodeIdByKeyEnding("joinAll", nodeKeyToId),
-                                getNodeIdByKeyEnding("end", nodeKeyToId));
+                assertNodeOrder(lastRunLogs, "startEvent#startstart", "scriptTask#extractFields");
+                assertNodeOrder(lastRunLogs, "scriptTask#extractFields", "inclusiveGateway#forkRoute");
+                assertNodeOrder(lastRunLogs, "inclusiveGateway#forkRoute", "serviceTask#billingRoute");
+                assertNodeOrder(lastRunLogs, "inclusiveGateway#forkRoute", "serviceTask#salesRoute");
+                assertNodeOrder(lastRunLogs, "serviceTask#billingRoute", "intermediateCatchEvent#billingWait");
+                assertNodeOrder(lastRunLogs, "serviceTask#salesRoute", "intermediateCatchEvent#salesWait");
+                assertNodeOrder(lastRunLogs, "inclusiveGateway#joinAll", "endEvent#end");
         }
 
         // --------------------------------------------------------------------------

@@ -47,9 +47,9 @@ public class OrchestratorComponentDispatcher {
         this.executor = executor;
     }
 
-    private Optional<LocalComponentRuntimeFactory<?>> checkForLocalComponent(WorkflowNodeExecution ne){
+    private Optional<LocalComponentRuntimeFactory<?>> checkForLocalComponent(WorkflowNodeExecution ne) {
         String component = ne.getWorkflowNode().getComponent();
-        if(component==null || component.isEmpty()){
+        if (component == null || component.isEmpty()) {
             return localComponentRuntimeFactories.stream().filter(
                     f -> f.getName().equalsIgnoreCase(NoopComponent.NAME)).findFirst();
         }
@@ -103,7 +103,9 @@ public class OrchestratorComponentDispatcher {
                     @Override
                     public Logger logger() {
                         return (message, level, throwable) -> workflowLogger.log(
-                                we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
+                                we.getWorkflowId(), we.getWorkflow().getDomain(), we.getWorkflowExecutionId(),
+                                ne.getWorkflowNodeId(),
+                                ne.getWorkflowNode().getWorkflowNodeKey(),
                                 ne.getWorkflowNode().getComponent(), level, message);
                     }
 
@@ -154,7 +156,9 @@ public class OrchestratorComponentDispatcher {
                     @Override
                     public Logger logger() {
                         return (message, level, throwable) -> workflowLogger.log(
-                                we.getWorkflowId(), we.getWorkflowExecutionId(), ne.getWorkflowNodeId(),
+                                we.getWorkflowId(), we.getWorkflow().getDomain(), we.getWorkflowExecutionId(),
+                                ne.getWorkflowNodeId(),
+                                ne.getWorkflowNode().getWorkflowNodeKey(),
                                 ne.getWorkflowNode().getComponent(), level, message);
                     }
                 }), executor).whenComplete((result, throwable) -> {

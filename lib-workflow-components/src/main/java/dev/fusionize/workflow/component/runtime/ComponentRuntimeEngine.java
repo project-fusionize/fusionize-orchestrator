@@ -86,8 +86,10 @@ public class ComponentRuntimeEngine {
                             ActivationResponseEvent responseEvent = supplier.get();
                             var oc = responseEvent.getOrchestrationEventContext();
                             workflowLogger.log(oc.workflowExecution().getWorkflowId(),
+                                    oc.workflowExecution().getWorkflow().getDomain(),
                                     oc.workflowExecution().getWorkflowExecutionId(),
                                     oc.nodeExecution().getWorkflowNodeId(),
+                                    oc.nodeExecution().getWorkflowNode().getWorkflowNodeKey(),
                                     oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
                         };
                     }
@@ -146,8 +148,10 @@ public class ComponentRuntimeEngine {
                             InvocationResponseEvent responseEvent = supplier.get();
                             var oc = responseEvent.getOrchestrationEventContext();
                             workflowLogger.log(oc.workflowExecution().getWorkflowId(),
+                                    oc.workflowExecution().getWorkflow().getDomain(),
                                     oc.workflowExecution().getWorkflowExecutionId(),
                                     oc.nodeExecution().getWorkflowNodeId(),
+                                    oc.nodeExecution().getWorkflowNode().getWorkflowNodeKey(),
                                     oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
                         };
                     }

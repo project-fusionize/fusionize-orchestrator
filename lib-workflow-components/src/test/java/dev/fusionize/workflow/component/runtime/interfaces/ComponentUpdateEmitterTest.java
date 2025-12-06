@@ -1,4 +1,4 @@
-package workflow.component.runtime.interfaces;
+package dev.fusionize.workflow.component.runtime.interfaces;
 
 import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;

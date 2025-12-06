@@ -1,4 +1,4 @@
-package workflow.component.local.beans;
+package dev.fusionize.workflow.component.local.beans;
 
 import dev.fusionize.workflow.WorkflowExecution;
 import dev.fusionize.workflow.WorkflowNodeExecution;
