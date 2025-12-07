@@ -1,5 +1,7 @@
 package dev.fusionize.ai.model;
 
+import dev.fusionize.common.parser.JsonParser;
+import dev.fusionize.common.sanitizer.Sanitization;
 import dev.fusionize.user.activity.DomainEntity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -10,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Document(collection = "ai_chat_model_config")
-public class ChatModelConfig extends DomainEntity {
+public class ChatModelConfig extends DomainEntity implements Sanitization<ChatModelConfig> {
     @Id
     private String id;
     private String provider;
@@ -77,6 +79,14 @@ public class ChatModelConfig extends DomainEntity {
 
     public static Builder builder(String parentDomain) {
         return new Builder(parentDomain);
+    }
+
+    @Override
+    public ChatModelConfig sanitize() {
+        JsonParser<ChatModelConfig> parser = new JsonParser<>();
+        ChatModelConfig replica = parser.fromJson(parser.toJson(this, ChatModelConfig.class),ChatModelConfig.class);
+        replica.setApiKey("****");
+        return replica;
     }
 
     public static class Builder extends DomainEntity.Builder<Builder> {

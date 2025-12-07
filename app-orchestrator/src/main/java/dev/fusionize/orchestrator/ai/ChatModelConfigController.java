@@ -1,9 +1,10 @@
 package dev.fusionize.orchestrator.ai;
 
 import dev.fusionize.Application;
+import dev.fusionize.ai.exception.ChatModelException;
+import dev.fusionize.ai.exception.ChatModelNotFoundException;
 import dev.fusionize.ai.model.ChatModelConfig;
 import dev.fusionize.ai.service.ChatModelManager;
-import dev.fusionize.common.exception.ApplicationException;
 import dev.fusionize.common.payload.ServicePayload;
 import dev.fusionize.common.payload.ServiceResponse;
 import org.springframework.web.bind.annotation.*;
@@ -22,85 +23,75 @@ public class ChatModelConfigController {
 
     @GetMapping
     public ServicePayload<List<ChatModelConfig>> getAll(
-            @RequestParam(required = false, defaultValue = "") String domain) throws ApplicationException {
-        try {
-            List<ChatModelConfig> configs = chatModelManager.getAll(domain);
-            return new ServicePayload.Builder<List<ChatModelConfig>>()
-                    .response(new ServiceResponse.Builder<List<ChatModelConfig>>()
-                            .status(200)
-                            .message(configs)
-                            .build())
-                    .build();
-        } catch (Exception e) {
-            throw new ApplicationException(e);
-        }
+            @RequestParam(required = false, defaultValue = "") String domain) {
+        List<ChatModelConfig> configs = chatModelManager.getAll(domain).stream().map(ChatModelConfig::sanitize).toList();
+        return new ServicePayload.Builder<List<ChatModelConfig>>()
+                .response(new ServiceResponse.Builder<List<ChatModelConfig>>()
+                        .status(200)
+                        .message(configs)
+                        .build())
+                .build();
     }
 
     @GetMapping("/{domain}")
-    public ServicePayload<ChatModelConfig> get(@PathVariable String domain) throws ApplicationException {
-        try {
-            ChatModelConfig config = chatModelManager.getModel(domain)
-                    .orElseThrow(() -> new ApplicationException("Config not found for domain: " + domain));
-            return new ServicePayload.Builder<ChatModelConfig>()
-                    .response(new ServiceResponse.Builder<ChatModelConfig>()
-                            .status(200)
-                            .message(config)
-                            .build())
-                    .build();
-        } catch (Exception e) {
-            throw new ApplicationException(e);
-        }
+    public ServicePayload<ChatModelConfig> get(@PathVariable String domain) throws ChatModelException {
+        ChatModelConfig config = chatModelManager.getModel(domain)
+                .orElseThrow(() -> new ChatModelNotFoundException(domain));
+        return new ServicePayload.Builder<ChatModelConfig>()
+                .response(new ServiceResponse.Builder<ChatModelConfig>()
+                        .status(200)
+                        .message(config.sanitize())
+                        .build())
+                .build();
     }
 
     @PostMapping
-    public ServicePayload<ChatModelConfig> create(@RequestBody ChatModelConfig config) throws ApplicationException {
-        try {
-            ChatModelConfig saved = chatModelManager.saveModel(config);
-            return new ServicePayload.Builder<ChatModelConfig>()
-                    .response(new ServiceResponse.Builder<ChatModelConfig>()
-                            .status(200)
-                            .message(saved)
-                            .build())
-                    .build();
-        } catch (Exception e) {
-            throw new ApplicationException(e);
-        }
+    public ServicePayload<ChatModelConfig> create(@RequestBody ChatModelConfig config) throws ChatModelException {
+        ChatModelConfig saved = chatModelManager.saveModel(config);
+        return new ServicePayload.Builder<ChatModelConfig>()
+                .response(new ServiceResponse.Builder<ChatModelConfig>()
+                        .status(200)
+                        .message(saved.sanitize())
+                        .build())
+                .build();
     }
 
     @PutMapping("/{domain}")
     public ServicePayload<ChatModelConfig> update(@PathVariable String domain, @RequestBody ChatModelConfig config)
-            throws ApplicationException {
-        try {
-            ChatModelConfig existing = chatModelManager.getModel(domain)
-                    .orElseThrow(() -> new ApplicationException("Config not found for domain: " + domain));
+            throws ChatModelException {
+        ChatModelConfig existing = chatModelManager.getModel(domain)
+                .orElseThrow(() -> new ChatModelNotFoundException(domain));
 
-            // Ensure the ID and domain are preserved/updated correctly
-            config.setId(existing.getId());
-            config.setDomain(domain);
+        // Ensure the ID and domain are preserved/updated correctly
+        config.setId(existing.getId());
+        config.setDomain(domain);
 
-            ChatModelConfig saved = chatModelManager.saveModel(config);
-            return new ServicePayload.Builder<ChatModelConfig>()
-                    .response(new ServiceResponse.Builder<ChatModelConfig>()
-                            .status(200)
-                            .message(saved)
-                            .build())
-                    .build();
-        } catch (Exception e) {
-            throw new ApplicationException(e);
-        }
+        ChatModelConfig saved = chatModelManager.saveModel(config);
+        return new ServicePayload.Builder<ChatModelConfig>()
+                .response(new ServiceResponse.Builder<ChatModelConfig>()
+                        .status(200)
+                        .message(saved.sanitize())
+                        .build())
+                .build();
     }
 
     @DeleteMapping("/{domain}")
-    public ServicePayload<Void> delete(@PathVariable String domain) throws ApplicationException {
-        try {
-            chatModelManager.deleteModel(domain);
-            return new ServicePayload.Builder<Void>()
-                    .response(new ServiceResponse.Builder<Void>()
-                            .status(200)
-                            .build())
-                    .build();
-        } catch (Exception e) {
-            throw new ApplicationException(e);
-        }
+    public ServicePayload<Void> delete(@PathVariable String domain) {
+        chatModelManager.deleteModel(domain);
+        return new ServicePayload.Builder<Void>()
+                .response(new ServiceResponse.Builder<Void>()
+                        .status(200)
+                        .build())
+                .build();
+    }
+
+    @PostMapping("/test-connection")
+    public ServicePayload<Void> testConnection(@RequestBody ChatModelConfig config) throws ChatModelException {
+        chatModelManager.testConnection(config);
+        return new ServicePayload.Builder<Void>()
+                .response(new ServiceResponse.Builder<Void>()
+                        .status(200)
+                        .build())
+                .build();
     }
 }
