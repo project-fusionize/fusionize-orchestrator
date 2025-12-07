@@ -64,7 +64,7 @@ class ChatModelManagerTest {
                 .withKey("gpt-4")
                 .build();
 
-        when(repository.findByKey("gpt-4")).thenReturn(Optional.of(config));
+        when(repository.findByDomain("gpt-4")).thenReturn(Optional.of(config));
 
         Optional<ChatModelConfig> found = manager.getModel("gpt-4");
         assertTrue(found.isPresent());
@@ -81,14 +81,14 @@ class ChatModelManagerTest {
                 .withTemperature(0.7)
                 .build();
 
-        when(repository.findByKey("gpt-4")).thenReturn(Optional.of(config));
+        when(repository.findByDomain("gpt-4")).thenReturn(Optional.of(config));
         ChatClient client = manager.getChatClient("gpt-4");
         assertNotNull(client);
     }
 
     @Test
     void getChatClient_NotFound() {
-        when(repository.findByKey("unknown")).thenReturn(Optional.empty());
+        when(repository.findByDomain("unknown")).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> manager.getChatClient("unknown"));
     }

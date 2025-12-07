@@ -12,6 +12,7 @@ import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -39,13 +40,21 @@ public class ChatModelManager {
         return repository.save(config);
     }
 
-    public Optional<ChatModelConfig> getModel(String key) {
-        return repository.findByKey(key);
+    public Optional<ChatModelConfig> getModel(String domain) {
+        return repository.findByDomain(domain);
     }
 
-    public ChatClient getChatClient(String key) {
-        ChatModelConfig config = repository.findByKey(key)
-                .orElseThrow(() -> new IllegalArgumentException("Chat model not found for key: " + key));
+    public void deleteModel(String domain) {
+        repository.deleteByDomain(domain);
+    }
+
+    public List<ChatModelConfig> getAll(String domain) {
+        return repository.findByDomainStartingWith(domain);
+    }
+
+    public ChatClient getChatClient(String domain) {
+        ChatModelConfig config = repository.findByDomain(domain)
+                .orElseThrow(() -> new IllegalArgumentException("Chat model not found for domain: " + domain));
 
         if ("openai".equalsIgnoreCase(config.getProvider())) {
             OpenAiApi openAiApi = OpenAiApi.builder().apiKey(config.getApiKey()).build();
