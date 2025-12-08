@@ -43,6 +43,60 @@ public class Context {
         return copy;
     }
 
+    public List<WorkflowGraphNodeRecursive> currentNodes() {
+        return ContextUtility.extractCurrentNodes(this);
+    }
+
+    public WorkflowDecision latestDecisionForNode(String nodeKey) {
+        return ContextUtility.getLatestDecisionForNode(this, nodeKey);
+    }
+
+    public WorkflowDecision decisionToRun() {
+        return this.latestDecisionForNode(this.getRuntimeData().getWorkflowNodeKey());
+    }
+
+    public <T> Optional<T> var(String key, Class<T> type) {
+        Object value = data.get(key);
+        if (type.isInstance(value)) {
+            return Optional.of(type.cast(value));
+        }
+        return Optional.empty();
+    }
+
+    public boolean contains(String key) {
+        return data.containsKey(key);
+    }
+
+    public void set(String key, Object value) {
+        data.put(key, value);
+    }
+
+    public Optional<String> varString(String key) {
+        return var(key, String.class);
+    }
+
+    public Optional<Integer> varInt(String key) {
+        return var(key, Integer.class);
+    }
+
+    public Optional<Double> varDouble(String key) {
+        return var(key, Double.class);
+    }
+
+    public Optional<Float> varFloat(String key) {
+        return var(key, Float.class);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public Optional<List> varList(String key) {
+        return var(key, List.class);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public Optional<Map> varMap(String key) {
+        return var(key, Map.class);
+    }
+
     public static class Builder {
         private final ConcurrentHashMap<String, Object> data = new ConcurrentHashMap<>();
         private final List<WorkflowDecision> decisions = new ArrayList<>();
@@ -114,60 +168,6 @@ public class Context {
 
     public void setRuntimeData(ContextRuntimeData runtimeData) {
         this.runtimeData = runtimeData;
-    }
-
-    public List<WorkflowGraphNodeRecursive> currentNodes() {
-        return ContextUtility.extractCurrentNodes(this);
-    }
-
-    public WorkflowDecision latestDecisionForNode(String nodeKey) {
-        return ContextUtility.getLatestDecisionForNode(this, nodeKey);
-    }
-
-    public WorkflowDecision getDecisionToRun() {
-        return this.latestDecisionForNode(this.getRuntimeData().getWorkflowNodeKey());
-    }
-
-    public <T> Optional<T> var(String key, Class<T> type) {
-        Object value = data.get(key);
-        if (type.isInstance(value)) {
-            return Optional.of(type.cast(value));
-        }
-        return Optional.empty();
-    }
-
-    public boolean contains(String key) {
-        return data.containsKey(key);
-    }
-
-    public void set(String key, Object value) {
-        data.put(key, value);
-    }
-
-    public Optional<String> varString(String key) {
-        return var(key, String.class);
-    }
-
-    public Optional<Integer> varInt(String key) {
-        return var(key, Integer.class);
-    }
-
-    public Optional<Double> varDouble(String key) {
-        return var(key, Double.class);
-    }
-
-    public Optional<Float> varFloat(String key) {
-        return var(key, Float.class);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public Optional<List> varList(String key) {
-        return var(key, List.class);
-    }
-
-    @SuppressWarnings("rawtypes")
-    public Optional<Map> varMap(String key) {
-        return var(key, Map.class);
     }
 
     @Override

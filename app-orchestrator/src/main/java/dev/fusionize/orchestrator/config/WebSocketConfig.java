@@ -11,6 +11,9 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+import java.net.URI;
+import java.net.URL;
+
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
@@ -18,35 +21,55 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public static final String URL_NODE_TOPIC_BASE = "/topic/"+ Application.VERSION + ".node";
     private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
-    @Value("${spring.rabbitmq.host:#{null}}")
-    private String rabbitmqHost;
+    @Value("${fusionize.worker.orchestrator-amqp:#{null}}")
+    private String amqConnectionString;
 
-    @Value("${spring.rabbitmq.virtual-host:#{null}}")
-    private String rabbitmqVirtualHost;
+    private static class BrokerRelayConnectionInfo {
+        final String host;
+        final String vhost;
+        final String user;
+        final String password;
 
-    @Value("${spring.rabbitmq.stomp.port:0}")
-    private int stompPort;
+        BrokerRelayConnectionInfo(String connectionString) throws Exception {
+            connectionString = connectionString.replaceFirst("[a-z]+://", "https://");
+            URL url = URI.create(connectionString).toURL();
+            this.host = url.getHost();
+            this.vhost = url.getFile().replaceFirst("/","");
+            String userInfo = url.getUserInfo();
+            if(userInfo==null){
+                this.user = "";
+                this.password = "";
+            }else{
+                this.user = userInfo.split(":")[0];
+                this.password = userInfo.split(":")[1];
+            }
+        }
 
-    @Value("${spring.rabbitmq.username:#{null}}")
-    private String username;
+        @Override
+        public String toString() {
+            return "BrokerRelayConnectionInfo{" +
+                    "host='" + host + '\'' +
+                    ", vhost='" + vhost + '\'' +
+                    '}';
+        }
+    }
 
-    @Value("${spring.rabbitmq.password:#{null}}")
-    private String password;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        if(stompPort==0) return;
+        if(amqConnectionString==null) return;
         try {
+            BrokerRelayConnectionInfo connectionInfo = new BrokerRelayConnectionInfo(amqConnectionString);
+            logger.info(connectionInfo.toString());
             StompBrokerRelayRegistration brokerRelayRegistration =
                     registry.enableStompBrokerRelay("/topic/")
-                    .setRelayHost(rabbitmqHost)
-                    .setVirtualHost(rabbitmqVirtualHost)
-                    .setClientLogin(username)
-                    .setClientPasscode(password)
-                    .setSystemLogin(username)
-                    .setSystemPasscode(password);
-            if(rabbitmqVirtualHost!=null && !rabbitmqVirtualHost.isEmpty()) {
-                brokerRelayRegistration.setVirtualHost(rabbitmqVirtualHost);
+                            .setRelayHost(connectionInfo.host)
+                            .setClientLogin(connectionInfo.user)
+                            .setClientPasscode(connectionInfo.password)
+                            .setSystemLogin(connectionInfo.user)
+                            .setSystemPasscode(connectionInfo.password);
+            if(!connectionInfo.vhost.isEmpty()) {
+                brokerRelayRegistration.setVirtualHost(connectionInfo.vhost);
             }
             registry.setApplicationDestinationPrefixes("/app");
         } catch (Exception e) {

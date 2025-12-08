@@ -9,13 +9,15 @@ active: true
 nodes:
   start:
     type: START
-    component: start:dev.fusionize.orchestrator.components.MyWebhookComponent
+    actor: SYSTEM
+    component: dev.fusionize.orchestrator.components.MyWebhookComponent
     next: [process]
 
   process:
     type: TASK
-    component: task:dev.fusionize.ai.DocumentExtractor
-    componentConfig:
+    actor: AI
+    component: dev.fusionize.ai.DocumentExtractor
+    config:
       inputVar: sampleFile
       outputVar: out
       example:
@@ -26,5 +28,6 @@ nodes:
 
   end:
     type: END
-    component: end:dev.fusionize.orchestrator.components.MyCustomComponentEnd
+    actor: SYSTEM
+    component: dev.fusionize.orchestrator.components.MyCustomComponentEnd
     next: []
