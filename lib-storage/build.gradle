@@ -16,6 +16,7 @@ dependencyManagement {
 
 dependencies {
     implementation project(':lib-common')
+    implementation project(':lib-user')
 
     implementation 'commons-io:commons-io:2.14.0'
 
@@ -24,8 +25,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     
-    implementation 'org.springframework.ai:spring-ai-starter-vector-store-pinecone'
-    implementation 'org.springframework.ai:spring-ai-starter-vector-store-mongodb-atlas'
+    implementation 'org.springframework.ai:spring-ai-pinecone-store'
+    implementation 'org.springframework.ai:spring-ai-mongodb-atlas-store'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation project(':lib-common-test')
