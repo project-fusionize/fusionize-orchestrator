@@ -13,7 +13,7 @@ import java.util.Map;
 public class StorageConfig extends DomainEntity implements Sanitization<StorageConfig> {
     @Id
     private String id;
-    private String provider;
+    private StorageProvider provider;
     private StorageType storageType;
     private Map<String, Object> secrets = new HashMap<>();
     private Map<String, Object> properties = new HashMap<>();
@@ -35,11 +35,11 @@ public class StorageConfig extends DomainEntity implements Sanitization<StorageC
         this.id = id;
     }
 
-    public String getProvider() {
+    public StorageProvider getProvider() {
         return provider;
     }
 
-    public void setProvider(String provider) {
+    public void setProvider(StorageProvider provider) {
         this.provider = provider;
     }
 
@@ -80,7 +80,7 @@ public class StorageConfig extends DomainEntity implements Sanitization<StorageC
     }
 
     public static class Builder extends DomainEntity.Builder<Builder> {
-        private String provider;
+        private StorageProvider provider;
         private StorageType storageType;
         private Map<String, Object> secrets = new HashMap<>();
         private Map<String, Object> properties = new HashMap<>();
@@ -90,7 +90,7 @@ public class StorageConfig extends DomainEntity implements Sanitization<StorageC
             super(parentDomain);
         }
 
-        public Builder withProvider(String provider) {
+        public Builder withProvider(StorageProvider provider) {
             this.provider = provider;
             return this;
         }

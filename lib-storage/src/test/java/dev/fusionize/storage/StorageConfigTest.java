@@ -15,7 +15,7 @@ class StorageConfigTest {
         String parentDomain = "test-domain";
         String name = "config";
         String expectedDomain = "test-domain.config";
-        String provider = "aws";
+        StorageProvider provider = StorageProvider.AWS_S3;
         StorageType type = StorageType.FILE_STORAGE;
         Map<String, Object> secrets = new HashMap<>();
         secrets.put("accessKey", "123");

@@ -61,22 +61,21 @@ public class StorageConfigManager {
         if (config.getStorageType() != StorageType.FILE_STORAGE) {
             return null;
         }
-        if ("aws-s3".equalsIgnoreCase(config.getProvider())) {
-            return dev.fusionize.storage.file.FileStorageServiceS3.instantiate(config, null);
-        }
-        return null;
+        return switch (config.getProvider()) {
+            case AWS_S3 -> dev.fusionize.storage.file.FileStorageServiceS3.instantiate(config, null);
+            default -> null;
+        };
     }
 
     public VectorStorageService getVectorStorageService(StorageConfig config) {
         if (config.getStorageType() != StorageType.VECTOR_STORAGE) {
             return null;
         }
-        if ("pinecone".equalsIgnoreCase(config.getProvider()) || "pincone".equalsIgnoreCase(config.getProvider())) {
-            return dev.fusionize.storage.vector.PineconeVectorStorageService.instantiate(config, null);
-        } else if ("mongo".equalsIgnoreCase(config.getProvider())) {
-            return dev.fusionize.storage.vector.MongoVectorStorageService.instantiate(config, null);
-        }
-        return null;
+        return switch (config.getProvider()) {
+            case PINECONE -> dev.fusionize.storage.vector.PineconeVectorStorageService.instantiate(config, null);
+            case MONGO_DB -> dev.fusionize.storage.vector.MongoVectorStorageService.instantiate(config, null);
+            default -> null;
+        };
     }
 
     public void testConnection(StorageConfig config) throws StorageException {
@@ -131,7 +130,7 @@ public class StorageConfigManager {
         if (!StringUtils.hasText(config.getDomain())) {
             throw new IllegalArgumentException("Domain is required");
         }
-        if (!StringUtils.hasText(config.getProvider())) {
+        if (config.getProvider() == null) {
             throw new IllegalArgumentException("Provider is required");
         }
         if (config.getStorageType() == null) {

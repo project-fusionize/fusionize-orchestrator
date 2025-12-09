@@ -62,7 +62,7 @@ class StorageConfigManagerTest {
         StorageConfig config = StorageConfig.builder("test-domain")
                 .withName("file-config")
                 .withStorageType(StorageType.FILE_STORAGE)
-                .withProvider("local")
+                .withProvider(StorageProvider.AWS_S3)
                 .build();
 
         ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -89,7 +89,7 @@ class StorageConfigManagerTest {
         StorageConfig config = StorageConfig.builder("test-domain")
                 .withName("vector-config")
                 .withStorageType(StorageType.VECTOR_STORAGE)
-                .withProvider("pinecone")
+                .withProvider(StorageProvider.PINECONE)
                 .build();
 
         // When

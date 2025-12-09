@@ -55,32 +55,32 @@ class StorageConfigControllerTest {
     @Test
     void getAll() throws Exception {
         StorageConfig config = new StorageConfig();
-        config.setProvider("aws-s3");
+        config.setProvider(dev.fusionize.storage.StorageProvider.AWS_S3);
         when(storageConfigManager.getAll("")).thenReturn(List.of(config));
 
         mockMvc.perform(get("/api/1.0/storage-config"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.response.status").value(200))
-                .andExpect(jsonPath("$.response.message[0].provider").value("aws-s3"));
+                .andExpect(jsonPath("$.response.message[0].provider").value("AWS_S3"));
     }
 
     @Test
     void getByDomain() throws Exception {
         String domain = "test.domain";
         StorageConfig config = new StorageConfig();
-        config.setProvider("aws-s3");
+        config.setProvider(dev.fusionize.storage.StorageProvider.AWS_S3);
         when(storageConfigManager.getConfig(domain)).thenReturn(Optional.of(config));
 
         mockMvc.perform(get("/api/1.0/storage-config/{domain}", domain))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.response.status").value(200))
-                .andExpect(jsonPath("$.response.message.provider").value("aws-s3"));
+                .andExpect(jsonPath("$.response.message.provider").value("AWS_S3"));
     }
 
     @Test
     void create() throws Exception {
         StorageConfig config = new StorageConfig();
-        config.setProvider("aws-s3");
+        config.setProvider(dev.fusionize.storage.StorageProvider.AWS_S3);
         when(storageConfigManager.saveConfig(any(StorageConfig.class))).thenReturn(config);
 
         mockMvc.perform(post("/api/1.0/storage-config")
@@ -88,7 +88,7 @@ class StorageConfigControllerTest {
                 .content(objectMapper.writeValueAsString(config)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.response.status").value(200))
-                .andExpect(jsonPath("$.response.message.provider").value("aws-s3"));
+                .andExpect(jsonPath("$.response.message.provider").value("AWS_S3"));
     }
 
     @Test
@@ -107,7 +107,7 @@ class StorageConfigControllerTest {
     @Test
     void testConnection_Success() throws Exception {
         StorageConfig config = new StorageConfig();
-        config.setProvider("aws-s3");
+        config.setProvider(dev.fusionize.storage.StorageProvider.AWS_S3);
 
         mockMvc.perform(post("/api/1.0/storage-config/test-connection")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -133,7 +133,7 @@ class StorageConfigControllerTest {
     void update() throws Exception {
         String domain = "test.domain";
         StorageConfig config = new StorageConfig();
-        config.setProvider("aws-s3");
+        config.setProvider(dev.fusionize.storage.StorageProvider.AWS_S3);
         config.setId("existing-id");
 
         when(storageConfigManager.getConfig(domain)).thenReturn(Optional.of(config));
@@ -144,7 +144,7 @@ class StorageConfigControllerTest {
                 .content(objectMapper.writeValueAsString(config)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.response.status").value(200))
-                .andExpect(jsonPath("$.response.message.provider").value("aws-s3"));
+                .andExpect(jsonPath("$.response.message.provider").value("AWS_S3"));
     }
 
     @Test
