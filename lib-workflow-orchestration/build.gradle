@@ -10,6 +10,7 @@ plugins {
 dependencyManagement {
     imports {
         mavenBom SpringBootPlugin.BOM_COORDINATES
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
     }
 }
 
@@ -19,6 +20,7 @@ dependencies {
     implementation project(':lib-workflow')
     implementation project(':lib-workflow-components')
     implementation project(':lib-process')
+    implementation project(':lib-storage')
 
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'

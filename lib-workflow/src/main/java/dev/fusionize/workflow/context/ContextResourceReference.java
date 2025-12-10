@@ -1,6 +1,6 @@
-package dev.fusionize.storage.file;
+package dev.fusionize.workflow.context;
 
-public class FileStorageReference {
+public class ContextResourceReference {
     private String storage;
     private String referenceKey;
     private String name;
@@ -86,14 +86,25 @@ public class FileStorageReference {
             return this;
         }
 
-        public FileStorageReference build() {
-            FileStorageReference fileStorageReference = new FileStorageReference();
-            fileStorageReference.setStorage(storage);
-            fileStorageReference.setReferenceKey(referenceKey);
-            fileStorageReference.setName(name);
-            fileStorageReference.setMime(mime);
-            fileStorageReference.setSize(size);
-            return fileStorageReference;
+        public ContextResourceReference build() {
+            ContextResourceReference contextResourceReference = new ContextResourceReference();
+            contextResourceReference.setStorage(storage);
+            contextResourceReference.setReferenceKey(referenceKey);
+            contextResourceReference.setName(name);
+            contextResourceReference.setMime(mime);
+            contextResourceReference.setSize(size);
+            return contextResourceReference;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "FileStorageReference{" +
+                "storage='" + storage + '\'' +
+                ", referenceKey='" + referenceKey + '\'' +
+                ", name='" + name + '\'' +
+                ", mime='" + mime + '\'' +
+                ", size=" + size +
+                '}';
     }
 }

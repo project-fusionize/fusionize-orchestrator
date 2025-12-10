@@ -1,26 +1,24 @@
 package dev.fusionize.workflow.orchestrator;
 
-import dev.fusionize.common.test.TestMongoConfig;
-import dev.fusionize.common.test.TestMongoConversionConfig;
-import dev.fusionize.process.ProcessConverter;
 import dev.fusionize.process.Process;
-import dev.fusionize.workflow.*;
+import dev.fusionize.process.ProcessConverter;
+import dev.fusionize.storage.file.FileStorageService;
+import dev.fusionize.storage.file.FileStorageServiceLocal;
+import dev.fusionize.workflow.Workflow;
+import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.WorkflowExecutionStatus;
+import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.component.Actor;
 import dev.fusionize.workflow.component.WorkflowComponent;
-import dev.fusionize.workflow.component.local.beans.DelayComponent;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeRegistry;
-import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
-import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
-import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import dev.fusionize.workflow.events.Event;
-import dev.fusionize.workflow.events.EventListener;
 import dev.fusionize.workflow.events.EventPublisher;
-import dev.fusionize.workflow.events.EventStore;
 import dev.fusionize.workflow.logging.WorkflowLogRepository;
+import dev.fusionize.workflow.orchestrator.helpers.*;
+import dev.fusionize.workflow.orchestrator.helpers.TestConfig;
 import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import dev.fusionize.workflow.repo.WorkflowExecutionRepository;
 import dev.fusionize.workflow.repo.WorkflowRepository;
@@ -31,12 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
-import org.springframework.context.ApplicationEvent;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -44,72 +37,18 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import javax.xml.stream.XMLStreamException;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
-
-/**
- * -----------------------------
- * SPRING TEST CONFIGURATION
- * -----------------------------
- * This configuration defines a simple in-memory EventPublisher
- * for testing workflow orchestration without needing messaging infrastructure.
- */
-@Configuration
-@ComponentScan(basePackages = { "dev.fusionize.workflow", "dev.fusionize.process" })
-@Import({
-                TestMongoConfig.class,
-                TestMongoConversionConfig.class
-})
-class TestConfig {
-        public static Logger logger = LoggerFactory.getLogger(TestConfig.class);
-
-        static final class WorkflowApplicationEvent extends ApplicationEvent {
-                public final Event event;
-
-                public WorkflowApplicationEvent(Object source, Event event) {
-                        super(source);
-                        this.event = event;
-                }
-        }
-
-        /**
-         * Simple adapter to use Spring's ApplicationEventPublisher
-         * as the workflow's EventPublisher abstraction.
-         */
-        @Bean
-        public EventPublisher<Event> eventPublisher(ApplicationEventPublisher eventPublisher,
-                        EventStore<Event> eventStore) {
-                return new EventPublisher<>(eventStore) {
-                        @Override
-                        public void publish(Event event) {
-                                super.publish(event);
-                                eventPublisher.publishEvent(new WorkflowApplicationEvent(event.getSource(), event));
-                        }
-                };
-        }
-
-        @Bean
-        public EventListener<Event> eventListener() {
-                return new EventListener<Event>() {
-                        final List<EventCallback<Event>> callbacks = new ArrayList<>();
-
-                        @Override
-                        public void addListener(EventCallback<Event> callback) {
-                                callbacks.add(callback);
-                        }
-
-                        @org.springframework.context.event.EventListener()
-                        public void onEvent(WorkflowApplicationEvent workflowApplicationEvent) {
-                                callbacks.forEach(c -> c.onEvent(workflowApplicationEvent.event));
-                        }
-                };
-        }
-}
 
 /**
  * -----------------------------
@@ -149,23 +88,33 @@ class OrchestratorTest {
         @Autowired
         WorkflowExecutionRepository workflowExecutionRepository;
         List<String> inbox;
+        BlockingQueue<InputStream> fileQueue;
 
         @Autowired
         ProcessConverter processConverter;
+        FileStorageService fileStorageService;
 
         @BeforeEach
         public void setUp() throws IOException {
+                fileStorageService = new FileStorageServiceLocal("/tmp/fs");
                 workflowRepository.deleteAll();
                 workflowExecutionRepository.deleteAll();
 
                 // Inbox shared across async threads (thread-safe list)
                 inbox = new CopyOnWriteArrayList<>();
+                fileQueue = new LinkedBlockingQueue<>();
 
                 // Define factories for workflow runtime components
                 ComponentRuntimeFactory<MockRecEmailComponentRuntime> emailRecStartFactory = () -> new MockRecEmailComponentRuntime(
                                 inbox);
                 ComponentRuntimeFactory<MockSendEmailComponent> emailSendTaskFactory = MockSendEmailComponent::new;
                 ComponentRuntimeFactory<MockEndEmailComponent> emailEndStepFactory = MockEndEmailComponent::new;
+
+                ComponentRuntimeFactory<MockDataExtractorComponent> fileExtractorFactory = () -> new MockDataExtractorComponent(
+                                fileStorageService);
+                ComponentRuntimeFactory<MockFileHandlerComponent> fileStartFactory = () -> new MockFileHandlerComponent(
+                                fileStorageService, fileQueue);
+                ComponentRuntimeFactory<MockEndFileComponent> fileEndFactory = MockEndFileComponent::new;
 
                 /**
                  * Register all mock components with the registry.
@@ -192,6 +141,27 @@ class OrchestratorTest {
                                                 .withActor(Actor.SYSTEM)
                                                 .build(),
                                 emailEndStepFactory);
+
+                componentRegistry.registerFactory(
+                                WorkflowComponent.builder("test")
+                                                .withDomain("mockFileHandler")
+                                                .withActor(Actor.SYSTEM)
+                                                .build(),
+                                fileStartFactory);
+
+                componentRegistry.registerFactory(
+                                WorkflowComponent.builder("test")
+                                                .withDomain("mockDataExtractor")
+                                                .withActor(Actor.AI)
+                                                .build(),
+                                fileExtractorFactory);
+
+                componentRegistry.registerFactory(
+                                WorkflowComponent.builder("test")
+                                                .withDomain("endFileWorkflow")
+                                                .withActor(Actor.SYSTEM)
+                                                .build(),
+                                fileEndFactory);
 
         }
 
@@ -957,142 +927,90 @@ class OrchestratorTest {
                 assertNodeOrder(lastRunLogs, "inclusiveGateway#joinAll", "endEvent#end");
         }
 
-        // --------------------------------------------------------------------------
-        // MOCK COMPONENTS
-        // --------------------------------------------------------------------------
+        @Test
+        void orchestrateWithFile() throws InterruptedException, IOException {
+                loadWorkflow("/file-workflow-with-mock-extraction.yml");
 
-        /**
-         * Simulates the END component of the workflow.
-         * Logs its activation and publishes completion asynchronously.
-         */
-        static final class MockEndEmailComponent implements ComponentRuntime {
+                Thread.sleep(200);
+                URL jsonUrl = this.getClass().getResource("/test/test1.json");
+                assertNotNull(jsonUrl);
+                InputStream is = jsonUrl.openStream();
+                assertTrue(fileQueue.offer(is));
 
-                MockEndEmailComponent() {
+                Thread.sleep(500);
+                jsonUrl = this.getClass().getResource("/test/test2.json");
+                assertNotNull(jsonUrl);
+                is = jsonUrl.openStream();
+                assertTrue(fileQueue.offer(is));
+
+                waitForWorkflowCompletion(2, 15);
+
+                List<WorkflowLog> logs = workflowLogRepository.findAll();
+                logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
+                logWorkflowLogs("DB logs orchestrateWithScript ->\n{}", logs);
+
+                List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
+                assertEquals(3, workflowExecutions.size());
+                List<WorkflowExecution> done = workflowExecutions.stream()
+                                .filter(we -> we.getStatus() == WorkflowExecutionStatus.SUCCESS).toList();
+                List<WorkflowExecution> idles = workflowExecutions.stream()
+                                .filter(we -> we.getStatus() == WorkflowExecutionStatus.IDLE).toList();
+
+                assertEquals(1, idles.size());
+                assertEquals(2, done.size());
+
+                List<WorkflowLog> idleLogs = logs.stream()
+                                .filter(l -> l.getWorkflowExecutionId()
+                                                .equals(idles.getFirst().getWorkflowExecutionId()))
+                                .toList();
+                List<WorkflowLog> firsRunLogs = logs.stream()
+                                .filter(l -> l.getWorkflowExecutionId()
+                                                .equals(done.getFirst().getWorkflowExecutionId()))
+                                .toList();
+                List<WorkflowLog> lastRunLogs = logs.stream()
+                                .filter(l -> l.getWorkflowExecutionId().equals(done.getLast().getWorkflowExecutionId()))
+                                .toList();
+
+                logWorkflowLogs("DB idleLogs ->\n{}", idleLogs);
+                logWorkflowLogs("DB firsRunLogs ->\n{}", firsRunLogs);
+                logWorkflowLogs("DB lastRunLogs ->\n{}", lastRunLogs);
+
+                List<String> expectedMessages = List.of(
+                                "system:test.mockFileHandler: MockFileHandlerComponent activated",
+                                "system:test.mockFileHandler: MockFileHandlerComponent handling file stream",
+                                "system:test.mockFileHandler: MockFileHandlerComponent handling file stream");
+
+                assertEquals(expectedMessages.size(), idleLogs.size(), "Log count mismatch");
+                for (int i = 0; i < expectedMessages.size(); i++) {
+                        String expected = expectedMessages.get(i);
+                        String actual = idleLogs.get(i).toString();
+                        assertTrue(actual.endsWith(expected),
+                                        "Expected log at index " + i + " to end with: " + expected + "\nActual: "
+                                                        + actual);
                 }
 
-                @Override
-                public void configure(ComponentRuntimeConfig config) {
-                }
+                // First Run Assertions (123)
+                assertNodeLogs(firsRunLogs, "extractData", List.of(
+                                "ai:test.mockDataExtractor: MockDataExtractorComponent activated",
+                                "ai:test.mockDataExtractor: Extracted: 123"));
+                assertNodeLogs(firsRunLogs, "end", List.of(
+                                "system:test.endFileWorkflow: MockEndFileComponent activated",
+                                "system:test.endFileWorkflow: ComponentFinishedEvent finished with data 123"));
 
-                @Override
-                public void canActivate(Context context, ComponentUpdateEmitter emitter) {
-                        emitter.logger().info("MockEndEmailComponent activated");
-                        emitter.success(context);
-                }
+                // Order assertions
+                assertNodeOrder(firsRunLogs, "start", "extractData");
+                assertNodeOrder(firsRunLogs, "extractData", "end");
 
-                @Override
-                public void run(Context context, ComponentUpdateEmitter emitter) {
-                        try {
-                                Thread.sleep(200);
-                                Optional<Integer> delayFromLocal = context.var(DelayComponent.VAR_DELAYED,
-                                                Integer.class);
-                                emitter.logger().info("ComponentFinishedEvent finished after {}",
-                                                delayFromLocal.orElse(-1));
-                                emitter.success(context);
-                        } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                        }
-                }
-        }
+                // Last Run Assertions (456)
+                assertNodeLogs(lastRunLogs, "extractData", List.of(
+                                "ai:test.mockDataExtractor: MockDataExtractorComponent activated",
+                                "ai:test.mockDataExtractor: Extracted: 456"));
+                assertNodeLogs(lastRunLogs, "end", List.of(
+                                "system:test.endFileWorkflow: MockEndFileComponent activated",
+                                "system:test.endFileWorkflow: ComponentFinishedEvent finished with data 456"));
 
-        /**
-         * Task component that sends emails.
-         * Reads the target address from config and logs the email body.
-         */
-        static final class MockSendEmailComponent implements ComponentRuntime {
-                private String address;
-
-                MockSendEmailComponent() {
-                }
-
-                @Override
-                public void configure(ComponentRuntimeConfig config) {
-                        this.address = config.varString("address").orElse(null);
-                }
-
-                @Override
-                public void canActivate(Context context, ComponentUpdateEmitter emitter) {
-
-                        boolean hasMessage = context.contains("email_message");
-                        if (hasMessage) {
-                                emitter.logger().info("MockSendEmailComponent activated");
-                                emitter.success(context);
-                        } else {
-                                emitter.logger().info("MockSendEmailComponent not activated");
-                                emitter.failure(new Exception("No email to send"));
-                        }
-                }
-
-                @Override
-                public void run(Context context, ComponentUpdateEmitter emitter) {
-                        try {
-                                emitter.logger().info("sending email to {}", address);
-                                Thread.sleep(10);
-                                emitter.logger().info("BODY: {}", context.varString("email_message").orElse(""));
-                                emitter.success(context);
-                        } catch (InterruptedException e) {
-                                emitter.failure(e);
-                        }
-                }
-
-        }
-
-        /**
-         * Start component that continuously polls an inbox list for new emails.
-         * When an email arrives, it triggers the workflow chain.
-         */
-        static final class MockRecEmailComponentRuntime implements ComponentRuntime {
-                private final List<String> inbox;
-                private String address;
-
-                MockRecEmailComponentRuntime(List<String> inbox) {
-                        this.inbox = inbox;
-                }
-
-                @Override
-                public void configure(ComponentRuntimeConfig config) {
-                        this.address = config.varString("address").orElse(null);
-                }
-
-                @Override
-                public void canActivate(Context context, ComponentUpdateEmitter emitter) {
-                        try {
-                                Thread.sleep(100);
-                                emitter.logger().info("MockRecEmailComponentRuntime activated");
-                                emitter.success(context);
-                        } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                        }
-                }
-
-                @Override
-                public void run(Context context, ComponentUpdateEmitter emitter) {
-                        while (true) {
-                                try {
-                                        Thread.sleep(100);
-                                        logger.info("inbox size: {}", inbox.size());
-
-                                        if (!inbox.isEmpty()) {
-                                                // Remove the first email and process it
-                                                String email = inbox.removeFirst();
-                                                emitter.logger().info(
-                                                                "MockRecEmailComponentRuntime handle email: {} from {}",
-                                                                email, address);
-                                                context.set("email_message", email);
-                                                emitter.success(context);
-                                        }
-
-                                } catch (InterruptedException e) {
-                                        logger.error(e.getMessage());
-                                        Thread.currentThread().interrupt();
-                                        break;
-                                } catch (Exception e) {
-                                        emitter.logger().error("Error processing email", e);
-                                        emitter.failure(e);
-                                        logger.error("Error processing email", e);
-                                }
-                        }
-                }
-
+                // Order assertions
+                assertNodeOrder(lastRunLogs, "start", "extractData");
+                assertNodeOrder(lastRunLogs, "extractData", "end");
         }
 }

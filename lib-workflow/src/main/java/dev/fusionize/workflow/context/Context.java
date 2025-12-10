@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public class Context {
     private ConcurrentHashMap<String, Object> data;
+    private ConcurrentHashMap<String, ContextResourceReference> resources;
     private List<WorkflowDecision> decisions;
     private List<WorkflowGraphNode> graphNodes;
 
@@ -19,6 +20,7 @@ public class Context {
 
     public Context() {
         this.data = new ConcurrentHashMap<>();
+        this.resources = new ConcurrentHashMap<>();
         this.decisions = new ArrayList<>();
         this.graphNodes = new ArrayList<>();
     }
@@ -26,6 +28,7 @@ public class Context {
     public Context renew() {
         Context copy = new Context();
         copy.data = new ConcurrentHashMap<>(this.data);
+        copy.resources = new ConcurrentHashMap<>(this.resources);
         if (this.decisions != null) {
             List<WorkflowDecision> copiedDecisions = new ArrayList<>();
             for (WorkflowDecision decision : this.decisions) {
@@ -71,6 +74,14 @@ public class Context {
         data.put(key, value);
     }
 
+    public void set(String key, ContextResourceReference reference) {
+        resources.put(key, reference);
+    }
+
+    public Optional<ContextResourceReference> resource(String key) {
+        return Optional.ofNullable(resources.get(key));
+    }
+
     public Optional<String> varString(String key) {
         return var(key, String.class);
     }
@@ -99,6 +110,7 @@ public class Context {
 
     public static class Builder {
         private final ConcurrentHashMap<String, Object> data = new ConcurrentHashMap<>();
+        private final ConcurrentHashMap<String, ContextResourceReference> resources = new ConcurrentHashMap<>();
         private final List<WorkflowDecision> decisions = new ArrayList<>();
         private final List<WorkflowGraphNode> graphNodes = new ArrayList<>();
 
@@ -115,6 +127,11 @@ public class Context {
             return this;
         }
 
+        public Builder addResource(String key, ContextResourceReference value) {
+            this.resources.put(key, value);
+            return this;
+        }
+
         public Builder decisions(WorkflowDecision... decisions) {
             this.decisions.addAll(Arrays.stream(decisions).toList());
             return this;
@@ -128,6 +145,7 @@ public class Context {
         public Context build() {
             Context ctx = new Context();
             ctx.data = new ConcurrentHashMap<>(this.data);
+            ctx.resources = new ConcurrentHashMap<>(this.resources);
             ctx.decisions = new ArrayList<>(this.decisions);
             ctx.graphNodes = new ArrayList<>(this.graphNodes);
             return ctx;
@@ -144,6 +162,14 @@ public class Context {
 
     public void setData(ConcurrentHashMap<String, Object> data) {
         this.data = data;
+    }
+
+    public ConcurrentHashMap<String, ContextResourceReference> getResources() {
+        return resources;
+    }
+
+    public void setResources(ConcurrentHashMap<String, ContextResourceReference> resources) {
+        this.resources = resources;
     }
 
     public List<WorkflowDecision> getDecisions() {
