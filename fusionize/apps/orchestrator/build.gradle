@@ -11,10 +11,11 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation project(':lib-security')
-    implementation project(':lib-spring-boot-starter')
-    implementation project(':lib-ai-components')
-    implementation project(':lib-storage')
+    implementation project(':fusionize:module:lib-security')
+    implementation project(':fusionize:module:lib-storage')
+
+    implementation project(':fusionize:component:ai')
+    implementation project(':fusionize:spring-boot-starter:worker-spring-boot-starter')
 
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'

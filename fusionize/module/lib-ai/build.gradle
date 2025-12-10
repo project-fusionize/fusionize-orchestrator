@@ -15,8 +15,8 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation project(':lib-user')
-    implementation project(':lib-common')
+    implementation project(':fusionize:module:lib-user')
+    implementation project(':fusionize:module:lib-common')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
     implementation "org.springframework.ai:spring-ai-starter-mcp-client"

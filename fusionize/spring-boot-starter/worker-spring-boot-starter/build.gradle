@@ -14,12 +14,12 @@ dependencyManagement {
 }
 
 dependencies {
-    api project(':lib-common')
-    api project(':lib-user')
-    api project(':lib-ai')
-    api project(':lib-workflow')
-    api project(':lib-workflow-components')
-    api project(':lib-workflow-orchestration')
+    api project(':fusionize:module:lib-common')
+    api project(':fusionize:module:lib-user')
+    api project(':fusionize:module:lib-ai')
+    api project(':fusionize:module:lib-workflow')
+    api project(':fusionize:module:lib-workflow-components')
+    api project(':fusionize:module:lib-workflow-orchestration')
 
     implementation 'commons-io:commons-io:2.20.0'
 
@@ -37,6 +37,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
-    testImplementation project(':lib-common-test')
+    testImplementation project(':fusionize:module:lib-common-test')
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

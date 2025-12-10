@@ -14,14 +14,10 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation project(':lib-common')
-    implementation project(':lib-user')
-    implementation project(':lib-workflow')
-    implementation project(':lib-script-engine')
-
+    implementation project(':fusionize:module:lib-common')
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation project(':lib-common-test')
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation("org.springframework.security:spring-security-oauth2-jose")
+    implementation 'org.apache.tomcat.embed:tomcat-embed-core'
 }

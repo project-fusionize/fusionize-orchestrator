@@ -14,12 +14,14 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation project(':lib-common')
-    implementation project(':lib-user')
+    implementation project(':fusionize:module:lib-common')
+    implementation project(':fusionize:module:lib-user')
+    implementation project(':fusionize:module:lib-workflow')
+    implementation project(':fusionize:module:lib-script-engine')
 
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation project(':lib-common-test')
+    testImplementation project(':fusionize:module:lib-common-test')
 }
