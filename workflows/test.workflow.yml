@@ -9,12 +9,14 @@ active: true
 nodes:
   start:
     type: START
-    component: start:dev.fusionize.orchestrator.components.MyCustomComponentRecEmail
-    componentConfig:
+    actor: SYSTEM
+    component: dev.fusionize.orchestrator.components.MyCustomComponentRecEmail
+    config:
       address: incoming@email.com
     next: [end]
 
   end:
     type: END
-    component: end:dev.fusionize.orchestrator.components.MyCustomComponentEnd
+    actor: SYSTEM
+    component: dev.fusionize.orchestrator.components.MyCustomComponentEnd
     next: []

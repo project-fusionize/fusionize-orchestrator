@@ -1,5 +1,6 @@
 package dev.fusionize.storage.vector;
 
+import dev.fusionize.storage.StorageConfig;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -43,5 +44,14 @@ public class PineconeVectorStorageService implements VectorStorageService {
     @Override
     public void destroy() throws Exception {
         // No resources to close
+    }
+
+    public static PineconeVectorStorageService instantiate(StorageConfig config,
+                                                           EmbeddingModel embeddingModel) {
+        String apiKey = (String) config.getSecrets().get("apiKey");
+        String indexName = (String) config.getProperties().get("indexName");
+        String namespace = (String) config.getProperties().get("namespace");
+
+        return new PineconeVectorStorageService(apiKey, indexName, namespace, embeddingModel);
     }
 }

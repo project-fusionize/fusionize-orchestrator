@@ -2,6 +2,7 @@ package dev.fusionize.storage.vector;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import dev.fusionize.storage.StorageConfig;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -56,5 +57,19 @@ public class MongoVectorStorageService implements VectorStorageService {
         if (mongoClient != null) {
             mongoClient.close();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static MongoVectorStorageService instantiate(StorageConfig config,
+                                                        EmbeddingModel embeddingModel) {
+        String uri = (String) config.getSecrets().get("uri");
+        String databaseName = (String) config.getProperties().get("databaseName");
+        String collectionName = (String) config.getProperties().get("collectionName");
+        String vectorIndexName = (String) config.getProperties().get("vectorIndexName");
+        String pathName = (String) config.getProperties().get("pathName");
+        List<String> metadataFields = (List<String>) config.getProperties().get("metadataFields");
+
+        return new MongoVectorStorageService(uri, databaseName, collectionName, vectorIndexName, pathName,
+                metadataFields, embeddingModel);
     }
 }

@@ -23,7 +23,8 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
 
     @Override
     public Workflow getWorkflow(String workflowExecutionId) {
-        if (!StringUtils.hasText(workflowExecutionId)) return null;
+        if (!StringUtils.hasText(workflowExecutionId))
+            return null;
         Workflow workflow = repository.findByWorkflowId(workflowExecutionId).orElse(null);
         if (workflow != null) {
             inflate(workflow);
@@ -31,8 +32,10 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
         return workflow;
     }
 
+    @Override
     public Workflow getWorkflowByDomain(String workflowDomain) {
-        if (!StringUtils.hasText(workflowDomain)) return null;
+        if (!StringUtils.hasText(workflowDomain))
+            return null;
         Workflow workflow = repository.findByDomain(workflowDomain.toLowerCase()).orElse(null);
         if (workflow != null) {
             inflate(workflow);
@@ -41,8 +44,16 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
     }
 
     @Override
+    public java.util.List<Workflow> getAll() {
+        java.util.List<Workflow> workflows = repository.findAll();
+        workflows.forEach(this::inflate);
+        return workflows;
+    }
+
+    @Override
     public Workflow register(Workflow workflow) {
-        if (workflow == null) return null;
+        if (workflow == null)
+            return null;
 
         flatten(workflow);
 
@@ -75,7 +86,8 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
                     throw saveEx;
                 }
             } else {
-                log.error("Duplicate key exception occurred, but no existing document found for workflowId='{}' or domain='{}'. Re-throwing.",
+                log.error(
+                        "Duplicate key exception occurred, but no existing document found for workflowId='{}' or domain='{}'. Re-throwing.",
                         workflow.getWorkflowId(), workflow.getDomain());
                 throw ex;
             }

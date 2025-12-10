@@ -19,6 +19,15 @@
       "publicClient": false,
       "protocol": "openid-connect",
       "redirectUris": ["*"]
+    },
+    {
+      "clientId": "fusionize-hub",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "redirectUris": ["*"],
+      "webOrigins": ["*"]
     }
   ],
   "users": [

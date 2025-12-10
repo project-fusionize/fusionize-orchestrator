@@ -151,7 +151,7 @@ public class ForkComponent implements LocalComponentRuntime {
         }
 
         // Store decision result
-        WorkflowDecision decision = context.getDecisionToRun();
+        WorkflowDecision decision = context.decisionToRun();
         decision.setOptionNodes(optionNodes);
 
         // Success cases

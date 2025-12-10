@@ -12,9 +12,9 @@ dependencyManagement {
 
 dependencies {
     implementation project(':lib-security')
-    implementation project(':lib-user')
     implementation project(':lib-spring-boot-starter')
     implementation project(':lib-ai-components')
+    implementation project(':lib-storage')
 
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'

@@ -22,7 +22,7 @@ import java.util.List;
 @Configuration
 @Profile("!ut")
 @EnableMongoRepositories(basePackages = {
-        "dev.fusionize.workflow"
+        "dev.fusionize"
 }, repositoryImplementationPostfix = "CustomImplementation", mongoTemplateRef = "workerMongoTemplate")
 @ConditionalOnClass(Worker.class)
 @EnableConfigurationProperties(WorkerProperties.class)

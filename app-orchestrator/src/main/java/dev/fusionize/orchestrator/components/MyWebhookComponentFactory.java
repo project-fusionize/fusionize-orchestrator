@@ -7,7 +7,7 @@ import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-@RuntimeComponentDefinition(type = MyWebhookComponentFactory.class, name = "webhook", description = "Webhook component", actors = {
+@RuntimeComponentDefinition(type = MyWebhookComponent.class, name = "webhook", description = "Webhook component", actors = {
         Actor.SYSTEM })
 public class MyWebhookComponentFactory implements ComponentRuntimeFactory<MyWebhookComponent> {
     private final WebhookService webhookService;

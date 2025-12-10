@@ -34,22 +34,12 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:8080/realms/fuz
-  data:
-    mongodb:
-      uri: mongodb://fusionize:fusionize@localhost:27017/fuzdb
-  rabbitmq:
-    host: localhost
-    # virtual-host: /
-    username: fusionize
-    password: fusionize
-    port: 5672
-    stomp:
-      port: 61613
 
 fusionize:
   worker:
     orchestrator-url: http://localhost:8081
+    orchestrator-mongo: mongodb://fusionize:fusionize@localhost:27017/fuzdb?authSource=admin
+    orchestrator-amqp: amqp://fusionize:fusionize@localhost:5672
     oidc-client-id: fusionize-workers
     oidc-client-secret: fusionize-secret
-    orchestrator-mongo: mongodb://fusionize:fusionize@localhost:27017/fuzdb?authSource=admin
     workflow-definitions-root: ./workflows

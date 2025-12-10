@@ -29,7 +29,7 @@ public class WorkflowLoader {
                     try {
                         Workflow workflow = new WorkflowDescriptor().fromYamlDescription(Files.readString(file.toPath()));
                         workflows.add(workflow);
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         logger.error("Failed to load workflow: {} -> {}", file.getAbsolutePath(), e.getMessage());
                     }
                 });

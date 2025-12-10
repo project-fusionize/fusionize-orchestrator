@@ -1,5 +1,6 @@
 package dev.fusionize.storage.file;
 
+import dev.fusionize.storage.StorageConfig;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,5 +136,14 @@ public class FileStorageServiceS3 implements FileStorageService {
         if (s3Client != null) {
             s3Client.close();
         }
+    }
+
+    public static FileStorageServiceS3 instantiate(StorageConfig config,
+                                                   FileStorageServiceLocal localFileSystemService) {
+        String awsAccessKey = (String) config.getSecrets().get("awsAccessKey");
+        String awsSecretKey = (String) config.getSecrets().get("awsSecretKey");
+        String bucketName = (String) config.getProperties().get("bucketName");
+
+        return new FileStorageServiceS3(awsAccessKey, awsSecretKey, bucketName, localFileSystemService);
     }
 }

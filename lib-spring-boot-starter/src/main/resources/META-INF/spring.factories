@@ -1,4 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-dev.fusionize.worker.WorkerAutoConfiguration, \
-  dev.fusionize.worker.WorkerMongoAutoConfiguration
-
+dev.fusionize.worker.WorkerAutoConfiguration

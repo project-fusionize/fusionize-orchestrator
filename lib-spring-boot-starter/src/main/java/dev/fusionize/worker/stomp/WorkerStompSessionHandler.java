@@ -38,13 +38,16 @@ public class WorkerStompSessionHandler extends StompSessionHandlerAdapter {
             StompCommand command,
             StompHeaders headers,
             byte[] payload,
-            Throwable exception
-    ) {
+            Throwable exception) {
         logger.error("Got an exception", exception);
     }
 
     @Override
     public void handleTransportError(StompSession session, Throwable exception) {
-        logger.error("Transport error in session {}", session.getSessionId(), exception);
+        if (exception instanceof ConnectionLostException) {
+            logger.info("Connection closed: {}", exception.getMessage());
+        } else {
+            logger.error("Transport error in session {}", session.getSessionId(), exception);
+        }
     }
 }

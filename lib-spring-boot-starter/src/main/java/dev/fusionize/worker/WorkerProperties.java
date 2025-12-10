@@ -9,6 +9,7 @@ import java.net.URISyntaxException;
 public class WorkerProperties {
     private String orchestratorUrl;
     private String orchestratorMongo;
+    private String orchestratorAmqp;
     private String oidcClientId;
     private String oidcClientSecret;
     private String workflowDefinitionsRoot = "workflows";
@@ -31,6 +32,14 @@ public class WorkerProperties {
 
     public void setOrchestratorMongo(String orchestratorMongo) {
         this.orchestratorMongo = orchestratorMongo;
+    }
+
+    public String getOrchestratorAmqp() {
+        return orchestratorAmqp;
+    }
+
+    public void setOrchestratorAmqp(String orchestratorAmqp) {
+        this.orchestratorAmqp = orchestratorAmqp;
     }
 
     public void setOidcClientId(String oidcClientId) {
@@ -91,8 +100,7 @@ public class WorkerProperties {
                     uri.getPort(),
                     uri.getPath(),
                     uri.getQuery(),
-                    uri.getFragment()
-            ).toString();
+                    uri.getFragment()).toString();
 
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException("Invalid URL: " + httpUrl, e);

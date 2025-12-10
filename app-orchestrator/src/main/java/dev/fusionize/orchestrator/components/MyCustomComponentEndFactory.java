@@ -6,7 +6,7 @@ import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-@RuntimeComponentDefinition(type = MyCustomComponentEndFactory.class, name = "end", description = "End component", actors = {
+@RuntimeComponentDefinition(type = MyCustomComponentEnd.class, name = "end", description = "End component", actors = {
         Actor.SYSTEM })
 public class MyCustomComponentEndFactory implements ComponentRuntimeFactory<MyCustomComponentEnd> {
 
