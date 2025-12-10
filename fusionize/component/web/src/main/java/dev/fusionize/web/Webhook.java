@@ -1,6 +1,6 @@
-package dev.fusionize.orchestrator.components;
+package dev.fusionize.web;
 
-import dev.fusionize.orchestrator.WebhookService;
+import dev.fusionize.web.services.WebhookService;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
@@ -8,11 +8,11 @@ import dev.fusionize.workflow.context.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MyWebhookComponent implements ComponentRuntime {
-    private static final Logger logger = LoggerFactory.getLogger(MyWebhookComponent.class);
+public class Webhook implements ComponentRuntime {
+    private static final Logger logger = LoggerFactory.getLogger(Webhook.class);
     private final WebhookService webhookService;
 
-    public MyWebhookComponent(WebhookService webhookService) {
+    public Webhook(WebhookService webhookService) {
         this.webhookService = webhookService;
     }
 

@@ -1,7 +1,6 @@
-package dev.fusionize.orchestrator.components;
+package dev.fusionize.web;
 
-import dev.fusionize.orchestrator.WebhookService;
-import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
+import dev.fusionize.web.services.WebhookService;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.context.ContextRuntimeData;
@@ -13,13 +12,13 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
-class MyWebhookComponentTest {
+class WebhookTest {
 
-    private MyWebhookComponent myWebhookComponent;
+    private Webhook myWebhookComponent;
     private WebhookService webhookService;
     private Context context;
     private TestEmitter emitter;
@@ -27,7 +26,7 @@ class MyWebhookComponentTest {
     @BeforeEach
     void setUp() {
         webhookService = mock(WebhookService.class);
-        myWebhookComponent = new MyWebhookComponent(webhookService);
+        myWebhookComponent = new Webhook(webhookService);
         context = new Context();
         ContextRuntimeData runtimeData = new ContextRuntimeData();
         runtimeData.setWorkflowId("wf1");

@@ -3,12 +3,10 @@ package dev.fusionize.orchestrator.storage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.fusionize.ai.DocumentExtractor;
 import dev.fusionize.orchestrator.EmailBoxService;
-import dev.fusionize.orchestrator.WebhookService;
 import dev.fusionize.storage.StorageConfig;
 import org.springframework.ai.chat.client.ChatClient;
 import dev.fusionize.storage.StorageConfigManager;
 import dev.fusionize.storage.exception.StorageConnectionException;
-import dev.fusionize.storage.exception.StorageNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -40,8 +38,6 @@ class StorageConfigControllerTest {
     @MockitoBean
     private EmailBoxService emailBoxService;
 
-    @MockitoBean
-    private WebhookService webhookService;
 
     @MockitoBean
     private DocumentExtractor documentExtractor;

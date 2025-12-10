@@ -1,4 +1,4 @@
-package dev.fusionize.orchestrator;
+package dev.fusionize.web.services;
 
 import org.springframework.stereotype.Component;
 

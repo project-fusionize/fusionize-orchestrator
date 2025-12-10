@@ -17,3 +17,5 @@ include 'fusionize:module:lib-storage'
 include 'fusionize:spring-boot-starter:worker-spring-boot-starter'
 
 include 'fusionize:component:ai'
+include 'fusionize:component:web'
+

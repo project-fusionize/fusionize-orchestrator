@@ -2,6 +2,7 @@ package dev.fusionize.orchestrator;
 
 import dev.fusionize.user.AuthenticatedUser;
 
+import dev.fusionize.web.services.WebhookService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
