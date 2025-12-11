@@ -5,21 +5,27 @@ import dev.fusionize.workflow.WorkflowNodeExecution;
 
 public class ContextRuntimeData {
     private String workflowId;
+    private String workflowDomain;
     private String workflowExecutionId;
     private String workflowNodeId;
     private String workflowNodeKey;
     private String workflowNodeExecutionId;
-    private RuntimeData runtimeData;
-    public record RuntimeData(WorkflowExecution workflowExecution, WorkflowNodeExecution nodeExecution){}
+    private ExecutionData executionData;
+    public record ExecutionData(WorkflowExecution workflowExecution, WorkflowNodeExecution nodeExecution){}
 
     public static ContextRuntimeData from(WorkflowExecution workflowExecution, WorkflowNodeExecution nodeExecution) {
         ContextRuntimeData runtimeData = new ContextRuntimeData();
         runtimeData.workflowExecutionId = workflowExecution.getWorkflowExecutionId();
         runtimeData.workflowId = workflowExecution.getWorkflowId();
+        if(workflowExecution.getWorkflow()!=null){
+            runtimeData.workflowDomain = workflowExecution.getWorkflow().getDomain();
+        }
         runtimeData.workflowNodeId = nodeExecution.getWorkflowNodeId();
-        runtimeData.workflowNodeKey = nodeExecution.getWorkflowNode().getWorkflowNodeKey();
+        if(nodeExecution.getWorkflowNode()!=null){
+            runtimeData.workflowNodeKey = nodeExecution.getWorkflowNode().getWorkflowNodeKey();
+        }
         runtimeData.workflowNodeExecutionId = nodeExecution.getWorkflowNodeExecutionId();
-        runtimeData.runtimeData = new RuntimeData(workflowExecution, nodeExecution);
+        runtimeData.executionData = new ExecutionData(workflowExecution, nodeExecution);
         return runtimeData;
     }
 
@@ -29,6 +35,14 @@ public class ContextRuntimeData {
 
     public void setWorkflowId(String workflowId) {
         this.workflowId = workflowId;
+    }
+
+    public String getWorkflowDomain() {
+        return workflowDomain;
+    }
+
+    public void setWorkflowDomain(String workflowDomain) {
+        this.workflowDomain = workflowDomain;
     }
 
     public String getWorkflowExecutionId() {
@@ -63,11 +77,11 @@ public class ContextRuntimeData {
         this.workflowNodeExecutionId = workflowNodeExecutionId;
     }
 
-    public RuntimeData getRuntimeData() {
-        return runtimeData;
+    public ExecutionData getExecutionData() {
+        return executionData;
     }
 
-    public void setRuntimeData(RuntimeData runtimeData) {
-        this.runtimeData = runtimeData;
+    public void setExecutionData(ExecutionData executionData) {
+        this.executionData = executionData;
     }
 }

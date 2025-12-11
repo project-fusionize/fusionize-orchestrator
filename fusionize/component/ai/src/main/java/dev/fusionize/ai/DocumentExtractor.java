@@ -15,15 +15,11 @@ public class DocumentExtractor implements ComponentRuntime {
     public static final String CONF_INPUT_VAR = "input";
     public static final String CONF_OUTPUT_VAR = "output";
     public static final String CONF_EXAMPLE = "example";
-    public static final String CONF_STORAGE = "storage";
-
 
     private final DocumentExtractorService documentExtractorService;
-    private FileStorageService fileStorageService;
 
     private String inputVar = "document";
     private String outputVar = "extractedData";
-    private String storage = null;
 
     private Map<String, Object> example = new HashMap<>();
 
@@ -35,11 +31,7 @@ public class DocumentExtractor implements ComponentRuntime {
     public void configure(ComponentRuntimeConfig config) {
         config.varString(CONF_INPUT_VAR).ifPresent(s -> this.inputVar = s);
         config.varString(CONF_OUTPUT_VAR).ifPresent(s -> this.outputVar = s);
-        config.varString(CONF_STORAGE).ifPresent(s -> this.storage = s);
         config.varMap(CONF_EXAMPLE).ifPresent(m -> this.example = m);
-        if(this.storage!=null){
-            this.fileStorageService = this.documentExtractorService.getFileStorageService(storage);
-        }
     }
 
     @Override
@@ -54,7 +46,7 @@ public class DocumentExtractor implements ComponentRuntime {
     @Override
     public void run(Context context, ComponentUpdateEmitter emitter) {
         try {
-            DocumentExtractorService.Response response = documentExtractorService.extract(context, inputVar, fileStorageService, example);
+            DocumentExtractorService.Response response = documentExtractorService.extract(context, inputVar, example);
 
             if (response == null) {
                 throw new Exception("response is null");

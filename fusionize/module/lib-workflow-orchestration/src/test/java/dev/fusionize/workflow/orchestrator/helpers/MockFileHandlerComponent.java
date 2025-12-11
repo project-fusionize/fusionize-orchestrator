@@ -65,7 +65,7 @@ public final class MockFileHandlerComponent implements ComponentRuntime {
                     }
                     ContextResourceReference storageReference = ContextResourceReference.builder()
                             .withMime(MimeTypeUtils.APPLICATION_JSON.toString())
-                            .withStorage(storageService.getStorageName())
+                            .withStorage("storage")
                             .withReferenceKey(randomKey)
                             .withName(randomKey + ".json")
                             .build();

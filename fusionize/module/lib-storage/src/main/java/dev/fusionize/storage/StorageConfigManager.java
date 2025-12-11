@@ -15,6 +15,7 @@ import dev.fusionize.storage.vector.VectorStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -29,6 +30,8 @@ public class StorageConfigManager {
 
     private static final Logger log = LoggerFactory.getLogger(StorageConfigManager.class);
     private final StorageConfigRepository repository;
+    private final Map<String, FileStorageService> fileStorageServiceMap = new HashMap<>();
+    private final Map<String, VectorStorageService> vectorStorageServiceMap = new HashMap<>();
 
     public StorageConfigManager(StorageConfigRepository repository) {
         this.repository = repository;
@@ -76,12 +79,22 @@ public class StorageConfigManager {
         if (config.getStorageType() != StorageType.FILE_STORAGE) {
             return null;
         }
+        if(fileStorageServiceMap.containsKey(config.getDomain())) {
+            return fileStorageServiceMap.get(config.getDomain());
+        }
         FileStorageServiceLocal local = null;
         try {
             local = new FileStorageServiceLocal("/tmp/" + KeyUtil.getFlatUUID());
         } catch (IOException e) {
             log.error("failed to get local file storage service", e);
         }
+
+        FileStorageService fileStorageService = getFileStorageService(config, local);
+        fileStorageServiceMap.put(config.getDomain(), fileStorageService);
+        return fileStorageServiceMap.get(config.getDomain());
+    }
+
+    private FileStorageService getFileStorageService(StorageConfig config, FileStorageServiceLocal local) {
         return switch (config.getProvider()) {
             case AWS_S3 -> FileStorageServiceS3.instantiate(config, local);
             default -> null;
@@ -92,9 +105,18 @@ public class StorageConfigManager {
         if (config.getStorageType() != StorageType.VECTOR_STORAGE) {
             return null;
         }
+        if(vectorStorageServiceMap.containsKey(config.getDomain())) {
+            return vectorStorageServiceMap.get(config.getDomain());
+        }
+        VectorStorageService vectorStorageService = getVectorStorageService(config, null);
+        vectorStorageServiceMap.put(config.getDomain(), vectorStorageService);
+        return vectorStorageServiceMap.get(config.getDomain());
+    }
+
+    private VectorStorageService getVectorStorageService(StorageConfig config, EmbeddingModel model) {
         return switch (config.getProvider()) {
-            case PINECONE -> PineconeVectorStorageService.instantiate(config, null);
-            case MONGO_DB -> MongoVectorStorageService.instantiate(config, null);
+            case PINECONE -> PineconeVectorStorageService.instantiate(config, model);
+            case MONGO_DB -> MongoVectorStorageService.instantiate(config, model);
             default -> null;
         };
     }

@@ -46,11 +46,6 @@ public class FileStorageServiceS3 implements FileStorageService {
     }
 
     @Override
-    public String getStorageName() {
-        return "s3:" + this.bucketName;
-    }
-
-    @Override
     public Map<String, OutputStream> write(List<String> paths) throws IOException {
         return this.localFileSystemService.write(paths);
     }

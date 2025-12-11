@@ -10,12 +10,10 @@ import dev.fusionize.workflow.context.ContextRuntimeData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +22,6 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class FileInboundConnectorTest {
@@ -78,7 +75,6 @@ class FileInboundConnectorTest {
              List<String> keys = invocation.getArgument(0);
              return Map.of(keys.get(0), outputStream);
         });
-        when(storageService.getStorageName()).thenReturn("test-storage");
 
         // Simulate callback
         MultipartFile multipartFile = mock(MultipartFile.class);

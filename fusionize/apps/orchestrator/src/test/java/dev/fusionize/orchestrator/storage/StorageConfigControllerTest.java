@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.fusionize.ai.DocumentExtractor;
 import dev.fusionize.orchestrator.EmailBoxService;
 import dev.fusionize.storage.StorageConfig;
+import org.mockito.InjectMocks;
 import org.springframework.ai.chat.client.ChatClient;
 import dev.fusionize.storage.StorageConfigManager;
 import dev.fusionize.storage.exception.StorageConnectionException;
@@ -35,15 +36,9 @@ class StorageConfigControllerTest {
     @MockitoBean
     private StorageConfigManager storageConfigManager;
 
-    @MockitoBean
-    private EmailBoxService emailBoxService;
+    @InjectMocks
+    private StorageConfigController storageConfigController;
 
-
-    @MockitoBean
-    private DocumentExtractor documentExtractor;
-
-    @MockitoBean
-    private ChatClient.Builder chatClientBuilder;
 
     @Autowired
     private ObjectMapper objectMapper;

@@ -19,13 +19,15 @@ public class RuntimeComponentRegistrar {
     }
 
     public boolean isValidComponentDefinition(RuntimeComponentDefinition runtimeComponentDefinition) {
-        return runtimeComponentDefinition.type() != null &&
+        return (runtimeComponentDefinition.type() != null || !runtimeComponentDefinition.domain().isEmpty()) &&
                 !runtimeComponentDefinition.name().isEmpty() &&
                 !runtimeComponentDefinition.description().isEmpty();
     }
 
     public WorkflowComponent registerComponent(RuntimeComponentDefinition runtimeComponentDefinition) {
-        String domain = runtimeComponentDefinition.type().getCanonicalName();
+        String domain = runtimeComponentDefinition.domain().isEmpty()
+                ? runtimeComponentDefinition.type().getCanonicalName()
+                : runtimeComponentDefinition.domain();
         WorkflowComponent newWorkflowComponent = WorkflowComponent.builder("")
                 .withDescription(runtimeComponentDefinition.description())
                 .withActors(Set.of(runtimeComponentDefinition.actors()))

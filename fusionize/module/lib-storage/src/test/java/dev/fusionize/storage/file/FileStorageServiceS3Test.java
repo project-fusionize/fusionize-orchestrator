@@ -46,11 +46,6 @@ class FileStorageServiceS3Test {
     }
 
     @Test
-    void getStorageName() {
-        assertEquals("s3:" + bucketName, fileStorageServiceS3.getStorageName());
-    }
-
-    @Test
     void read() {
         String key = "test-file.txt";
         String content = "hello world";

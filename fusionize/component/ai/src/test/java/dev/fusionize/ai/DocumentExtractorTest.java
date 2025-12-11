@@ -47,7 +47,7 @@ class DocumentExtractorTest {
         // Mock Service response
         DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of(
                 "key", "extractedValue"));
-        when(documentExtractorService.extract(any(), any(), any(), any())).thenReturn(response);
+        when(documentExtractorService.extract(any(), any(), any())).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -60,14 +60,13 @@ class DocumentExtractorTest {
         assertNotNull(result);
         assertEquals("extractedValue", result.get("key"));
         
-        verify(documentExtractorService).extract(eq(context), eq("document"), isNull(), eq(example));
+        verify(documentExtractorService).extract(eq(context), eq("document"), eq(example));
     }
 
     @Test
     void testRun_WithStorage() throws Exception {
         // Configure
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
-        config.set(DocumentExtractor.CONF_STORAGE, "my-storage");
         documentExtractor.configure(config);
 
         // Setup context
@@ -81,7 +80,7 @@ class DocumentExtractorTest {
 
         // Mock Service response
         DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of("key", "val"));
-        when(documentExtractorService.extract(any(), any(), any(), any())).thenReturn(response);
+        when(documentExtractorService.extract(any(), any(), any())).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -89,7 +88,7 @@ class DocumentExtractorTest {
         // Verify success
         assertTrue(emitter.successCalled);
         
-        verify(documentExtractorService).extract(eq(context), eq("document"), eq(mockStorage), any());
+        verify(documentExtractorService).extract(eq(context), eq("document"), any());
     }
 
     @Test
@@ -102,7 +101,7 @@ class DocumentExtractorTest {
         context.set("document", "some text");
 
         // Mock Service response to null
-        when(documentExtractorService.extract(any(), any(), any(), any())).thenReturn(null);
+        when(documentExtractorService.extract(any(), any(), any())).thenReturn(null);
 
         // Run
         documentExtractor.run(context, emitter);

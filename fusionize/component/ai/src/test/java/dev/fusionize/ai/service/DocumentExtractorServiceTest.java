@@ -1,8 +1,10 @@
 package dev.fusionize.ai.service;
 
+import dev.fusionize.storage.StorageConfig;
 import dev.fusionize.storage.StorageConfigManager;
 import dev.fusionize.storage.file.FileStorageService;
 import dev.fusionize.workflow.context.Context;
+import dev.fusionize.workflow.context.ContextResourceReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -11,10 +13,8 @@ import org.springframework.ai.chat.client.ChatClient;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,6 +44,8 @@ class DocumentExtractorServiceTest {
 
         // Mock ChatClient builder to return our deep stubbed client
         when(chatClientBuilder.build()).thenReturn(chatClient);
+        when(configManager.getConfig(any())).thenReturn(Optional.of(new StorageConfig()));
+        when(configManager.getFileStorageService(any())).thenReturn(storageService);
 
         service = new DocumentExtractorService(chatClientBuilder, configManager);
         context = new Context();
@@ -60,12 +62,12 @@ class DocumentExtractorServiceTest {
         
         // Mock deep call chain
         when(chatClient.prompt()
-                .user(any(java.util.function.Consumer.class))
+                .user(any(Consumer.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", null, example);
+        DocumentExtractorService.Response response = service.extract(context, "input", example);
 
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -79,12 +81,12 @@ class DocumentExtractorServiceTest {
         
         // Mock chain for text path
         when(chatClient.prompt()
-                .user(any(java.util.function.Consumer.class))
+                .user(any(Consumer.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", null, example);
+        DocumentExtractorService.Response response = service.extract(context, "input", example);
 
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -99,12 +101,12 @@ class DocumentExtractorServiceTest {
         
         // Mock deep call chain for bytes path (decoded from base64)
         when(chatClient.prompt()
-                .user(any(java.util.function.Consumer.class))
+                .user(any(Consumer.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        service.extract(context, "input", null, example);
+        service.extract(context, "input", example);
         
         // Verify invocation (using deep verify is tricky, but result being present assumes success)
         // We can just rely on the return value being non-null and correct
@@ -116,13 +118,11 @@ class DocumentExtractorServiceTest {
         String refKey = "file/path.txt";
         
         // Setup context with resource
-        dev.fusionize.workflow.context.ContextResourceReference ref = new dev.fusionize.workflow.context.ContextResourceReference();
+        ContextResourceReference ref = new ContextResourceReference();
         ref.setStorage(storageName);
         ref.setReferenceKey(refKey);
         context.set("input", ref);
-        
-        // Mock Storage
-        when(storageService.getStorageName()).thenReturn(storageName);
+
         byte[] fileBytes = "file content".getBytes(StandardCharsets.UTF_8);
         when(storageService.read(List.of(refKey))).thenReturn(Map.of(refKey, new ByteArrayInputStream(fileBytes)));
         
@@ -130,12 +130,12 @@ class DocumentExtractorServiceTest {
         DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("extracted", "data"));
         
         when(chatClient.prompt()
-                .user(any(java.util.function.Consumer.class))
+                .user(any(Consumer.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", storageService, example);
+        DocumentExtractorService.Response response = service.extract(context, "input", example);
         
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -148,25 +148,23 @@ class DocumentExtractorServiceTest {
         String refKey = "file/path.txt";
         
         // Setup context with resource AND data
-        dev.fusionize.workflow.context.ContextResourceReference ref = new dev.fusionize.workflow.context.ContextResourceReference();
+        ContextResourceReference ref = new ContextResourceReference();
         ref.setStorage(storageName);
         ref.setReferenceKey(refKey);
         context.set("input", ref);
         context.set("input", "fallback content"); // Overwrites data but resource map is separate
-        
-        // Mock Storage to fail or return null
-        when(storageService.getStorageName()).thenReturn(storageName);
+
         when(storageService.read(List.of(refKey))).thenThrow(new RuntimeException("Storage unavailable"));
         
         // Mock ChatClient for text path (fallback)
         DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("extracted", "fallbackData"));
         when(chatClient.prompt()
-                .user(any(java.util.function.Consumer.class))
+                .user(any(Consumer.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", storageService, example);
+        DocumentExtractorService.Response response = service.extract(context, "input", example);
         
         assertNotNull(response);
         assertEquals("fallbackData", response.data().get("extracted"));
@@ -176,7 +174,7 @@ class DocumentExtractorServiceTest {
     @Test
     void testExtract_Throws_WhenInputMissing() {
         assertThrows(IllegalArgumentException.class, () -> {
-            service.extract(context, "missing", null, example);
+            service.extract(context, "missing", example);
         });
     }
 }

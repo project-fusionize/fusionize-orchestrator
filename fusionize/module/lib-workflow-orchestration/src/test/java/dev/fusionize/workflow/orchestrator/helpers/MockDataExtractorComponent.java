@@ -47,8 +47,7 @@ public class MockDataExtractorComponent implements ComponentRuntime {
     public void run(Context context, ComponentUpdateEmitter emitter) {
         try {
             Optional<ContextResourceReference> optionalRef = context.resource(resource);
-            // emitter.logger().info("FILE REF: {}", optionalRef.orElse(null));
-            if (optionalRef.isPresent() && storageService.getStorageName().equals(optionalRef.get().getStorage())) {
+            if (optionalRef.isPresent()) {
                 Map<String, InputStream> read = storageService.read(List.of(optionalRef.get().getReferenceKey()));
                 InputStream is = read.get(optionalRef.get().getReferenceKey());
                 if (is != null) {

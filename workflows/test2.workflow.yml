@@ -11,7 +11,7 @@ nodes:
   start:
     type: START
     actor: SYSTEM
-    component: dev.fusionize.web.FileInboundConnector
+    component: fuz.connector.FileInbound
     config:
       storage: test-s3-storage
       output: myFile
@@ -20,9 +20,8 @@ nodes:
   process:
     type: TASK
     actor: AI
-    component: dev.fusionize.ai.DocumentExtractor
+    component: fuz.DocumentExtractor
     config:
-      storage: test-s3-storage
       input: myFile
       output: out
       example:

@@ -9,8 +9,6 @@ import java.util.Map;
 import org.springframework.beans.factory.DisposableBean;
 
 public interface FileStorageService extends DisposableBean {
-    String getStorageName();
-
     Map<String, OutputStream> write(List<String> paths) throws IOException;
 
     Map<String, InputStream> read(List<String> paths);

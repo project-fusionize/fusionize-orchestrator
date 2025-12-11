@@ -40,11 +40,6 @@ public class FileStorageServiceLocal implements FileStorageService {
     }
 
     @Override
-    public String getStorageName() {
-        return "local:" + this.fileStorageLocation.toString();
-    }
-
-    @Override
     public Map<String, OutputStream> write(List<String> paths) throws IOException {
         List<FileSystemPackage> files = paths.stream()
                 .map(FileSystemPackage::new)

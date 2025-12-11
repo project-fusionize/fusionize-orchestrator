@@ -10,8 +10,12 @@ import org.springframework.stereotype.Component;
 import dev.fusionize.ai.service.DocumentExtractorService;
 
 @Component
-@RuntimeComponentDefinition(name = "document-extractor", description = "Extracts data from documents", type = DocumentExtractor.class, actors = {
-        Actor.AI })
+@RuntimeComponentDefinition(
+        name = "document-extractor",
+        description = "Extracts data from documents",
+        domain = "fuz.DocumentExtractor",
+        type = DocumentExtractor.class,
+        actors = { Actor.AI })
 public class DocumentExtractorFactory implements ComponentRuntimeFactory<DocumentExtractor> {
 
     private final DocumentExtractorService documentExtractorService;

@@ -7,7 +7,8 @@ import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
 import org.springframework.stereotype.Component;
 
 @Component
-@RuntimeComponentDefinition(type = MyCustomComponentRecEmail.class, name = "receivedIncomingEmail", description = "Received incoming email", actors = {
+@RuntimeComponentDefinition(
+        type = MyCustomComponentRecEmail.class, name = "receivedIncomingEmail", description = "Received incoming email", actors = {
         Actor.SYSTEM })
 public class MyCustomComponentRecEmailFactory implements ComponentRuntimeFactory<MyCustomComponentRecEmail> {
     private final EmailBoxService emailBoxService;

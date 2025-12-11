@@ -27,7 +27,8 @@ public class HttpInboundConnector implements ComponentRuntime {
 
     @Override
     public void run(Context context, ComponentUpdateEmitter emitter) {
-        String workflowKey = context.getRuntimeData().getWorkflowId();
+        String workflowKey = context.getRuntimeData().getWorkflowDomain();
+        workflowKey = workflowKey == null ? context.getRuntimeData().getWorkflowId() : workflowKey;
         String workflowNodeKey = context.getRuntimeData().getWorkflowNodeKey();
 
         if (workflowKey == null || workflowNodeKey == null) {

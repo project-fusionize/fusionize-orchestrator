@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RuntimeComponentDefinition(
         type = HttpInboundConnector.class,
+        domain = "fuz.connector.HttpInbound",
         name = "Http Inbound Connector",
         description = "Http Inbound Connector component",
         actors = { Actor.SYSTEM })

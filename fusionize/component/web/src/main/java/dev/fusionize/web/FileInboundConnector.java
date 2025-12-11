@@ -41,14 +41,15 @@ public class FileInboundConnector implements ComponentRuntime {
     @Override
     public void canActivate(Context context, ComponentUpdateEmitter emitter) {
         if(fileStorageService==null){
-            emitter.failure(new Exception("FileStorageService is not found"));
+            emitter.failure(new Exception("FileStorageService is not found: " + this.storage ));
         }
         emitter.success(context);
     }
 
     @Override
     public void run(Context context, ComponentUpdateEmitter emitter) {
-        String workflowKey = context.getRuntimeData().getWorkflowId();
+        String workflowKey = context.getRuntimeData().getWorkflowDomain();
+        workflowKey = workflowKey == null ? context.getRuntimeData().getWorkflowId() : workflowKey;
         String workflowNodeKey = context.getRuntimeData().getWorkflowNodeKey();
 
         if (workflowKey == null || workflowNodeKey == null) {

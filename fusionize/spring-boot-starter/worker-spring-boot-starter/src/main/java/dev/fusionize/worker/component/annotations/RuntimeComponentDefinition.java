@@ -16,5 +16,7 @@ public @interface RuntimeComponentDefinition {
 
     Class<?> type();
 
+    String domain() default "";
+
     Actor[] actors() default { Actor.SYSTEM };
 }

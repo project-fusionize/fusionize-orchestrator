@@ -15,7 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -44,8 +47,8 @@ public class DocumentExtractorService {
         return configOptional.map(this.configManager::getFileStorageService).orElse(null);
     }
 
-    public Response extract(Context context, String inputVar, FileStorageService storageService, Map<String, Object> example) throws Exception {
-        Object documentObj = resolveDocumentObject(context, inputVar, storageService);
+    public Response extract(Context context, String inputVar, Map<String, Object> example) throws Exception {
+        Object documentObj = resolveDocumentObject(context, inputVar);
 
         if (documentObj == null) {
             throw new IllegalArgumentException("Input '" + inputVar + "' not found in context (data or resource)");
@@ -57,13 +60,13 @@ public class DocumentExtractorService {
         return extractDataFromDocument(content, exampleJson);
     }
 
-    private Object resolveDocumentObject(Context context, String inputVar, FileStorageService storageService) {
+    private Object resolveDocumentObject(Context context, String inputVar) {
         if (context == null || inputVar == null) {
             return null;
         }
 
         // 1. Try resolving from Context Resources
-        Object resourceContent = tryReadFromResource(context, inputVar, storageService);
+        Object resourceContent = tryReadFromResource(context, inputVar);
         if (resourceContent != null) {
             return resourceContent;
         }
@@ -72,13 +75,18 @@ public class DocumentExtractorService {
         return context.getData().get(inputVar);
     }
 
-    private Object tryReadFromResource(Context context, String inputVar, FileStorageService storageService) {
+    private Object tryReadFromResource(Context context, String inputVar) {
         Optional<ContextResourceReference> resourceRefOpt = context.resource(inputVar);
-        if (resourceRefOpt.isEmpty() || storageService == null) {
+        if (resourceRefOpt.isEmpty()) {
             return null;
         }
 
         ContextResourceReference ref = resourceRefOpt.get();
+        if (ref.getStorage()==null || ref.getStorage().isEmpty()) {
+            return null;
+        }
+
+        FileStorageService storageService = getFileStorageService(ref.getStorage());
         try {
             return readContentFromStorage(storageService, ref.getReferenceKey());
         } catch (Exception e) {
@@ -87,15 +95,13 @@ public class DocumentExtractorService {
         }
     }
 
-    private byte[] readContentFromStorage(FileStorageService storageService, String referenceKey) {
-        Map<String, java.io.InputStream> streams = storageService.read(java.util.List.of(referenceKey));
-        java.io.InputStream is = streams.get(referenceKey);
+    private byte[] readContentFromStorage(FileStorageService storageService, String referenceKey) throws IOException {
+        Map<String, InputStream> streams = storageService.read(List.of(referenceKey));
+        InputStream is = streams.get(referenceKey);
 
         if (is != null) {
             try (is) {
                 return is.readAllBytes();
-            } catch (java.io.IOException e) {
-                defaultLogger.error("IOException reading storage stream for key '{}'", referenceKey, e);
             }
         }
         return null;
@@ -104,8 +110,7 @@ public class DocumentExtractorService {
     private DocumentContent parseDocumentContent(Object documentObj) {
         if (documentObj instanceof byte[]) {
             return new DocumentContent((byte[]) documentObj, null);
-        } else if (documentObj instanceof String) {
-            String text = (String) documentObj;
+        } else if (documentObj instanceof String text) {
             try {
                 byte[] decoded = java.util.Base64.getDecoder().decode(text);
                 return new DocumentContent(decoded, null);
