@@ -34,7 +34,9 @@ services:
       - fusionize-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0.4
+    build:
+      context: ./keycloak
+      dockerfile: Dockerfile
     container_name: fusionize-keycloak
     command:
       - start-dev
@@ -47,8 +49,6 @@ services:
       KC_METRICS_ENABLED: "true"
     ports:
       - "8080:8080"
-    volumes:
-      - ./keycloak/realm-export:/opt/keycloak/data/import
     networks:
       - fusionize-network
 

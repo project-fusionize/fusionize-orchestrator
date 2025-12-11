@@ -55,6 +55,10 @@ public class ComponentRuntimeConfig {
         config.put(key, value);
     }
 
+    public Optional<Boolean> varBoolean(String key) {
+        return var(key, Boolean.class);
+    }
+
     public Optional<String> varString(String key) {
         return var(key, String.class);
     }

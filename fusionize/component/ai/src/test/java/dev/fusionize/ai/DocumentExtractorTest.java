@@ -1,51 +1,38 @@
 package dev.fusionize.ai;
 
+import dev.fusionize.ai.service.DocumentExtractorService;
+import dev.fusionize.storage.file.FileStorageService;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.ChatClient.CallResponseSpec;
-import org.springframework.ai.chat.client.ChatClient.ChatClientRequestSpec;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class DocumentExtractorTest {
 
     private DocumentExtractor documentExtractor;
-    private ChatClient.Builder chatClientBuilder;
-    private ChatClient chatClient;
-    private ChatClientRequestSpec requestSpec;
-    private CallResponseSpec responseSpec;
+    private DocumentExtractorService documentExtractorService;
     private Context context;
     private TestEmitter emitter;
 
     @BeforeEach
     void setUp() {
-        chatClientBuilder = mock(ChatClient.Builder.class);
-        chatClient = mock(ChatClient.class);
-        requestSpec = mock(ChatClientRequestSpec.class);
-        responseSpec = mock(CallResponseSpec.class);
-
-        when(chatClientBuilder.build()).thenReturn(chatClient);
-        when(chatClient.prompt()).thenReturn(requestSpec);
-        when(requestSpec.user(any(Consumer.class))).thenReturn(requestSpec);
-        when(requestSpec.call()).thenReturn(responseSpec);
-
-        documentExtractor = new DocumentExtractor(chatClientBuilder);
+        documentExtractorService = mock(DocumentExtractorService.class);
+        documentExtractor = new DocumentExtractor(documentExtractorService);
         context = new Context();
         emitter = new TestEmitter();
     }
 
     @Test
-    void testRun_ExtractsData() {
+    void testRun_ExtractsData() throws Exception {
         // Configure
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
         Map<String, Object> example = new HashMap<>();
@@ -57,10 +44,10 @@ class DocumentExtractorTest {
         byte[] docBytes = "test content".getBytes();
         context.set("document", docBytes);
 
-        // Mock AI response
-        DocumentExtractor.Response response = new DocumentExtractor.Response(Map.of(
+        // Mock Service response
+        DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of(
                 "key", "extractedValue"));
-        when(responseSpec.entity(any(Class.class))).thenReturn(response);
+        when(documentExtractorService.extract(any(), any(), any(), any())).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -72,90 +59,58 @@ class DocumentExtractorTest {
         Map<String, Object> result = (Map<String, Object>) context.getData().get("extractedData");
         assertNotNull(result);
         assertEquals("extractedValue", result.get("key"));
+        
+        verify(documentExtractorService).extract(eq(context), eq("document"), isNull(), eq(example));
     }
 
     @Test
-    void testRun_DetectsMimeType() {
+    void testRun_WithStorage() throws Exception {
         // Configure
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set(DocumentExtractor.CONF_STORAGE, "my-storage");
         documentExtractor.configure(config);
 
-        // Setup context with PNG bytes
-        byte[] pngBytes = new byte[] { (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-        context.set("document", pngBytes);
+        // Setup context
+        context.set("document", "some ref");
 
-        // Mock AI response
-        DocumentExtractor.Response response = new DocumentExtractor.Response(Map.of());
-        when(responseSpec.entity(any(Class.class))).thenReturn(response);
+        // Mock getFileStorageService
+        FileStorageService mockStorage = mock(FileStorageService.class);
+        when(documentExtractorService.getFileStorageService("my-storage")).thenReturn(mockStorage);
+        // Re-configure to pick up the mock
+        documentExtractor.configure(config);
+
+        // Mock Service response
+        DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of("key", "val"));
+        when(documentExtractorService.extract(any(), any(), any(), any())).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
 
         // Verify success
         assertTrue(emitter.successCalled);
-
-        // Verify correct MIME type passed
-        verify(requestSpec).user(any(Consumer.class));
-        // Note: It's hard to verify the exact lambda passed to user(), but we can
-        // verify that the code runs without error
-        // and that the mime type detection logic is exercised.
-        // Ideally we would capture the PromptUserSpec and verify the media call, but
-        // that requires more complex mocking.
-        // For now, we rely on the fact that if it didn't detect PNG, it would default
-        // to octet-stream,
-        // and if we were using a real ChatClient it would matter.
-        // Since we are mocking, we just ensure it runs.
+        
+        verify(documentExtractorService).extract(eq(context), eq("document"), eq(mockStorage), any());
     }
 
     @Test
-    void testRun_HandlesBase64String() {
+    void testRun_HandlesNullResponse() throws Exception {
         // Configure
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
         documentExtractor.configure(config);
 
-        // Setup context with Base64 encoded PNG
-        byte[] pngBytes = new byte[] { (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-        String base64Png = java.util.Base64.getEncoder().encodeToString(pngBytes);
-        context.set("document", base64Png);
+        // Setup context
+        context.set("document", "some text");
 
-        // Mock AI response
-        DocumentExtractor.Response response = new DocumentExtractor.Response(Map.of());
-        when(responseSpec.entity(any(Class.class))).thenReturn(response);
+        // Mock Service response to null
+        when(documentExtractorService.extract(any(), any(), any(), any())).thenReturn(null);
 
         // Run
         documentExtractor.run(context, emitter);
 
-        // Verify success
-        assertTrue(emitter.successCalled);
-
-        // Verify media was passed (meaning it was treated as bytes)
-        verify(requestSpec).user(any(Consumer.class));
+        // Verify failure
+        assertTrue(emitter.failureCalled);
     }
 
-    @Test
-    void testRun_HandlesPlainText() {
-        // Configure
-        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
-        documentExtractor.configure(config);
-
-        // Setup context with plain text
-        String plainText = "This is just some text content.";
-        context.set("document", plainText);
-
-        // Mock AI response
-        DocumentExtractor.Response response = new DocumentExtractor.Response(Map.of());
-        when(responseSpec.entity(any(Class.class))).thenReturn(response);
-
-        // Run
-        documentExtractor.run(context, emitter);
-
-        // Verify success
-        assertTrue(emitter.successCalled);
-
-        // Verify user prompt was called (we can't easily verify exact content without
-        // capturing, but we know it runs)
-        verify(requestSpec).user(any(Consumer.class));
-    }
 
     static class TestEmitter implements ComponentUpdateEmitter {
         boolean successCalled = false;

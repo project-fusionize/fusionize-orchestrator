@@ -140,9 +140,9 @@ public class FileStorageServiceS3 implements FileStorageService {
 
     public static FileStorageServiceS3 instantiate(StorageConfig config,
                                                    FileStorageServiceLocal localFileSystemService) {
-        String awsAccessKey = (String) config.getSecrets().get("awsAccessKey");
-        String awsSecretKey = (String) config.getSecrets().get("awsSecretKey");
-        String bucketName = (String) config.getProperties().get("bucketName");
+        String awsAccessKey = (String) config.getSecrets().get("accessKey");
+        String awsSecretKey = (String) config.getSecrets().get("secretKey");
+        String bucketName = (String) config.getProperties().get("bucket");
 
         return new FileStorageServiceS3(awsAccessKey, awsSecretKey, bucketName, localFileSystemService);
     }

@@ -2,9 +2,11 @@ package dev.fusionize.orchestrator;
 
 import dev.fusionize.user.AuthenticatedUser;
 
-import dev.fusionize.web.services.WebhookService;
+import dev.fusionize.web.services.FileInboundConnectorService;
+import dev.fusionize.web.services.HttpInboundConnectorService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -12,12 +14,15 @@ import java.util.Map;
 @RequestMapping("/api")
 public class EchoController {
     private final EmailBoxService emailBoxService;
-    private final WebhookService webhookService;
+    private final HttpInboundConnectorService httpInboundConnectorService;
+    private final FileInboundConnectorService fileInboundConnectorService;
 
     public EchoController(EmailBoxService emailBoxService,
-            WebhookService webhookService) {
+                          HttpInboundConnectorService httpInboundConnectorService,
+                          FileInboundConnectorService fileInboundConnectorService) {
         this.emailBoxService = emailBoxService;
-        this.webhookService = webhookService;
+        this.httpInboundConnectorService = httpInboundConnectorService;
+        this.fileInboundConnectorService = fileInboundConnectorService;
     }
 
     @GetMapping("/echo")
@@ -31,12 +36,21 @@ public class EchoController {
         return "added";
     }
 
-    @PostMapping("/webhook/{workflowKey}/{workflowNodeKey}")
-    public String webhook(
-            @RequestBody Map<String, Object> webhookBody,
+    @PostMapping("/http-inbound/{workflowKey}/{workflowNodeKey}")
+    public String httpInbound(
+            @RequestBody Map<String, Object> body,
             @PathVariable("workflowKey") String workflowKey,
             @PathVariable("workflowNodeKey") String workflowNodeKey) {
-        webhookService.invoke(new WebhookService.WebhookKey(workflowKey, workflowNodeKey), webhookBody);
+        httpInboundConnectorService.invoke(new HttpInboundConnectorService.HttpConnectorKey(workflowKey, workflowNodeKey), body);
+        return "added";
+    }
+
+    @PostMapping("/file-inbound/{workflowKey}/{workflowNodeKey}")
+    public String fileInbound(
+            @RequestParam("file") MultipartFile file,
+            @PathVariable("workflowKey") String workflowKey,
+            @PathVariable("workflowNodeKey") String workflowNodeKey) {
+        fileInboundConnectorService.invoke(new FileInboundConnectorService.IngestKey(workflowKey, workflowNodeKey), file);
         return "added";
     }
 }

@@ -19,13 +19,14 @@ dependencies {
     implementation project(':fusionize:module:lib-ai')
     implementation project(':fusionize:module:lib-workflow')
     implementation project(':fusionize:module:lib-workflow-components')
+    implementation project(':fusionize:module:lib-storage')
     implementation project(':fusionize:spring-boot-starter:worker-spring-boot-starter')
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
     implementation "org.springframework.ai:spring-ai-starter-mcp-client"
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
-    implementation 'org.apache.tika:tika-core:2.9.2'
+    implementation 'org.apache.tika:tika-core:3.2.2'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

@@ -19,6 +19,8 @@ dependencies {
     implementation project(':fusionize:module:lib-workflow')
     implementation project(':fusionize:module:lib-workflow-components')
     implementation project(':fusionize:spring-boot-starter:worker-spring-boot-starter')
+    implementation project(':fusionize:module:lib-storage')
+
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

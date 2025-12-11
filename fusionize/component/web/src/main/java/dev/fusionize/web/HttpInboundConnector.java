@@ -1,6 +1,6 @@
 package dev.fusionize.web;
 
-import dev.fusionize.web.services.WebhookService;
+import dev.fusionize.web.services.HttpInboundConnectorService;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
@@ -8,12 +8,12 @@ import dev.fusionize.workflow.context.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Webhook implements ComponentRuntime {
-    private static final Logger logger = LoggerFactory.getLogger(Webhook.class);
-    private final WebhookService webhookService;
+public class HttpInboundConnector implements ComponentRuntime {
+    private static final Logger logger = LoggerFactory.getLogger(HttpInboundConnector.class);
+    private final HttpInboundConnectorService httpInboundConnectorService;
 
-    public Webhook(WebhookService webhookService) {
-        this.webhookService = webhookService;
+    public HttpInboundConnector(HttpInboundConnectorService httpInboundConnectorService) {
+        this.httpInboundConnectorService = httpInboundConnectorService;
     }
 
     @Override
@@ -35,14 +35,14 @@ public class Webhook implements ComponentRuntime {
             return;
         }
 
-        WebhookService.WebhookKey key = new WebhookService.WebhookKey(workflowKey, workflowNodeKey);
+        HttpInboundConnectorService.HttpConnectorKey key = new HttpInboundConnectorService.HttpConnectorKey(workflowKey, workflowNodeKey);
 
         logger.info("Registering webhook listener for key: {}", key);
 
-        webhookService.addListener(key, body -> {
+        httpInboundConnectorService.addListener(key, body -> {
             logger.info("Webhook triggered for key: {}, body: {}", key, body);
             context.getData().putAll(body);
-            webhookService.removeListener(key); // Cleanup
+//            httpInboundConnectorService.removeListener(key); // Cleanup
             emitter.success(context);
         });
     }

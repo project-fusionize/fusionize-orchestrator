@@ -5,7 +5,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-@EnableRuntimeComponents(basePackages = {"dev.fusionize.orchestrator.components","dev.fusionize.ai"})
+@EnableRuntimeComponents(basePackages = {
+        "dev.fusionize.orchestrator.components",
+        "dev.fusionize.ai",
+        "dev.fusionize.web"
+})
 public class Application {
     public static final String VERSION = "1.0";
     public static final String API_PREFIX = "/api/"+VERSION;

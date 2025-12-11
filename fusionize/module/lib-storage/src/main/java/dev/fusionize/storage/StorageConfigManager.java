@@ -1,27 +1,33 @@
 package dev.fusionize.storage;
 
+import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.storage.exception.StorageConnectionException;
 import dev.fusionize.storage.exception.StorageDomainAlreadyExistsException;
 import dev.fusionize.storage.exception.StorageException;
 
 import dev.fusionize.storage.file.FileStorageService;
+import dev.fusionize.storage.file.FileStorageServiceLocal;
+import dev.fusionize.storage.file.FileStorageServiceS3;
 import dev.fusionize.storage.repo.StorageConfigRepository;
+import dev.fusionize.storage.vector.MongoVectorStorageService;
+import dev.fusionize.storage.vector.PineconeVectorStorageService;
 import dev.fusionize.storage.vector.VectorStorageService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class StorageConfigManager {
 
+    private static final Logger log = LoggerFactory.getLogger(StorageConfigManager.class);
     private final StorageConfigRepository repository;
 
     public StorageConfigManager(StorageConfigRepository repository) {
@@ -42,6 +48,15 @@ public class StorageConfigManager {
             }
         }
 
+        Map<Boolean, Map<String, Object>> splitProperties = config.getProperties().entrySet().stream()
+                .collect(Collectors.partitioningBy(
+                        entry -> entry.getKey().endsWith("Key") || entry.getKey().endsWith("key"),
+                        Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)
+                ));
+
+        config.setProperties(splitProperties.get(false));
+        config.getSecrets().putAll(splitProperties.get(true));
+
         return repository.save(config);
     }
 
@@ -61,8 +76,14 @@ public class StorageConfigManager {
         if (config.getStorageType() != StorageType.FILE_STORAGE) {
             return null;
         }
+        FileStorageServiceLocal local = null;
+        try {
+            local = new FileStorageServiceLocal("/tmp/" + KeyUtil.getFlatUUID());
+        } catch (IOException e) {
+            log.error("failed to get local file storage service", e);
+        }
         return switch (config.getProvider()) {
-            case AWS_S3 -> dev.fusionize.storage.file.FileStorageServiceS3.instantiate(config, null);
+            case AWS_S3 -> FileStorageServiceS3.instantiate(config, local);
             default -> null;
         };
     }
@@ -72,8 +93,8 @@ public class StorageConfigManager {
             return null;
         }
         return switch (config.getProvider()) {
-            case PINECONE -> dev.fusionize.storage.vector.PineconeVectorStorageService.instantiate(config, null);
-            case MONGO_DB -> dev.fusionize.storage.vector.MongoVectorStorageService.instantiate(config, null);
+            case PINECONE -> PineconeVectorStorageService.instantiate(config, null);
+            case MONGO_DB -> MongoVectorStorageService.instantiate(config, null);
             default -> null;
         };
     }

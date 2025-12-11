@@ -7,10 +7,14 @@ description: A test workflow for ai processing
 version: 1
 active: true
 nodes:
+
   start:
     type: START
     actor: SYSTEM
-    component: dev.fusionize.orchestrator.components.MyWebhookComponent
+    component: dev.fusionize.web.FileInboundConnector
+    config:
+      storage: test-s3-storage
+      output: myFile
     next: [process]
 
   process:
@@ -18,8 +22,9 @@ nodes:
     actor: AI
     component: dev.fusionize.ai.DocumentExtractor
     config:
-      inputVar: sampleFile
-      outputVar: out
+      storage: test-s3-storage
+      input: myFile
+      output: out
       example:
         userName: string
         location: string
