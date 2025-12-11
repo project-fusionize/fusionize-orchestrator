@@ -1,5 +1,6 @@
 package dev.fusionize.workflow;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import dev.fusionize.common.utility.KeyUtil;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
@@ -12,6 +13,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@JsonIgnoreProperties({"workflow"})
 @Document(collection = "workflow-execution")
 public class WorkflowExecution {
     @Id

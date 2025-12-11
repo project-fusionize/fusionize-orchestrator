@@ -43,6 +43,14 @@ public class ComponentRuntimeEngine {
     }
 
     private Optional<ComponentRuntime> getRuntimeComponent(OrchestrationEvent orchestrationEvent) {
+        if(orchestrationEvent == null
+                || orchestrationEvent.getComponent() == null
+                || orchestrationEvent.getOrchestrationEventContext()==null
+                || orchestrationEvent.getOrchestrationEventContext().nodeExecution() == null
+                || orchestrationEvent.getOrchestrationEventContext().nodeExecution().getWorkflowNode() == null
+        ) {
+            return Optional.empty();
+        }
         String component = orchestrationEvent.getComponent();
         ComponentConfig componentConfig = orchestrationEvent.getOrchestrationEventContext()
                 .nodeExecution().getWorkflowNode().getComponentConfig();

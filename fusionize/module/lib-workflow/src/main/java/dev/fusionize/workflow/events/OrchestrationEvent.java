@@ -1,5 +1,6 @@
 package dev.fusionize.workflow.events;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowExecution;
 import dev.fusionize.workflow.WorkflowNodeExecution;
@@ -10,6 +11,7 @@ import org.springframework.data.annotation.Transient;
 import java.util.HashMap;
 import java.util.Map;
 
+@JsonIgnoreProperties({"orchestrationEventContext"})
 public abstract class OrchestrationEvent extends RuntimeEvent {
     public record EventContext(WorkflowExecution workflowExecution, WorkflowNodeExecution nodeExecution){}
 
@@ -18,6 +20,7 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
     private String workflowNodeId;
     private String workflowNodeExecutionId;
     private Origin origin;
+
     @Transient
     private EventContext orchestrationEventContext;
 

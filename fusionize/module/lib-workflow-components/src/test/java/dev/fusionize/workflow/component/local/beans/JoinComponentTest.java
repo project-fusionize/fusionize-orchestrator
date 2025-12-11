@@ -41,6 +41,11 @@ class JoinComponentTest {
 
         registry = new WorkflowExecutionRegistry() {
             @Override
+            public List<WorkflowExecution> getWorkflowExecutions(String workflowId) {
+                return List.of();
+            }
+
+            @Override
             public WorkflowExecution getWorkflowExecution(String id) {
                 return workflowExecution;
             }

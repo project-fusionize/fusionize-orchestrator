@@ -4,7 +4,9 @@ import dev.fusionize.Application;
 import dev.fusionize.common.payload.ServicePayload;
 import dev.fusionize.common.payload.ServiceResponse;
 import dev.fusionize.workflow.Workflow;
+import dev.fusionize.workflow.WorkflowExecution;
 import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
+import dev.fusionize.workflow.registry.WorkflowExecutionRepoRegistry;
 import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +27,13 @@ public class WorkflowController {
     private static final Logger log = LoggerFactory.getLogger(WorkflowController.class);
 
     private final WorkflowRepoRegistry workflowRepoRegistry;
+    private final WorkflowExecutionRepoRegistry workflowExecutionRepoRegistry;
     private final WorkflowDescriptor workflowDescriptor;
 
-    public WorkflowController(WorkflowRepoRegistry workflowRepoRegistry) {
+    public WorkflowController(WorkflowRepoRegistry workflowRepoRegistry,
+                              WorkflowExecutionRepoRegistry workflowExecutionRepoRegistry) {
         this.workflowRepoRegistry = workflowRepoRegistry;
+        this.workflowExecutionRepoRegistry = workflowExecutionRepoRegistry;
         this.workflowDescriptor = new WorkflowDescriptor();
     }
 
@@ -58,6 +63,17 @@ public class WorkflowController {
                 .response(new ServiceResponse.Builder<Workflow>()
                         .status(200)
                         .message(workflow)
+                        .build())
+                .build();
+    }
+
+    @GetMapping("/{workflowId}/executions")
+    public ServicePayload<List<WorkflowExecution>> getWorkflowExecutions(@PathVariable String workflowId) {
+        List<WorkflowExecution> executions = workflowExecutionRepoRegistry.getWorkflowExecutions(workflowId);
+        return new ServicePayload.Builder<List<WorkflowExecution>>()
+                .response(new ServiceResponse.Builder<List<WorkflowExecution>>()
+                        .status(200)
+                        .message(executions)
                         .build())
                 .build();
     }

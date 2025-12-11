@@ -17,6 +17,7 @@ dependencies {
     implementation project(':fusionize:module:lib-common')
     implementation project(':fusionize:module:lib-user')
 
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 

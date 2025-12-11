@@ -1,5 +1,6 @@
 package dev.fusionize.workflow;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.user.activity.DomainEntity;
 import org.springframework.data.annotation.Id;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@JsonIgnoreProperties({"nodes"})
 @Document(collection = "workflow")
 public class Workflow extends DomainEntity {
     @Id

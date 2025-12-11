@@ -1,5 +1,6 @@
 package dev.fusionize.workflow;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.workflow.context.Context;
 import org.springframework.data.annotation.Transient;
@@ -11,6 +12,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@JsonIgnoreProperties({"workflowNode"})
 public class WorkflowNodeExecution {
     private List<WorkflowNodeExecution> children = new ArrayList<>();
     private String workflowNodeId;

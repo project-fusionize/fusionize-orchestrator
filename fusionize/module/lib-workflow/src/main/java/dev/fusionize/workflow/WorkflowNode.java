@@ -1,5 +1,6 @@
 package dev.fusionize.workflow;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.workflow.component.ComponentConfig;
 import org.springframework.data.annotation.Transient;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+@JsonIgnoreProperties({"children"})
 public class WorkflowNode {
     private List<String> childrenIds = new ArrayList<>();
     private WorkflowNodeType type;
@@ -15,6 +17,7 @@ public class WorkflowNode {
     private String workflowNodeKey;
     private String component;
     private ComponentConfig componentConfig;
+
     @Transient
     private List<WorkflowNode> children = new ArrayList<>();
 
