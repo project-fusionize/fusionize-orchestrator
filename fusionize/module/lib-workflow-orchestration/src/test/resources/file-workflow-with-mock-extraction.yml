@@ -1,0 +1,33 @@
+kind: Workflow
+apiVersion: v1
+name: File Processing Workflow
+domain: file.workflow
+key: email-routing-demo
+description: Demonstrates file processing
+version: 1
+active: true
+
+nodes:
+
+  start:
+    type: START
+    actor: system
+    component: test.mockFileHandler
+    config:
+      mountAsResource: mockfile
+    next: [extractData]
+
+  extractData:
+    type: TASK
+    actor: ai
+    component: test.mockDataExtractor
+    config:
+      resource: mockfile
+      mountAsData: extracted
+    next: [ end ]
+
+  end:
+    type: END
+    actor: system
+    component: test.endFileWorkflow
+    next: []

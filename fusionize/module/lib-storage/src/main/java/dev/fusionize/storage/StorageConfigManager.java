@@ -1,0 +1,183 @@
+package dev.fusionize.storage;
+
+import dev.fusionize.common.utility.KeyUtil;
+import dev.fusionize.storage.exception.StorageConnectionException;
+import dev.fusionize.storage.exception.StorageDomainAlreadyExistsException;
+import dev.fusionize.storage.exception.StorageException;
+
+import dev.fusionize.storage.file.FileStorageService;
+import dev.fusionize.storage.file.FileStorageServiceLocal;
+import dev.fusionize.storage.file.FileStorageServiceS3;
+import dev.fusionize.storage.repo.StorageConfigRepository;
+import dev.fusionize.storage.vector.MongoVectorStorageService;
+import dev.fusionize.storage.vector.PineconeVectorStorageService;
+import dev.fusionize.storage.vector.VectorStorageService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class StorageConfigManager {
+
+    private static final Logger log = LoggerFactory.getLogger(StorageConfigManager.class);
+    private final StorageConfigRepository repository;
+    private final Map<String, FileStorageService> fileStorageServiceMap = new HashMap<>();
+    private final Map<String, VectorStorageService> vectorStorageServiceMap = new HashMap<>();
+
+    public StorageConfigManager(StorageConfigRepository repository) {
+        this.repository = repository;
+    }
+
+    public StorageConfig saveConfig(StorageConfig config) throws StorageException {
+        validateConfig(config);
+
+        if (config.getId() == null && repository.findByDomain(config.getDomain()).isPresent()) {
+            throw new StorageDomainAlreadyExistsException(config.getDomain());
+        }
+
+        if (config.getId() != null) {
+            Optional<StorageConfig> existing = repository.findByDomain(config.getDomain());
+            if (existing.isPresent() && !existing.get().getId().equals(config.getId())) {
+                throw new StorageDomainAlreadyExistsException(config.getDomain());
+            }
+        }
+
+        Map<Boolean, Map<String, Object>> splitProperties = config.getProperties().entrySet().stream()
+                .collect(Collectors.partitioningBy(
+                        entry -> entry.getKey().endsWith("Key") || entry.getKey().endsWith("key"),
+                        Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)
+                ));
+
+        config.setProperties(splitProperties.get(false));
+        config.getSecrets().putAll(splitProperties.get(true));
+
+        return repository.save(config);
+    }
+
+    public Optional<StorageConfig> getConfig(String domain) {
+        return repository.findByDomain(domain);
+    }
+
+    public void deleteConfig(String domain) {
+        repository.deleteByDomain(domain);
+    }
+
+    public List<StorageConfig> getAll(String domain) {
+        return repository.findByDomainStartingWith(domain);
+    }
+
+    public FileStorageService getFileStorageService(StorageConfig config) {
+        if (config.getStorageType() != StorageType.FILE_STORAGE) {
+            return null;
+        }
+        if(fileStorageServiceMap.containsKey(config.getDomain())) {
+            return fileStorageServiceMap.get(config.getDomain());
+        }
+        FileStorageServiceLocal local = null;
+        try {
+            local = new FileStorageServiceLocal("/tmp/" + KeyUtil.getFlatUUID());
+        } catch (IOException e) {
+            log.error("failed to get local file storage service", e);
+        }
+
+        FileStorageService fileStorageService = getFileStorageService(config, local);
+        fileStorageServiceMap.put(config.getDomain(), fileStorageService);
+        return fileStorageServiceMap.get(config.getDomain());
+    }
+
+    private FileStorageService getFileStorageService(StorageConfig config, FileStorageServiceLocal local) {
+        return switch (config.getProvider()) {
+            case AWS_S3 -> FileStorageServiceS3.instantiate(config, local);
+            default -> null;
+        };
+    }
+
+    public VectorStorageService getVectorStorageService(StorageConfig config) {
+        if (config.getStorageType() != StorageType.VECTOR_STORAGE) {
+            return null;
+        }
+        if(vectorStorageServiceMap.containsKey(config.getDomain())) {
+            return vectorStorageServiceMap.get(config.getDomain());
+        }
+        VectorStorageService vectorStorageService = getVectorStorageService(config, null);
+        vectorStorageServiceMap.put(config.getDomain(), vectorStorageService);
+        return vectorStorageServiceMap.get(config.getDomain());
+    }
+
+    private VectorStorageService getVectorStorageService(StorageConfig config, EmbeddingModel model) {
+        return switch (config.getProvider()) {
+            case PINECONE -> PineconeVectorStorageService.instantiate(config, model);
+            case MONGO_DB -> MongoVectorStorageService.instantiate(config, model);
+            default -> null;
+        };
+    }
+
+    public void testConnection(StorageConfig config) throws StorageException {
+        try {
+            if (config.getStorageType() == StorageType.VECTOR_STORAGE) {
+                testVectorConnection(config);
+            } else if (config.getStorageType() == StorageType.FILE_STORAGE) {
+                testFileConnection(config);
+            }
+        } catch (Exception e) {
+            throw new StorageConnectionException("Failed to connect to storage provider: " + e.getMessage(), e);
+        }
+    }
+
+    private void testVectorConnection(StorageConfig config) {
+        VectorStorageService service = getVectorStorageService(config);
+        if (service == null) {
+            throw new IllegalStateException("VectorStorageService not available (implementation returned null)");
+        }
+        String testId = "test-connection-" + UUID.randomUUID();
+        Document doc = new Document(testId, "Test Connection", Collections.emptyMap());
+        service.add(List.of(doc));
+        service.delete(List.of(testId));
+    }
+
+    private void testFileConnection(StorageConfig config) throws Exception {
+        FileStorageService service = getFileStorageService(config);
+        if (service == null) {
+            throw new IllegalStateException("FileStorageService not available (implementation returned null)");
+        }
+        String testPath = "test-connection-" + UUID.randomUUID() + ".txt";
+
+        // Write
+        Map<String, OutputStream> streams = service.write(List.of(testPath));
+        if (streams.containsKey(testPath)) {
+            try (OutputStream os = streams.get(testPath)) {
+                os.write("Test Connection".getBytes(StandardCharsets.UTF_8));
+            }
+        }
+
+        // Save
+        service.save(List.of(testPath));
+
+        // Remove
+        service.remove(List.of(testPath));
+    }
+
+    private void validateConfig(StorageConfig config) throws StorageException {
+        if (config == null) {
+            throw new IllegalArgumentException("Config cannot be null");
+        }
+        if (!StringUtils.hasText(config.getDomain())) {
+            throw new IllegalArgumentException("Domain is required");
+        }
+        if (config.getProvider() == null) {
+            throw new IllegalArgumentException("Provider is required");
+        }
+        if (config.getStorageType() == null) {
+            throw new IllegalArgumentException("Storage Type is required");
+        }
+    }
+}

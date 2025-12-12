@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: fusionize-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: fusionize
+      MONGO_INITDB_ROOT_PASSWORD: fusionize
+      MONGO_INITDB_DATABASE: fuzdb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - fusionize-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: fusionize-rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: fusionize
+      RABBITMQ_DEFAULT_PASS: fusionize
+    ports:
+      - "5672:5672"      # AMQP
+      - "15672:15672"    # Management UI
+      - "61613:61613"    # STOMP
+    command: >
+      bash -c "rabbitmq-plugins enable rabbitmq_stomp rabbitmq_web_stomp rabbitmq_management &&
+               rabbitmq-server"
+    networks:
+      - fusionize-network
+
+  keycloak:
+    build:
+      context: ./keycloak
+      dockerfile: Dockerfile
+    container_name: fusionize-keycloak
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: dev-mem
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    networks:
+      - fusionize-network
+
+networks:
+  fusionize-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
