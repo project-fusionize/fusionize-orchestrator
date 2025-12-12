@@ -1,7 +1,10 @@
 package dev.fusionize.workflow;
 
+import dev.fusionize.workflow.component.ComponentConfig;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -144,5 +147,143 @@ class WorkflowTest {
         assertEquals("Updated", original.getName());
         assertEquals("Original Desc", original.getDescription());
         assertEquals(1, original.getVersion());
+    }
+    
+    @Test
+    void mergeFrom_ShouldPreserveId_WhenNodeUnchanged() {
+        // Create initial node
+        WorkflowNode node = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("task1")
+                .component("some-component")
+                .build();
+        String originalNodeId = node.getWorkflowNodeId();
+        
+        Workflow original = Workflow.builder("test")
+                .addNode(node)
+                .build();
+        // Mimic existing structure where nodeMap might be populated
+        original.getNodeMap().put(node.getWorkflowNodeKey(), node);
+
+        // Create update with identical node content (but different instance)
+        WorkflowNode updateNode = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("task1")
+                .component("some-component")
+                .build();
+        // Ideally this has a new ID initially
+        assertNotEquals(originalNodeId, updateNode.getWorkflowNodeId());
+
+        Workflow update = Workflow.builder("test")
+                .addNode(updateNode)
+                .build();
+
+        original.mergeFrom(update);
+
+        // Should have preserved the original ID
+        assertEquals(1, original.getNodes().size());
+        assertEquals(originalNodeId, original.getNodes().get(0).getWorkflowNodeId());
+    }
+
+    @Test
+    void mergeFrom_ShouldUpdateId_WhenNodeChanged() {
+        // Create initial node
+        WorkflowNode node = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("task1")
+                .component("component-v1")
+                .build();
+        String originalNodeId = node.getWorkflowNodeId();
+        
+        Workflow original = Workflow.builder("test")
+                .addNode(node)
+                .build();
+        original.getNodeMap().put(node.getWorkflowNodeKey(), node);
+
+        // Create update with changed component
+        WorkflowNode updateNode = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("task1")
+                .component("component-v2")
+                .build();
+        
+        Workflow update = Workflow.builder("test")
+                .addNode(updateNode)
+                .build();
+
+        original.mergeFrom(update);
+
+        assertEquals(1, original.getNodes().size());
+        // ID should be the new one (from updateNode)
+        assertEquals(updateNode.getWorkflowNodeId(), original.getNodes().get(0).getWorkflowNodeId());
+        assertNotEquals(originalNodeId, original.getNodes().get(0).getWorkflowNodeId());
+    }
+
+    @Test
+    void mergeFrom_ShouldPreserveId_Recursive() {
+         // Parent node
+         WorkflowNode child = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("child")
+                .component("child-comp")
+                .build();
+         WorkflowNode parent = WorkflowNode.builder()
+                .type(WorkflowNodeType.START)
+                .workflowNodeKey("parent")
+                .addChild(child)
+                .build();
+        
+        String parentId = parent.getWorkflowNodeId();
+        String childId = child.getWorkflowNodeId();
+
+        Workflow original = Workflow.builder("test")
+                .addNode(parent)
+                .build();
+        // Flatten map needs to be consistent for the test setup if we rely on map in mergeFrom
+        // The implementation falls back to flattening `nodes` if `nodeMap` is empty, so we don't strictly need to populate map here manually
+        // but for completeness let's rely on the fallback logic
+        
+        // Create identical update structure
+         WorkflowNode childUpdate = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("child")
+                .component("child-comp")
+                .build();
+         WorkflowNode parentUpdate = WorkflowNode.builder()
+                .type(WorkflowNodeType.START)
+                .workflowNodeKey("parent")
+                .addChild(childUpdate)
+                .build();
+
+        Workflow update = Workflow.builder("test")
+                .addNode(parentUpdate)
+                .build();
+
+        original.mergeFrom(update);
+
+        assertEquals(parentId, original.getNodes().get(0).getWorkflowNodeId());
+        assertEquals(childId, original.getNodes().get(0).getChildren().get(0).getWorkflowNodeId());
+    }
+    
+    @Test
+    void mergeFrom_ShouldHandleRemovedNodes() {
+        WorkflowNode node1 = WorkflowNode.builder().workflowNodeKey("n1").build();
+        WorkflowNode node2 = WorkflowNode.builder().workflowNodeKey("n2").build();
+        
+        Workflow original = Workflow.builder("test")
+                .addNode(node1)
+                .addNode(node2)
+                .build();
+        
+        // Update only has n1
+        WorkflowNode node1Update = WorkflowNode.builder().workflowNodeKey("n1").build();
+        Workflow update = Workflow.builder("test")
+                .addNode(node1Update)
+                .build();
+        
+        original.mergeFrom(update);
+        
+        assertEquals(1, original.getNodes().size());
+        assertEquals("n1", original.getNodes().get(0).getWorkflowNodeKey());
     }
 }

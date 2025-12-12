@@ -96,6 +96,23 @@ public class WorkflowNode {
         this.componentConfig = componentConfig;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        WorkflowNode that = (WorkflowNode) o;
+        return type == that.type &&
+                Objects.equals(workflowNodeKey, that.workflowNodeKey) &&
+                Objects.equals(component, that.component) &&
+                Objects.equals(componentConfig, that.componentConfig);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, workflowNodeKey, component, componentConfig);
+    }
+
+
     public static Builder builder() {
         return new Builder();
     }

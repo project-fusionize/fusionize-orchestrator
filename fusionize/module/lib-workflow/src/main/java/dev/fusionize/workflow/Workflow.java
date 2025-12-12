@@ -47,9 +47,98 @@ public class Workflow extends DomainEntity {
         if (other.getDomain() != null) this.setDomain(other.getDomain());
         if (other.getDescription() != null) this.setDescription(other.getDescription());
         if (other.getVersion() != 0) this.setVersion(other.getVersion());
-        if (other.getNodes() != null && !other.getNodes().isEmpty()) this.setNodes(other.getNodes());
         this.setActive(other.isActive());
+
+        if (other.getNodes() != null && !other.getNodes().isEmpty()) {
+            // Ensure this workflow is flat so we have a full nodeMap
+            this.flatten();
+            
+            // Build map of existing nodes keyed by WorkflowNodeKey for matching logic
+            Map<String, WorkflowNode> existingNodesByKey = new java.util.HashMap<>();
+            for (WorkflowNode node : this.nodeMap.values()) {
+                if (node.getWorkflowNodeKey() != null) {
+                    existingNodesByKey.put(node.getWorkflowNodeKey(), node);
+                }
+            }
+
+            // Process incoming nodes
+            updateNodeIds(other.getNodes(), existingNodesByKey);
+            this.setNodes(other.getNodes());
+            
+            // Re-flatten to keep internal state consistent after setting new nodes
+            this.flatten();
+        }
     }
+
+    public void flatten() {
+        this.nodeMap.clear();
+        this.rootNodeIds.clear();
+        if (this.nodes != null) {
+            for (WorkflowNode node : this.nodes) {
+                this.rootNodeIds.add(node.getWorkflowNodeId());
+                flattenNode(node, this.nodeMap);
+            }
+        }
+    }
+
+    private void flattenNode(WorkflowNode node, Map<String, WorkflowNode> nodeMap) {
+        if (nodeMap.containsKey(node.getWorkflowNodeId())) {
+            return; // Already processed (cycle)
+        }
+        nodeMap.put(node.getWorkflowNodeId(), node);
+        node.getChildrenIds().clear();
+        if (node.getChildren() != null) {
+            for (WorkflowNode child : node.getChildren()) {
+                node.getChildrenIds().add(child.getWorkflowNodeId());
+                flattenNode(child, nodeMap);
+            }
+        }
+    }
+
+    public void inflate() {
+        this.nodes.clear();
+        // First pass: link roots
+        if (this.rootNodeIds != null) {
+            for (String rootId : this.rootNodeIds) {
+                WorkflowNode rootNode = this.nodeMap.get(rootId);
+                if (rootNode != null) {
+                    this.nodes.add(rootNode);
+                }
+            }
+        }
+        // Second pass: link children for all nodes
+        for (WorkflowNode node : this.nodeMap.values()) {
+            node.getChildren().clear();
+            if (node.getChildrenIds() != null) {
+                for (String childId : node.getChildrenIds()) {
+                    WorkflowNode child = this.nodeMap.get(childId);
+                    if (child != null) {
+                        node.getChildren().add(child);
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    private void updateNodeIds(List<WorkflowNode> incomingNodes, Map<String, WorkflowNode> existingNodes) {
+        if (incomingNodes == null) return;
+        for (WorkflowNode incoming : incomingNodes) {
+            if (incoming.getWorkflowNodeKey() != null && existingNodes.containsKey(incoming.getWorkflowNodeKey())) {
+                WorkflowNode existing = existingNodes.get(incoming.getWorkflowNodeKey());
+                if (Objects.equals(existing, incoming)) {
+                    // Content is identical, preserve the ID
+                    incoming.setWorkflowNodeId(existing.getWorkflowNodeId());
+                }
+            }
+            // Recurse for children
+            if (incoming.getChildren() != null) {
+                updateNodeIds(incoming.getChildren(), existingNodes);
+            }
+        }
+    }
+
 
     public static class Builder extends DomainEntity.Builder<Builder> {
         private String workflowId;

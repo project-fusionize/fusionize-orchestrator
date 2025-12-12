@@ -27,7 +27,7 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
             return null;
         Workflow workflow = repository.findByWorkflowId(workflowExecutionId).orElse(null);
         if (workflow != null) {
-            inflate(workflow);
+            workflow.inflate();
         }
         return workflow;
     }
@@ -38,7 +38,7 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
             return null;
         Workflow workflow = repository.findByDomain(workflowDomain.toLowerCase()).orElse(null);
         if (workflow != null) {
-            inflate(workflow);
+            workflow.inflate();
         }
         return workflow;
     }
@@ -46,7 +46,7 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
     @Override
     public java.util.List<Workflow> getAll() {
         java.util.List<Workflow> workflows = repository.findAll();
-        workflows.forEach(this::inflate);
+        workflows.forEach(Workflow::inflate);
         return workflows;
     }
 
@@ -55,11 +55,11 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
         if (workflow == null)
             return null;
 
-        flatten(workflow);
+        workflow.flatten();
 
         try {
             Workflow saved = repository.save(workflow);
-            inflate(saved);
+            saved.inflate();
             return saved;
         } catch (DuplicateKeyException ex) {
             log.warn("Duplicate key detected for workflowId='{}' or domain='{}'. Attempting upsert.",
@@ -74,11 +74,12 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
             }
 
             if (existing != null) {
-                existing.mergeFrom(workflow);
-                flatten(existing); // Flatten again after merge
+                existing.inflate(); // Ensure existing is inflated before merge
+                existing.mergeFrom(workflow); // mergeFrom now handles flattening/re-flattening internally
+                
                 try {
                     Workflow saved = repository.save(existing);
-                    inflate(saved);
+                    saved.inflate();
                     return saved;
                 } catch (Exception saveEx) {
                     log.error("Upsert failed after duplicate key detection for workflow '{}'.",
@@ -95,56 +96,6 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
         } catch (Exception e) {
             log.error("Failed to register workflow '{}'", workflow.getWorkflowId(), e);
             throw e;
-        }
-    }
-
-    private void flatten(Workflow workflow) {
-        workflow.getNodeMap().clear();
-        workflow.getRootNodeIds().clear();
-        if (workflow.getNodes() != null) {
-            for (WorkflowNode node : workflow.getNodes()) {
-                workflow.getRootNodeIds().add(node.getWorkflowNodeId());
-                flattenNode(node, workflow.getNodeMap());
-            }
-        }
-    }
-
-    private void flattenNode(WorkflowNode node, Map<String, WorkflowNode> nodeMap) {
-        if (nodeMap.containsKey(node.getWorkflowNodeId())) {
-            return; // Already processed (cycle)
-        }
-        nodeMap.put(node.getWorkflowNodeId(), node);
-        node.getChildrenIds().clear();
-        if (node.getChildren() != null) {
-            for (WorkflowNode child : node.getChildren()) {
-                node.getChildrenIds().add(child.getWorkflowNodeId());
-                flattenNode(child, nodeMap);
-            }
-        }
-    }
-
-    private void inflate(Workflow workflow) {
-        workflow.getNodes().clear();
-        // First pass: link roots
-        if (workflow.getRootNodeIds() != null) {
-            for (String rootId : workflow.getRootNodeIds()) {
-                WorkflowNode rootNode = workflow.getNodeMap().get(rootId);
-                if (rootNode != null) {
-                    workflow.getNodes().add(rootNode);
-                }
-            }
-        }
-        // Second pass: link children for all nodes
-        for (WorkflowNode node : workflow.getNodeMap().values()) {
-            node.getChildren().clear();
-            if (node.getChildrenIds() != null) {
-                for (String childId : node.getChildrenIds()) {
-                    WorkflowNode child = workflow.getNodeMap().get(childId);
-                    if (child != null) {
-                        node.getChildren().add(child);
-                    }
-                }
-            }
         }
     }
 }
