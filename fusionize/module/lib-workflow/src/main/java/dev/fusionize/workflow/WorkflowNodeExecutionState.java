@@ -7,6 +7,7 @@ public enum WorkflowNodeExecutionState {
     IDLE("IDLE"),
     WORKING("WORKING"),
     WAITING("WAITING"),
+    FAILED("FAILED"),
     DONE("DONE");
 
     private final String name;

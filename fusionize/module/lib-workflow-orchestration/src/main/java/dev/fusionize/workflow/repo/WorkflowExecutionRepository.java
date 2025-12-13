@@ -12,4 +12,5 @@ public interface WorkflowExecutionRepository extends MongoRepository<WorkflowExe
     WorkflowExecution save(WorkflowExecution workflowExecution);
     Optional<WorkflowExecution> findByWorkflowExecutionId(String id);
     List<WorkflowExecution> findByWorkflowIdIn(List<String> ids);
+    void deleteByWorkflowIdAndStatus(String workflowId, String status);
 }

@@ -1,8 +1,6 @@
 package dev.fusionize.workflow.orchestrator;
 
-import dev.fusionize.workflow.Workflow;
-import dev.fusionize.workflow.WorkflowExecution;
-import dev.fusionize.workflow.WorkflowNodeExecution;
+import dev.fusionize.workflow.*;
 import dev.fusionize.workflow.context.ContextFactory;
 import dev.fusionize.workflow.events.OrchestrationEvent;
 import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
@@ -41,7 +39,7 @@ public class Orchestrator {
 
     public void orchestrate(Workflow workflow) {
         WorkflowExecution we = WorkflowExecution.of(workflow);
-        // todo check and re-use idle execution
+        workflowExecutionRegistry.deleteIdlesFor(workflow.getWorkflowId());
         List<WorkflowNodeExecution> nodes = workflow.getNodes().stream()
                 .map(n -> WorkflowNodeExecution.of(n, ContextFactory.empty()))
                 .peek(ne -> we.getNodes().add(ne)).toList();
@@ -63,14 +61,23 @@ public class Orchestrator {
     }
 
     public void onActivated(ActivationResponseEvent activationResponseEvent) {
+        OrchestrationEvent.EventContext oc = activationResponseEvent.getOrchestrationEventContext();
         if (activationResponseEvent.getException() != null) {
-            // todo handle exception
             log.error("Error onActivated -> {}", activationResponseEvent.getException().getMessage(),
                     activationResponseEvent.getException());
-
+            // todo handle escalation or compensation
+            oc.nodeExecution().setState(WorkflowNodeExecutionState.FAILED);
+            if(oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
+                oc.workflowExecution().setStatus(WorkflowExecutionStatus.ERROR);
+            }
         } else {
-            OrchestrationEvent.EventContext oc = activationResponseEvent.getOrchestrationEventContext();
             requestInvocation(oc.workflowExecution(), oc.nodeExecution());
+            if(oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.WAIT)){
+                oc.nodeExecution().setState(WorkflowNodeExecutionState.WAITING);
+            }else if(!oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
+                oc.nodeExecution().setState(WorkflowNodeExecutionState.WORKING);
+            }
+            workflowExecutionRegistry.register(oc.workflowExecution());
         }
     }
 
@@ -79,14 +86,19 @@ public class Orchestrator {
     }
 
     public void onInvoked(InvocationResponseEvent invocationResponseEvent) {
+        OrchestrationEvent.EventContext oc = invocationResponseEvent.getOrchestrationEventContext();
+
         if (invocationResponseEvent.getException() != null) {
-            // todo handle exception
             log.error("Error onInvoked -> {}", invocationResponseEvent.getException().getMessage(),
                     invocationResponseEvent.getException());
-            return;
+            // todo handle escalation or compensation
+            oc.nodeExecution().setState(WorkflowNodeExecutionState.FAILED);
+            if(oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
+                oc.workflowExecution().setStatus(WorkflowExecutionStatus.ERROR);
+            }
+            workflowExecutionRegistry.register(oc.workflowExecution());
         }
         log.info(invocationResponseEvent.getContext().toString());
-        OrchestrationEvent.EventContext oc = invocationResponseEvent.getOrchestrationEventContext();
         oc.nodeExecution().setStageContext(invocationResponseEvent.getContext());
         handleInvocationSuccess(oc.workflowExecution(), oc.nodeExecution());
     }

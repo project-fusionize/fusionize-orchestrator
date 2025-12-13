@@ -1,6 +1,7 @@
 package dev.fusionize.workflow.registry;
 
 import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.WorkflowExecutionStatus;
 import dev.fusionize.workflow.repo.WorkflowExecutionRepository;
 import org.springframework.stereotype.Component;
 
@@ -25,5 +26,9 @@ public class WorkflowExecutionRepoRegistry implements WorkflowExecutionRegistry 
 
     public WorkflowExecution register(WorkflowExecution workflowExecution) {
         return repository.save(workflowExecution);
+    }
+
+    public void deleteIdlesFor(String workflowId) {
+        repository.deleteByWorkflowIdAndStatus(workflowId, WorkflowExecutionStatus.IDLE.getName());
     }
 }
