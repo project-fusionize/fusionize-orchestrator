@@ -60,6 +60,7 @@ class WorkflowUpdatePublisherTest {
 
         WorkflowExecution execution = new WorkflowExecution();
         execution.setWorkflowExecutionId(executionId);
+        execution.setWorkflowId("123");
         when(workflowExecutionRegistry.getWorkflowExecution(executionId)).thenReturn(execution);
 
         // Act
@@ -72,7 +73,7 @@ class WorkflowUpdatePublisherTest {
         // Execute the captured runnable to trigger the logic inside
         runnableCaptor.getValue().run();
 
-        verify(messagingTemplate).convertAndSend(eq("/topic/workflow-executions/" + executionId), eq(execution));
+        verify(messagingTemplate).convertAndSend(eq("/topic/1.0.workflow-executions.123"), eq(execution));
     }
 
     @Test
