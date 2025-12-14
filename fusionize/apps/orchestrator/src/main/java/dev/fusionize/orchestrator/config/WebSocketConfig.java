@@ -17,8 +17,9 @@ import java.net.URL;
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-    public static final String URL_SOCKET_BASE = "/ws/"+ Application.VERSION;
-    public static final String URL_NODE_TOPIC_BASE = "/topic/"+ Application.VERSION + ".node";
+    public static final String SOCKET_BASE = "/ws/"+ Application.VERSION;
+    public static final String TOPIC_BASE = "/topic/"+ Application.VERSION;
+    public static final String NODE_TOPIC_BASE = TOPIC_BASE + ".node";
     private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
     @Value("${fusionize.worker.orchestrator-amqp:#{null}}")
@@ -79,6 +80,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint(URL_SOCKET_BASE).setAllowedOrigins("*");
+        registry.addEndpoint(SOCKET_BASE).setAllowedOrigins("*");
     }
 }
