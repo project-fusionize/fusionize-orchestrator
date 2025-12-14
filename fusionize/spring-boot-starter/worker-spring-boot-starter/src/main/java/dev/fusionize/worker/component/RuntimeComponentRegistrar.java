@@ -19,7 +19,8 @@ public class RuntimeComponentRegistrar {
     }
 
     public boolean isValidComponentDefinition(RuntimeComponentDefinition runtimeComponentDefinition) {
-        return (runtimeComponentDefinition.type() != null || !runtimeComponentDefinition.domain().isEmpty()) &&
+        return runtimeComponentDefinition!= null &&
+                (runtimeComponentDefinition.type() != null || !runtimeComponentDefinition.domain().isEmpty()) &&
                 !runtimeComponentDefinition.name().isEmpty() &&
                 !runtimeComponentDefinition.description().isEmpty();
     }

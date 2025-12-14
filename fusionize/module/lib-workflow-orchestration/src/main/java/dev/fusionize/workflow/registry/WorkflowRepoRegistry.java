@@ -8,8 +8,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import dev.fusionize.workflow.WorkflowNode;
-import java.util.Map;
+import java.util.List;
 
 @Component
 public class WorkflowRepoRegistry implements WorkflowRegistry {
@@ -44,8 +43,8 @@ public class WorkflowRepoRegistry implements WorkflowRegistry {
     }
 
     @Override
-    public java.util.List<Workflow> getAll() {
-        java.util.List<Workflow> workflows = repository.findAll();
+    public List<Workflow> getAll() {
+        List<Workflow> workflows = repository.findAll();
         workflows.forEach(Workflow::inflate);
         return workflows;
     }

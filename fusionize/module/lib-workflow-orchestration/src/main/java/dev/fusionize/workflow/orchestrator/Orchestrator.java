@@ -44,20 +44,16 @@ public class Orchestrator {
                 .map(n -> WorkflowNodeExecution.of(n, ContextFactory.empty()))
                 .peek(ne -> we.getNodes().add(ne)).toList();
         workflowExecutionRegistry.register(we);
-        nodes.forEach(ne -> requestActivation(we, ne));
+        nodes.forEach(ne -> componentDispatcher.dispatchActivation(we, ne));
     }
 
     private void proceedExecution(WorkflowExecution we, WorkflowNodeExecution ne) {
         workflowNavigator.navigate(we, ne, (
                 WorkflowExecution nextWe, WorkflowNodeExecution nextNe) -> {
             workflowExecutionRegistry.register(nextWe);
-            nextNe.getChildren().forEach(cne -> requestActivation(nextWe, cne));
+            nextNe.getChildren().forEach(cne -> componentDispatcher.dispatchActivation(nextWe, cne));
         });
 
-    }
-
-    private void requestActivation(WorkflowExecution we, WorkflowNodeExecution ne) {
-        componentDispatcher.dispatchActivation(we, ne, this::handleActivationSuccess, this::handleFailure);
     }
 
     public void onActivated(ActivationResponseEvent activationResponseEvent) {
@@ -71,7 +67,7 @@ public class Orchestrator {
                 oc.workflowExecution().setStatus(WorkflowExecutionStatus.ERROR);
             }
         } else {
-            requestInvocation(oc.workflowExecution(), oc.nodeExecution());
+            componentDispatcher.dispatchInvocation(oc.workflowExecution(), oc.nodeExecution());
             if(oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.WAIT)){
                 oc.nodeExecution().setState(WorkflowNodeExecutionState.WAITING);
             }else if(!oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
@@ -79,10 +75,6 @@ public class Orchestrator {
             }
             workflowExecutionRegistry.register(oc.workflowExecution());
         }
-    }
-
-    private void requestInvocation(WorkflowExecution we, WorkflowNodeExecution ne) {
-        componentDispatcher.dispatchInvocation(we, ne, this::handleInvocationSuccess, this::handleFailure);
     }
 
     public void onInvoked(InvocationResponseEvent invocationResponseEvent) {
@@ -100,18 +92,8 @@ public class Orchestrator {
         }
         log.info(invocationResponseEvent.getContext().toString());
         oc.nodeExecution().setStageContext(invocationResponseEvent.getContext());
-        handleInvocationSuccess(oc.workflowExecution(), oc.nodeExecution());
+        proceedExecution(oc.workflowExecution(), oc.nodeExecution());
     }
 
-    private void handleActivationSuccess(WorkflowExecution we, WorkflowNodeExecution ne) {
-        requestInvocation(we, ne);
-    }
 
-    private void handleInvocationSuccess(WorkflowExecution we, WorkflowNodeExecution ne) {
-        proceedExecution(we, ne);
-    }
-
-    private void handleFailure(Exception ex, WorkflowNodeExecution ne) {
-        log.error("Error executing node {}: {}", ne.getWorkflowNodeExecutionId(), ex.getMessage(), ex);
-    }
 }
