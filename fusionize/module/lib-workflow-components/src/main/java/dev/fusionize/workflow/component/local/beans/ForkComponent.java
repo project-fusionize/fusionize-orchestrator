@@ -152,8 +152,11 @@ public class ForkComponent implements LocalComponentRuntime {
 
         // Store decision result
         WorkflowDecision decision = context.decisionToRun();
-        decision.setOptionNodes(optionNodes);
+        for(String ket : optionNodes.keySet()){
+            decision.getOptionNodes().put(ket, optionNodes.get(ket));
+        }
 
+        optionNodes = decision.getOptionNodes();
         // Success cases
         if (optionNodes.values().stream().anyMatch(Boolean::booleanValue)) {
             emitter.logger().info("Evaluation results: {}", optionNodes);

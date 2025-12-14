@@ -33,18 +33,39 @@ services:
     networks:
       - fusionize-network
 
+  keycloak-db:
+    image: postgres:16
+    container_name: fusionize-keycloak-db
+    restart: always
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - keycloak_pg:/var/lib/postgresql/data
+    networks:
+      - fusionize-network
+
   keycloak:
     build:
       context: ./keycloak
       dockerfile: Dockerfile
     container_name: fusionize-keycloak
+    depends_on:
+      - keycloak-db
     command:
       - start-dev
       - --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: dev-mem
+
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-db
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
     ports:
@@ -58,3 +79,4 @@ networks:
 
 volumes:
   mongo_data:
+  keycloak_pg:

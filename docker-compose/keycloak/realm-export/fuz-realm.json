@@ -1,6 +1,9 @@
 {
   "realm": "fuz",
   "enabled": true,
+  "accessTokenLifespan": 3600,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 28800,
   "clients": [
     {
       "clientId": "fusionize-orchestrator",
@@ -9,6 +12,9 @@
       "serviceAccountsEnabled": true,
       "publicClient": false,
       "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "3600"
+      },
       "redirectUris": ["*"]
     },
     {
@@ -18,6 +24,9 @@
       "serviceAccountsEnabled": true,
       "publicClient": false,
       "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "3600"
+      },
       "redirectUris": ["*"]
     },
     {
