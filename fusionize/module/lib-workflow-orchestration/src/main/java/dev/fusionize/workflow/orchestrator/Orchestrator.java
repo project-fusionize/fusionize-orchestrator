@@ -73,7 +73,11 @@ public class Orchestrator {
             }else if(!oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
                 oc.nodeExecution().setState(WorkflowNodeExecutionState.WORKING);
             }
-            workflowExecutionRegistry.register(oc.workflowExecution());
+            workflowExecutionRegistry.updateStatus(oc.workflowExecution().getWorkflowExecutionId(),
+                    oc.workflowExecution().getStatus());
+            workflowExecutionRegistry.updateNodeExecution(oc.workflowExecution().getWorkflowExecutionId(),
+                    oc.nodeExecution());
+
         }
     }
 
@@ -85,10 +89,15 @@ public class Orchestrator {
                     invocationResponseEvent.getException());
             // todo handle escalation or compensation
             oc.nodeExecution().setState(WorkflowNodeExecutionState.FAILED);
+            workflowExecutionRegistry.updateNodeExecution(oc.workflowExecution().getWorkflowExecutionId(),
+                    oc.nodeExecution());
             if(oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
                 oc.workflowExecution().setStatus(WorkflowExecutionStatus.ERROR);
+                workflowExecutionRegistry.updateStatus(oc.workflowExecution().getWorkflowExecutionId(),
+                        oc.workflowExecution().getStatus());
             }
             workflowExecutionRegistry.register(oc.workflowExecution());
+            return;
         }
         log.info(invocationResponseEvent.getContext().toString());
         oc.nodeExecution().setStageContext(invocationResponseEvent.getContext());

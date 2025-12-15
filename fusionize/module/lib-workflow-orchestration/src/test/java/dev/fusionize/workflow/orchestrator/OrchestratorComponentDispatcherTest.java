@@ -1,5 +1,6 @@
 package dev.fusionize.workflow.orchestrator;
 
+import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowExecution;
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeExecution;
@@ -33,6 +34,7 @@ public class OrchestratorComponentDispatcherTest {
         WorkflowExecution we = new WorkflowExecution();
         we.setWorkflowExecutionId("exec-1");
         we.setWorkflowId("wf-1");
+        we.setWorkflow(new Workflow());
 
         WorkflowNode node = WorkflowNode.builder().workflowNodeId("node-1").component("remote-component").build();
         WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, Context.builder().build());
@@ -52,6 +54,7 @@ public class OrchestratorComponentDispatcherTest {
         WorkflowExecution we = new WorkflowExecution();
         we.setWorkflowExecutionId("exec-1");
         we.setWorkflowId("wf-1");
+        we.setWorkflow(new Workflow());
 
         WorkflowNode node = WorkflowNode.builder().workflowNodeId("node-1").component("remote-component").build();
         WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, Context.builder().build());

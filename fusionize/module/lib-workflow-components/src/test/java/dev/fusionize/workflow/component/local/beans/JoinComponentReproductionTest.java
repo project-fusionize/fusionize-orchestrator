@@ -1,6 +1,7 @@
 package dev.fusionize.workflow.component.local.beans;
 
 import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.WorkflowExecutionStatus;
 import dev.fusionize.workflow.WorkflowNodeExecution;
 import dev.fusionize.workflow.WorkflowNodeExecutionState;
 import dev.fusionize.workflow.component.local.beans.JoinComponent;
@@ -51,6 +52,16 @@ class JoinComponentReproductionTest {
             @Override
             public WorkflowExecution register(WorkflowExecution workflowExecution) {
                 return workflowExecution;
+            }
+
+            @Override
+            public void updateNodeExecution(String workflowExecutionId, WorkflowNodeExecution nodeExecution) {
+
+            }
+
+            @Override
+            public void updateStatus(String workflowExecutionId, WorkflowExecutionStatus status) {
+
             }
         };
 

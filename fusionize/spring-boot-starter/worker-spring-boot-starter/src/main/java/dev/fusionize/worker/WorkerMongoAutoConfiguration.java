@@ -6,10 +6,14 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
@@ -57,6 +61,13 @@ public class WorkerMongoAutoConfiguration extends AbstractMongoClientConfigurati
         converters.add(new ZonedDateTimeReadConverter());
         converters.add(new ZonedDateTimeWriteConverter());
         return new MongoCustomConversions(converters);
+    }
+
+    @Bean("workerMongoTemplate")
+    @Override
+    public MongoTemplate mongoTemplate(MongoDatabaseFactory databaseFactory,
+                                       MappingMongoConverter converter) {
+        return super.mongoTemplate(databaseFactory, converter);
     }
 
     public static class ZonedDateTimeReadConverter implements Converter<Date, ZonedDateTime> {

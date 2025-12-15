@@ -14,6 +14,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.mongodb.MongoDatabaseFactory;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
+import org.springframework.data.mongodb.core.convert.NoOpDbRefResolver;
+import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +38,20 @@ import java.util.List;
         TestMongoConversionConfig.class
 })
 public class TestConfig {
+
+    private final MongoDatabaseFactory mongoDatabaseFactory;
+    private final MongoMappingContext mongoMappingContext;
+    private final MongoCustomConversions mongoCustomConversions;
+
     public static Logger logger = LoggerFactory.getLogger(TestConfig.class);
+
+    public TestConfig(MongoDatabaseFactory mongoDatabaseFactory,
+                      MongoMappingContext mongoMappingContext,
+                      MongoCustomConversions mongoCustomConversions) {
+        this.mongoDatabaseFactory = mongoDatabaseFactory;
+        this.mongoMappingContext = mongoMappingContext;
+        this.mongoCustomConversions = mongoCustomConversions;
+    }
 
     static final class WorkflowApplicationEvent extends ApplicationEvent {
         public final Event event;
@@ -74,5 +93,23 @@ public class TestConfig {
                 callbacks.forEach(c -> c.onEvent(workflowApplicationEvent.event));
             }
         };
+    }
+
+    @Bean
+    public MongoTemplate workerMongoTemplate() {
+        MappingMongoConverter converter = new MappingMongoConverter(
+                NoOpDbRefResolver.INSTANCE, mongoMappingContext);
+        converter.setCustomConversions(mongoCustomConversions);
+        converter.afterPropertiesSet();
+        return new MongoTemplate(mongoDatabaseFactory, converter);
+    }
+
+    @Bean
+    public MongoTemplate mongoTemplate() {
+        MappingMongoConverter converter = new MappingMongoConverter(
+                NoOpDbRefResolver.INSTANCE, mongoMappingContext);
+        converter.setCustomConversions(mongoCustomConversions);
+        converter.afterPropertiesSet();
+        return new MongoTemplate(mongoDatabaseFactory, converter);
     }
 }
