@@ -23,6 +23,10 @@ public class OrchestratorComponentDispatcher {
     }
 
     public void dispatchActivation(WorkflowExecution we, WorkflowNodeExecution ne) {
+        if(we == null || ne == null || we.getWorkflow() == null || ne.getWorkflowNode() == null) {
+            log.error("Invalid workflow execution, cannot dispatch activation");
+            return;
+        }
         String component = ne.getWorkflowNode().getComponent();
         if (component == null || component.trim().isEmpty()) {
             component = NoopComponent.NAME;
@@ -41,6 +45,10 @@ public class OrchestratorComponentDispatcher {
     }
 
     public void dispatchInvocation(WorkflowExecution we, WorkflowNodeExecution ne) {
+        if(we == null || ne == null || we.getWorkflow() == null || ne.getWorkflowNode() == null) {
+            log.error("Invalid workflow execution, cannot dispatch invocation");
+            return;
+        }
         String component = ne.getWorkflowNode().getComponent();
         if (component == null || component.trim().isEmpty()) {
             component = NoopComponent.NAME;

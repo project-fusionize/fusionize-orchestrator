@@ -1,5 +1,6 @@
 package dev.fusionize.workflow.logging;
 
+import dev.fusionize.workflow.LogListener;
 import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.WorkflowLogger;
 import org.slf4j.Logger;
@@ -8,13 +9,28 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class WorkflowLogRepoLogger implements WorkflowLogger {
     private final WorkflowLogRepository repository;
+    private final List<LogListener> listeners = new CopyOnWriteArrayList<>();
 
-    public WorkflowLogRepoLogger(WorkflowLogRepository repository) {
+    public WorkflowLogRepoLogger(WorkflowLogRepository repository, List<LogListener> listeners) {
         this.repository = repository;
+        if (listeners != null) {
+            this.listeners.addAll(listeners);
+        }
+    }
+
+    @Override
+    public void addListener(LogListener listener) {
+        listeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(LogListener listener) {
+        listeners.remove(listener);
     }
 
     public void log(String workflowId, String workflowDomain, String workflowExecutionId, String workflowNodeId,
@@ -29,7 +45,10 @@ public class WorkflowLogRepoLogger implements WorkflowLogger {
             case ERROR -> logger.error(message);
             case DEBUG -> logger.debug(message);
         }
-        CompletableFuture.runAsync(() -> repository.save(log));
+        CompletableFuture.runAsync(() -> {
+            repository.save(log);
+            listeners.forEach(l -> l.onLog(log));
+        });
     }
 
     public List<WorkflowLog> getLogs(String workflowExecutionId) {

@@ -22,6 +22,7 @@ dependencies {
     api project(':fusionize:module:lib-workflow-orchestration')
 
     implementation 'commons-io:commons-io:2.20.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
 
     implementation 'org.slf4j:slf4j-api'
     runtimeOnly 'ch.qos.logback:logback-classic'

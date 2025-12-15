@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 
 public class FileInboundConnector implements ComponentRuntime {
-    private static final Logger logger = LoggerFactory.getLogger(FileInboundConnector.class);
     private final FileInboundConnectorService fileInboundConnectorService;
     private FileStorageService fileStorageService;
 
@@ -43,6 +42,7 @@ public class FileInboundConnector implements ComponentRuntime {
         if(fileStorageService==null){
             emitter.failure(new Exception("FileStorageService is not found: " + this.storage ));
         }
+        emitter.logger().info("File inbound connector activated, storing in -> {}", this.storage);
         emitter.success(context);
     }
 
@@ -58,11 +58,9 @@ public class FileInboundConnector implements ComponentRuntime {
         }
 
         FileInboundConnectorService.IngestKey key = new FileInboundConnectorService.IngestKey(workflowKey, workflowNodeKey);
-
-        logger.info("Registering file webhook listener for key: {}", key);
-
+        emitter.logger().info("Registering file listener for key: {}", key);
         fileInboundConnectorService.addListener(key, file -> {
-            logger.info("File webhook triggered for key: {}", key);
+            emitter.logger().info("File listener triggered for key: {}", key);
             try {
                 String randomKey = KeyUtil.getFlatUUID();
                 randomKey += file.getOriginalFilename();
@@ -92,7 +90,7 @@ public class FileInboundConnector implements ComponentRuntime {
                 }
 
             } catch (Exception e) {
-                logger.error("Error processing file webhook", e);
+                emitter.logger().error("Error processing file webhook", e);
                 emitter.failure(e);
             }
         });
