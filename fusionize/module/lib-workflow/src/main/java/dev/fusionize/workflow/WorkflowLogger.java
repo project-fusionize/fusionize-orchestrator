@@ -9,4 +9,8 @@ public interface WorkflowLogger {
             WorkflowLog.LogLevel level, String message);
 
     List<WorkflowLog> getLogs(String workflowExecutionId);
+
+    default void addListener(LogListener listener) {}
+
+    default void removeListener(LogListener listener) {}
 }

@@ -4,21 +4,49 @@ import dev.fusionize.workflow.context.Context;
 public abstract class RuntimeEvent extends Event {
     private Context context;
     private String component;
-    private Exception exception;
+    private SerializableError exception;
+
+    public static class SerializableError {
+        private String className;
+        private String message;
+
+        public SerializableError() {}
+
+        public SerializableError(String className, String message) {
+            this.className = className;
+            this.message = message;
+        }
+
+        public String getClassName() {
+            return className;
+        }
+
+        public void setClassName(String className) {
+            this.className = className;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+    }
 
     @Override
     public RuntimeEvent renew() {
         RuntimeEvent renewed = (RuntimeEvent) super.renew();
         renewed.setComponent(this.component);
         renewed.setContext(this.context);
-        renewed.setException(this.exception);
+        renewed.exception = this.exception;
         return renewed;
     }
 
     public abstract static class Builder<T extends Builder<T>> extends Event.Builder<T> {
         private Context context;
         private String component;
-        private Exception exception;
+        private Throwable exception;
 
         protected Builder(Class<?> eventClass, Object source) {
             super(eventClass, source);
@@ -34,7 +62,7 @@ public abstract class RuntimeEvent extends Event {
             return self();
         }
 
-        public T exception(Exception exception) {
+        public T exception(Throwable exception) {
             this.exception = exception;
             return self();
         }
@@ -63,11 +91,18 @@ public abstract class RuntimeEvent extends Event {
         this.component = component;
     }
 
-    public Exception getException() {
-        return exception;
+    public Throwable getException() {
+        if (exception == null) {
+            return null;
+        }
+        return new RuntimeException(exception.getClassName() + ": " + exception.getMessage());
     }
 
-    public void setException(Exception exception) {
-        this.exception = exception;
+    public void setException(Throwable exception) {
+        if (exception != null) {
+            this.exception = new SerializableError(exception.getClass().getName(), exception.getMessage());
+        } else {
+            this.exception = null;
+        }
     }
 }

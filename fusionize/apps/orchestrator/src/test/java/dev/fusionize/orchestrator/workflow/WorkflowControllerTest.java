@@ -2,9 +2,11 @@ package dev.fusionize.orchestrator.workflow;
 
 import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.WorkflowLogger;
 import dev.fusionize.workflow.registry.WorkflowExecutionRepoRegistry;
 import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -29,7 +31,13 @@ class WorkflowControllerTest {
     private WorkflowRepoRegistry workflowRepoRegistry;
 
     @MockitoBean
+    private WorkflowLogger workflowLogger;
+
+    @MockitoBean
     private WorkflowExecutionRepoRegistry workflowExecutionRepoRegistry;
+
+    @InjectMocks
+    private WorkflowController workflowController;
 
     @Test
     void getAll() throws Exception {

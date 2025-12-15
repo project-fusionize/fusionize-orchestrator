@@ -1,0 +1,103 @@
+kind: Workflow
+apiVersion: v1
+name: Complex Invoice Processing
+domain: finance.invoice
+key: invoice-processing-key
+description: Automated invoice processing with high-value approval checks and parallel archiving
+version: 1
+active: true
+nodes:
+  start:
+    type: START
+    actor: SYSTEM
+    component: fuz.connector.FileInbound
+    config:
+      storage: test-s3-storage
+      output: invoiceFile
+    next: [extract-data]
+
+  extract-data:
+    type: TASK
+    actor: AI
+    component: fuz.DocumentExtractor
+    config:
+      input: invoiceFile
+      output: invoice_data
+      example:
+        vendor: string
+        amount: double
+        invoiceDate: string
+        isUrgent: boolean
+    next: [check-threshold]
+
+  check-threshold:
+    type: DECISION
+    component: fork
+    config:
+      default: auto-process
+      conditions:
+        high-value-approval: "#invoice_data['amount'] > 5000"
+    next: [high-value-approval, auto-process]
+
+  high-value-approval:
+    type: TASK
+    actor: SYSTEM
+    component: test.sendEmail
+    config:
+      address: manager@company.com
+      subject: "High Value Invoice Approval Needed"
+      body: "Invoice from found with amount" 
+    next: [approval-rec]
+
+  approval-rec:
+    type: WAIT
+    actor: SYSTEM
+    component: fuz.connector.HttpInbound
+    next: [ parallel-fan-out ]
+
+  auto-process:
+    type: WAIT
+    component: delay
+    config:
+      delay: 10000
+    next: [parallel-fan-out]
+
+  parallel-fan-out:
+    type: WAIT
+    actor: SYSTEM
+    component: dev.fusionize.orchestrator.components.MyCustomComponentRecEmail
+    config:
+      address: incoming@email.com
+    next: [extract-fields, send-receipt]
+
+  extract-fields:
+    type: TASK
+    component: script
+    config:
+      parser: js
+      script: |
+        // Parse the email text and determine its traits
+        let isUrgent = invoice_data.isUrgent;
+        print(isUrgent)
+    next: [ wait-for-completion ]
+
+  send-receipt:
+    type: TASK
+    actor: SYSTEM
+    component: test.sendEmail
+    config:
+      address: vendor@external.com
+      subject: "Invoice Received"
+      body: "Your invoice has been processed."
+    next: [wait-for-completion]
+
+  wait-for-completion:
+    type: WAIT
+    component: join
+    config:
+      mergeStrategy: waitForAll
+      await: [extract-fields, send-receipt]
+    next: [end]
+
+  end:
+    type: END

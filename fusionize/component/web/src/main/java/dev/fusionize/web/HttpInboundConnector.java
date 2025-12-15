@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HttpInboundConnector implements ComponentRuntime {
-    private static final Logger logger = LoggerFactory.getLogger(HttpInboundConnector.class);
     private final HttpInboundConnectorService httpInboundConnectorService;
 
     public HttpInboundConnector(HttpInboundConnectorService httpInboundConnectorService) {
@@ -38,10 +37,10 @@ public class HttpInboundConnector implements ComponentRuntime {
 
         HttpInboundConnectorService.HttpConnectorKey key = new HttpInboundConnectorService.HttpConnectorKey(workflowKey, workflowNodeKey);
 
-        logger.info("Registering webhook listener for key: {}", key);
+        emitter.logger().info("Registering http listener for key: {}", key);
 
         httpInboundConnectorService.addListener(key, body -> {
-            logger.info("Webhook triggered for key: {}, body: {}", key, body);
+            emitter.logger().info("Http listener triggered for key: {}, body: {}", key, body);
             context.getData().putAll(body);
 //            httpInboundConnectorService.removeListener(key); // Cleanup
             emitter.success(context);

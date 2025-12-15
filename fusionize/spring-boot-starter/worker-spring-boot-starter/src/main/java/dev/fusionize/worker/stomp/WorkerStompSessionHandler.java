@@ -4,32 +4,38 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.stomp.*;
 
-import java.lang.reflect.Type;
-
 public class WorkerStompSessionHandler extends StompSessionHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerStompSessionHandler.class);
 
+    private StompSession session;
+
     @Override
     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
+        this.session = session;
         logger.info("Connected to STOMP server: {}", session.getSessionId());
 
         // Subscribe to a topic
         session.subscribe("/topic/messages", this);
+    }
 
-        // Send a message
-        session.send("/app/hello", "Hello from client!".getBytes());
+    public <T> void send(String destination, T payload) {
+        if (session != null && session.isConnected()) {
+            logger.debug("sending message to {}", destination);
+            try {
+                session.send(destination, payload);
+                logger.debug("sent message to {}", destination);
+            } catch (Exception e) {
+                logger.error("Failed to send message to {}", destination, e);
+            }
+        } else {
+            logger.warn("Cannot send message to {}, session is not connected", destination);
+        }
     }
 
     @Override
     public void handleFrame(StompHeaders headers, Object payload) {
         logger.info("Received message: {}", payload);
-    }
-
-    @Override
-    public Type getPayloadType(StompHeaders headers) {
-        // You can deserialize to String, or any custom object
-        return String.class;
     }
 
     @Override

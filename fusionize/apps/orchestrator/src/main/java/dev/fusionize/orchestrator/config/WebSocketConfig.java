@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.config.StompBrokerRelayRegistration;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -13,12 +15,14 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 import java.net.URI;
 import java.net.URL;
+import java.util.List;
 
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-    public static final String URL_SOCKET_BASE = "/ws/"+ Application.VERSION;
-    public static final String URL_NODE_TOPIC_BASE = "/topic/"+ Application.VERSION + ".node";
+    public static final String SOCKET_BASE = "/ws/"+ Application.VERSION;
+    public static final String TOPIC_BASE = "/topic/"+ Application.VERSION;
+    public static final String NODE_TOPIC_BASE = TOPIC_BASE + ".node";
     private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
     @Value("${fusionize.worker.orchestrator-amqp:#{null}}")
@@ -57,7 +61,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        if(amqConnectionString==null) return;
+        registry.setApplicationDestinationPrefixes("/app");
+
+        if (amqConnectionString == null) {
+            registry.enableSimpleBroker("/topic");
+            return;
+        }
+        
         try {
             BrokerRelayConnectionInfo connectionInfo = new BrokerRelayConnectionInfo(amqConnectionString);
             logger.info(connectionInfo.toString());
@@ -71,14 +81,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             if(!connectionInfo.vhost.isEmpty()) {
                 brokerRelayRegistration.setVirtualHost(connectionInfo.vhost);
             }
-            registry.setApplicationDestinationPrefixes("/app");
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
+            logger.error("Failed to configure STOMP broker relay, falling back to simple broker", e);
+            registry.enableSimpleBroker("/topic");
         }
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint(URL_SOCKET_BASE).setAllowedOrigins("*");
+        registry.addEndpoint(SOCKET_BASE).setAllowedOrigins("*");
     }
 }

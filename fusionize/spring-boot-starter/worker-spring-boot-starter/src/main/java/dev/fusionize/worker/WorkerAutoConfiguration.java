@@ -29,6 +29,7 @@ import org.springframework.messaging.simp.stomp.StompSessionHandler;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -51,11 +52,15 @@ public class WorkerAutoConfiguration {
         return new Worker();
     }
 
+
+
     @Bean
     @ConditionalOnMissingBean
-    public WebSocketStompClient stompClient() {
+    public WebSocketStompClient stompClient(ObjectMapper objectMapper) {
         WebSocketStompClient stompClient = new WebSocketStompClient(new StandardWebSocketClient());
-        stompClient.setMessageConverter(new MappingJackson2MessageConverter());
+        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+        converter.setObjectMapper(objectMapper);
+        stompClient.setMessageConverter(converter);
         return stompClient;
     }
 
@@ -111,6 +116,10 @@ public class WorkerAutoConfiguration {
                 WorkflowComponent component = registrar.registerComponent(definition);
                 componentRegistry.registerFactory(component, f);
                 logger.info("Registered Factory: {} {}", f.getClass().getSimpleName(), component.getComponentId());
+            }else {
+                logger.warn("Skip Factory registration: {} {}", f.getClass().getSimpleName(), validAnnotation
+                                ? "name, description or meta information is missing"
+                                : "is not implementing ComponentRuntimeFactory");
             }
         });
     }

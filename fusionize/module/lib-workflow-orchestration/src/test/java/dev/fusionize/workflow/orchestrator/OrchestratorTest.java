@@ -243,7 +243,7 @@ class OrchestratorTest {
                 assertNodeLogs(firsRunLogs, "extractFields", List.of(
                                 "script: Script ran successfully {email_message=invoice help needed., isBilling=true, isSupport=true, isSales=false}"));
                 assertNodeLogs(firsRunLogs, "forkRoute", List.of(
-                                "fork: Evaluation results: {billingRoute=true, salesRoute=false, supportRoute=true}"));
+                                "fork: Evaluation results: {salesRoute=false, supportRoute=true, billingRoute=true}"));
                 assertNodeLogs(firsRunLogs, "billingRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to billing-team@fusionize.dev",
@@ -275,7 +275,7 @@ class OrchestratorTest {
                 assertNodeLogs(lastRunLogs, "extractFields", List.of(
                                 "script: Script ran successfully {email_message=submitted the invoice pricing., isBilling=true, isSupport=false, isSales=true}"));
                 assertNodeLogs(lastRunLogs, "forkRoute", List.of(
-                                "fork: Evaluation results: {billingRoute=true, salesRoute=true, supportRoute=false}"));
+                                "fork: Evaluation results: {salesRoute=true, supportRoute=false, billingRoute=true}"));
                 assertNodeLogs(lastRunLogs, "billingRoute", List.of(
                                 "ai:test.sendEmail: MockSendEmailComponent activated",
                                 "ai:test.sendEmail: sending email to billing-team@fusionize.dev",

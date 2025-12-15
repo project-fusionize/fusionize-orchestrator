@@ -1,8 +1,6 @@
 package dev.fusionize.workflow.orchestrator;
 
-import dev.fusionize.workflow.Workflow;
-import dev.fusionize.workflow.WorkflowExecution;
-import dev.fusionize.workflow.WorkflowNodeExecution;
+import dev.fusionize.workflow.*;
 import dev.fusionize.workflow.context.ContextFactory;
 import dev.fusionize.workflow.events.OrchestrationEvent;
 import dev.fusionize.workflow.events.orchestration.ActivationResponseEvent;
@@ -41,65 +39,70 @@ public class Orchestrator {
 
     public void orchestrate(Workflow workflow) {
         WorkflowExecution we = WorkflowExecution.of(workflow);
-        // todo check and re-use idle execution
+        workflowExecutionRegistry.deleteIdlesFor(workflow.getWorkflowId());
         List<WorkflowNodeExecution> nodes = workflow.getNodes().stream()
                 .map(n -> WorkflowNodeExecution.of(n, ContextFactory.empty()))
                 .peek(ne -> we.getNodes().add(ne)).toList();
         workflowExecutionRegistry.register(we);
-        nodes.forEach(ne -> requestActivation(we, ne));
+        nodes.forEach(ne -> componentDispatcher.dispatchActivation(we, ne));
     }
 
     private void proceedExecution(WorkflowExecution we, WorkflowNodeExecution ne) {
         workflowNavigator.navigate(we, ne, (
                 WorkflowExecution nextWe, WorkflowNodeExecution nextNe) -> {
             workflowExecutionRegistry.register(nextWe);
-            nextNe.getChildren().forEach(cne -> requestActivation(nextWe, cne));
+            nextNe.getChildren().forEach(cne -> componentDispatcher.dispatchActivation(nextWe, cne));
         });
 
     }
 
-    private void requestActivation(WorkflowExecution we, WorkflowNodeExecution ne) {
-        componentDispatcher.dispatchActivation(we, ne, this::handleActivationSuccess, this::handleFailure);
-    }
-
     public void onActivated(ActivationResponseEvent activationResponseEvent) {
+        OrchestrationEvent.EventContext oc = activationResponseEvent.getOrchestrationEventContext();
         if (activationResponseEvent.getException() != null) {
-            // todo handle exception
             log.error("Error onActivated -> {}", activationResponseEvent.getException().getMessage(),
                     activationResponseEvent.getException());
-
+            // todo handle escalation or compensation
+            oc.nodeExecution().setState(WorkflowNodeExecutionState.FAILED);
+            if(oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
+                oc.workflowExecution().setStatus(WorkflowExecutionStatus.ERROR);
+            }
         } else {
-            OrchestrationEvent.EventContext oc = activationResponseEvent.getOrchestrationEventContext();
-            requestInvocation(oc.workflowExecution(), oc.nodeExecution());
-        }
-    }
+            componentDispatcher.dispatchInvocation(oc.workflowExecution(), oc.nodeExecution());
+            if(oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.WAIT)){
+                oc.nodeExecution().setState(WorkflowNodeExecutionState.WAITING);
+            }else if(!oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
+                oc.nodeExecution().setState(WorkflowNodeExecutionState.WORKING);
+            }
+            workflowExecutionRegistry.updateStatus(oc.workflowExecution().getWorkflowExecutionId(),
+                    oc.workflowExecution().getStatus());
+            workflowExecutionRegistry.updateNodeExecution(oc.workflowExecution().getWorkflowExecutionId(),
+                    oc.nodeExecution());
 
-    private void requestInvocation(WorkflowExecution we, WorkflowNodeExecution ne) {
-        componentDispatcher.dispatchInvocation(we, ne, this::handleInvocationSuccess, this::handleFailure);
+        }
     }
 
     public void onInvoked(InvocationResponseEvent invocationResponseEvent) {
+        OrchestrationEvent.EventContext oc = invocationResponseEvent.getOrchestrationEventContext();
+
         if (invocationResponseEvent.getException() != null) {
-            // todo handle exception
             log.error("Error onInvoked -> {}", invocationResponseEvent.getException().getMessage(),
                     invocationResponseEvent.getException());
+            // todo handle escalation or compensation
+            oc.nodeExecution().setState(WorkflowNodeExecutionState.FAILED);
+            workflowExecutionRegistry.updateNodeExecution(oc.workflowExecution().getWorkflowExecutionId(),
+                    oc.nodeExecution());
+            if(oc.nodeExecution().getWorkflowNode().getType().equals(WorkflowNodeType.START)){
+                oc.workflowExecution().setStatus(WorkflowExecutionStatus.ERROR);
+                workflowExecutionRegistry.updateStatus(oc.workflowExecution().getWorkflowExecutionId(),
+                        oc.workflowExecution().getStatus());
+            }
+            workflowExecutionRegistry.register(oc.workflowExecution());
             return;
         }
         log.info(invocationResponseEvent.getContext().toString());
-        OrchestrationEvent.EventContext oc = invocationResponseEvent.getOrchestrationEventContext();
         oc.nodeExecution().setStageContext(invocationResponseEvent.getContext());
-        handleInvocationSuccess(oc.workflowExecution(), oc.nodeExecution());
+        proceedExecution(oc.workflowExecution(), oc.nodeExecution());
     }
 
-    private void handleActivationSuccess(WorkflowExecution we, WorkflowNodeExecution ne) {
-        requestInvocation(we, ne);
-    }
 
-    private void handleInvocationSuccess(WorkflowExecution we, WorkflowNodeExecution ne) {
-        proceedExecution(we, ne);
-    }
-
-    private void handleFailure(Exception ex, WorkflowNodeExecution ne) {
-        log.error("Error executing node {}: {}", ne.getWorkflowNodeExecutionId(), ex.getMessage(), ex);
-    }
 }

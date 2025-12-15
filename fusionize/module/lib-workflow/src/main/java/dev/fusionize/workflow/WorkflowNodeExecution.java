@@ -5,6 +5,7 @@ import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.workflow.context.Context;
 import org.springframework.data.annotation.Transient;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -14,13 +15,18 @@ import java.util.stream.Stream;
 
 @JsonIgnoreProperties({"workflowNode"})
 public class WorkflowNodeExecution {
-    private List<WorkflowNodeExecution> children = new ArrayList<>();
+    private List<String> childrenIds = new ArrayList<>();
     private String workflowNodeId;
     private String workflowNodeExecutionId;
     private WorkflowNodeExecutionState state;
     private Context stageContext;
+    private Instant createdDate;
+    private Instant updatedDate;
+
     @Transient
     private WorkflowNode workflowNode;
+    @Transient
+    private List<WorkflowNodeExecution> children = new ArrayList<>();
 
     public static WorkflowNodeExecution of(WorkflowNode node, Context context) {
         WorkflowNodeExecution execution = new WorkflowNodeExecution();
@@ -29,6 +35,8 @@ public class WorkflowNodeExecution {
         execution.state = WorkflowNodeExecutionState.IDLE;
         execution.stageContext = context;
         execution.workflowNode = node;
+        execution.createdDate = Instant.now();
+        execution.updatedDate = Instant.now();
         return execution;
     }
 
@@ -61,6 +69,8 @@ public class WorkflowNodeExecution {
         clone.state = WorkflowNodeExecutionState.IDLE;
         clone.stageContext = this.stageContext != null ? this.stageContext.renew() : null;
         clone.workflowNode = this.workflowNode;
+        clone.createdDate = Instant.now();
+        clone.updatedDate = Instant.now();
 
         List<WorkflowNodeExecution> renewedChildren = new ArrayList<>();
         for (WorkflowNodeExecution child : this.children) {
@@ -77,6 +87,14 @@ public class WorkflowNodeExecution {
 
     public void setChildren(List<WorkflowNodeExecution> children) {
         this.children = children;
+    }
+
+    public List<String> getChildrenIds() {
+        return childrenIds;
+    }
+
+    public void setChildrenIds(List<String> childrenIds) {
+        this.childrenIds = childrenIds;
     }
 
     public String getWorkflowNodeExecutionId() {
@@ -117,5 +135,21 @@ public class WorkflowNodeExecution {
 
     public void setWorkflowNode(WorkflowNode workflowNode) {
         this.workflowNode = workflowNode;
+    }
+
+    public Instant getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(Instant createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public Instant getUpdatedDate() {
+        return updatedDate;
+    }
+
+    public void setUpdatedDate(Instant updatedDate) {
+        this.updatedDate = updatedDate;
     }
 }

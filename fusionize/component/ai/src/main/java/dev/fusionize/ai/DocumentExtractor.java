@@ -37,6 +37,7 @@ public class DocumentExtractor implements ComponentRuntime {
     @Override
     public void canActivate(Context context, ComponentUpdateEmitter emitter) {
         if (context.contains(inputVar) || context.getResources().containsKey(inputVar)) {
+            emitter.logger().info("Document extractor is activated, extracting {} to {}", inputVar, outputVar);
             emitter.success(context);
         } else {
             emitter.failure(new IllegalArgumentException("Input '" + inputVar + "' not found in context"));
@@ -51,6 +52,7 @@ public class DocumentExtractor implements ComponentRuntime {
             if (response == null) {
                 throw new Exception("response is null");
             }
+            emitter.logger().info("Document extraction was successful, {}", response.data());
             context.getData().put(outputVar, response.data());
             emitter.success(context);
 

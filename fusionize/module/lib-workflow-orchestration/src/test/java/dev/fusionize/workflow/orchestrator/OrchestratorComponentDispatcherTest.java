@@ -1,24 +1,18 @@
 package dev.fusionize.workflow.orchestrator;
 
+import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowExecution;
 import dev.fusionize.workflow.WorkflowNode;
 import dev.fusionize.workflow.WorkflowNodeExecution;
-import dev.fusionize.workflow.component.local.LocalComponentRuntime;
-import dev.fusionize.workflow.component.local.LocalComponentRuntimeFactory;
 import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
 import dev.fusionize.workflow.events.orchestration.ActivationRequestEvent;
 import dev.fusionize.workflow.events.orchestration.InvocationRequestEvent;
-import dev.fusionize.workflow.logging.WorkflowLogRepoLogger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
@@ -26,17 +20,13 @@ import static org.mockito.Mockito.verify;
 public class OrchestratorComponentDispatcherTest {
 
     private EventPublisher<Event> eventPublisher;
-    private List<LocalComponentRuntimeFactory<? extends LocalComponentRuntime>> localComponentRuntimeFactories;
+
     private OrchestratorComponentDispatcher dispatcher;
 
     @BeforeEach
     public void setUp() {
         eventPublisher = Mockito.mock(EventPublisher.class);
-        localComponentRuntimeFactories = new ArrayList<>();
-        WorkflowLogRepoLogger workflowLogger = Mockito.mock(WorkflowLogRepoLogger.class);
-        ExecutorService executor = Mockito.mock(ExecutorService.class);
-        dispatcher = new OrchestratorComponentDispatcher(eventPublisher, localComponentRuntimeFactories, workflowLogger,
-                executor);
+        dispatcher = new OrchestratorComponentDispatcher(eventPublisher);
     }
 
     @Test
@@ -44,13 +34,12 @@ public class OrchestratorComponentDispatcherTest {
         WorkflowExecution we = new WorkflowExecution();
         we.setWorkflowExecutionId("exec-1");
         we.setWorkflowId("wf-1");
+        we.setWorkflow(new Workflow());
 
         WorkflowNode node = WorkflowNode.builder().workflowNodeId("node-1").component("remote-component").build();
         WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, Context.builder().build());
 
-        dispatcher.dispatchActivation(we, ne, (w, n) -> {
-        }, (e, n) -> {
-        });
+        dispatcher.dispatchActivation(we, ne);
 
         ArgumentCaptor<ActivationRequestEvent> captor = ArgumentCaptor.forClass(ActivationRequestEvent.class);
         verify(eventPublisher).publish(captor.capture());
@@ -65,13 +54,12 @@ public class OrchestratorComponentDispatcherTest {
         WorkflowExecution we = new WorkflowExecution();
         we.setWorkflowExecutionId("exec-1");
         we.setWorkflowId("wf-1");
+        we.setWorkflow(new Workflow());
 
         WorkflowNode node = WorkflowNode.builder().workflowNodeId("node-1").component("remote-component").build();
         WorkflowNodeExecution ne = WorkflowNodeExecution.of(node, Context.builder().build());
 
-        dispatcher.dispatchInvocation(we, ne, (w, n) -> {
-        }, (e, n) -> {
-        });
+        dispatcher.dispatchInvocation(we, ne);
 
         ArgumentCaptor<InvocationRequestEvent> captor = ArgumentCaptor.forClass(InvocationRequestEvent.class);
         verify(eventPublisher).publish(captor.capture());

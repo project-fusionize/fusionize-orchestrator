@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MyCustomComponentRecEmail implements ComponentRuntime {
-    private static final Logger logger = LoggerFactory.getLogger(MyCustomComponentRecEmail.class);
     private final EmailBoxService emailBoxService;
     private String address;
 
@@ -26,7 +25,7 @@ public class MyCustomComponentRecEmail implements ComponentRuntime {
     public void canActivate(Context context, ComponentUpdateEmitter emitter) {
         try {
             Thread.sleep(100);
-            logger.info("MyCustomComponentRecEmail activated");
+            emitter.logger().info("MyCustomComponentRecEmail activated");
             emitter.success(context);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -39,15 +38,14 @@ public class MyCustomComponentRecEmail implements ComponentRuntime {
             try {
                 Thread.sleep(100);
                 if(!emailBoxService.getInbox().isEmpty()){
-                    logger.info("inbox size: {}", emailBoxService.getInbox().size());
+                    emitter.logger().info("inbox size: {}", emailBoxService.getInbox().size());
                 }
 
                 if (!emailBoxService.getInbox().isEmpty()) {
                     // Remove the first email and process it
                     String email = emailBoxService.getInbox().remove(0);
 
-                    String worklog = "MockRecEmailComponentRuntime handle email: " + email;
-                    logger.info(worklog);
+                    emitter.logger().info("MockRecEmailComponentRuntime handle email: " + email);
 
                     context.getData().put("email_message", email);
 
@@ -56,11 +54,13 @@ public class MyCustomComponentRecEmail implements ComponentRuntime {
                 }
 
             } catch (InterruptedException e) {
-                logger.error(e.getMessage());
+                emitter.logger().error(e.getMessage());
                 Thread.currentThread().interrupt();
+                emitter.failure(e);
                 break;
             } catch (Exception e) {
-                logger.error("Error processing email", e);
+                emitter.logger().error("Error processing email", e);
+                emitter.failure(e);
             }
         }
     }
