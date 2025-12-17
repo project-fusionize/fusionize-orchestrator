@@ -75,7 +75,6 @@ public class ChatModelManager {
 
             OpenAiChatOptions options = OpenAiChatOptions.builder()
                     .model(config.getModelName())
-                    .temperature(config.getTemperature())
                     .build();
 
             OpenAiChatModel chatModel = new OpenAiChatModel(openAiApi, options, toolCallingManager, retryTemplate,

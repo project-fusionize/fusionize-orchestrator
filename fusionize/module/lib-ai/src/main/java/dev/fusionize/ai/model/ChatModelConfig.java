@@ -45,14 +45,6 @@ public class ChatModelConfig extends DomainEntity implements Sanitization<ChatMo
         this.apiKey = apiKey;
     }
 
-    public Double getTemperature() {
-        return (Double) properties.get("temperature");
-    }
-
-    public void setTemperature(Double temperature) {
-        this.properties.put("temperature", temperature);
-    }
-
     public Map<String, Object> getProperties() {
         return properties;
     }
