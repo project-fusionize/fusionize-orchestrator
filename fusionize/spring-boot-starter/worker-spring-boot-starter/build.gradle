@@ -17,6 +17,7 @@ dependencies {
     api project(':fusionize:module:lib-common')
     api project(':fusionize:module:lib-user')
     api project(':fusionize:module:lib-ai')
+    api project(':fusionize:module:lib-process')
     api project(':fusionize:module:lib-workflow')
     api project(':fusionize:module:lib-workflow-components')
     api project(':fusionize:module:lib-workflow-orchestration')
