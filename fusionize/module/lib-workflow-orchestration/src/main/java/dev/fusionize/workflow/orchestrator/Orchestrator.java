@@ -99,9 +99,15 @@ public class Orchestrator {
             workflowExecutionRegistry.register(oc.workflowExecution());
             return;
         }
-        log.info(invocationResponseEvent.getContext().toString());
-        oc.nodeExecution().setStageContext(invocationResponseEvent.getContext());
-        proceedExecution(oc.workflowExecution(), oc.nodeExecution());
+        if(oc.nodeExecution().getState().equals(WorkflowNodeExecutionState.DONE) ||
+                oc.nodeExecution().getState().equals(WorkflowNodeExecutionState.FAILED)){
+            log.warn("Skipping onInvoked -> node is not in WORKING state");
+        }else{
+            log.info(invocationResponseEvent.getContext().toString());
+            oc.nodeExecution().setStageContext(invocationResponseEvent.getContext());
+            proceedExecution(oc.workflowExecution(), oc.nodeExecution());
+        }
+
     }
 
 

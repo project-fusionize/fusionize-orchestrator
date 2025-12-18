@@ -89,6 +89,7 @@ class OrchestratorTest {
         WorkflowExecutionRepository workflowExecutionRepository;
         List<String> inbox;
         BlockingQueue<InputStream> fileQueue;
+        MockWaitUtilComponent.Beacon beacon;
 
         @Autowired
         ProcessConverter processConverter;
@@ -103,6 +104,7 @@ class OrchestratorTest {
                 // Inbox shared across async threads (thread-safe list)
                 inbox = new CopyOnWriteArrayList<>();
                 fileQueue = new LinkedBlockingQueue<>();
+                beacon = new MockWaitUtilComponent.Beacon();
 
                 // Define factories for workflow runtime components
                 ComponentRuntimeFactory<MockRecEmailComponentRuntime> emailRecStartFactory = () -> new MockRecEmailComponentRuntime(
@@ -114,6 +116,8 @@ class OrchestratorTest {
                                 fileStorageService);
                 ComponentRuntimeFactory<MockFileHandlerComponent> fileStartFactory = () -> new MockFileHandlerComponent(
                                 fileStorageService, fileQueue);
+                ComponentRuntimeFactory<MockWaitUtilComponent> waitUtilFactory = ()->new MockWaitUtilComponent(beacon);
+
                 ComponentRuntimeFactory<MockEndFileComponent> fileEndFactory = MockEndFileComponent::new;
 
                 /**
@@ -162,6 +166,15 @@ class OrchestratorTest {
                                                 .withActor(Actor.SYSTEM)
                                                 .build(),
                                 fileEndFactory);
+
+                componentRegistry.registerFactory(
+                        WorkflowComponent.builder("test")
+                                .withDomain("waitUtil")
+                                .withActor(Actor.SYSTEM)
+                                .build(),
+                        waitUtilFactory);
+
+
 
         }
 
@@ -359,6 +372,82 @@ class OrchestratorTest {
                 }
                 logger.info("waitForWorkflowCompletion time out {}", timeoutSeconds);
 
+        }
+
+        @Test
+        void orchestrateWithMultipleBeaconTrigger() throws InterruptedException, IOException {
+                Workflow workflow = loadWorkflow("/email-trigger-with-wait.yml");
+
+                // Simulate asynchronous email arrivals
+                Thread.sleep(200);
+                inbox.add("first email..");
+                Thread.sleep(500);
+                beacon.send("first beacon..");
+                Thread.sleep(500);
+                beacon.send("second beacon..");
+                Thread.sleep(500);
+                waitForWorkflowCompletion(1, 15);
+
+                List<WorkflowLog> logs = workflowLogRepository.findAll();
+                logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
+                logWorkflowLogs("DB logs orchestrateWithScript ->\n{}", logs);
+
+                List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
+                assertEquals(2, workflowExecutions.size());
+                List<WorkflowExecution> done = workflowExecutions.stream()
+                        .filter(we -> we.getStatus() == WorkflowExecutionStatus.SUCCESS).toList();
+                List<WorkflowExecution> idles = workflowExecutions.stream()
+                        .filter(we -> we.getStatus() == WorkflowExecutionStatus.IDLE).toList();
+
+                assertEquals(1, idles.size());
+                assertEquals(1, done.size());
+                assertEquals(workflow.getNodeMap().size(), done.getFirst().getNodeExecutionMap().size());
+
+                List<WorkflowLog> idleLogs = logs.stream()
+                        .filter(l -> l.getWorkflowExecutionId()
+                                .equals(idles.getFirst().getWorkflowExecutionId()))
+                        .toList();
+                List<WorkflowLog> firsRunLogs = logs.stream()
+                        .filter(l -> l.getWorkflowExecutionId()
+                                .equals(done.getFirst().getWorkflowExecutionId()))
+                        .toList();
+
+                logWorkflowLogs("DB idleLogs ->\n{}", idleLogs);
+                logWorkflowLogs("DB firsRunLogs ->\n{}", firsRunLogs);
+
+                List<String> expectedMessages = List.of(
+                        "system:test.receivedIncomingEmail: MockRecEmailComponentRuntime activated",
+                        "system:test.receivedIncomingEmail: MockRecEmailComponentRuntime handle email: first email.. from start@email.com");
+
+                assertEquals(expectedMessages.size(), idleLogs.size(), "Log count mismatch");
+                for (int i = 0; i < expectedMessages.size(); i++) {
+                        String expected = expectedMessages.get(i);
+                        String actual = idleLogs.get(i).toString();
+                        assertTrue(actual.endsWith(expected),
+                                "Expected log at index " + i + " to end with: " + expected + "\nActual: "
+                                        + actual);
+                }
+
+                expectedMessages = List.of(
+                        "ai:test.sendEmail: MockSendEmailComponent activated",
+                        "ai:test.sendEmail: sending email to outgoing1@email.com",
+                        "ai:test.sendEmail: BODY: first email..",
+                        "delay: scheduling delay of 100 milliseconds",
+                        "system:test.waitUtil: MockWaitUtilComponent activated",
+                        "system:test.waitUtil: first beacon..",
+                        "system:test.endEmailWorkflow: MockEndEmailComponent activated",
+                        "system:test.endEmailWorkflow: ComponentFinishedEvent finished after 100",
+                        "system:test.waitUtil: second beacon.."
+                        );
+
+                assertEquals(expectedMessages.size(), firsRunLogs.size(), "Log count mismatch");
+                for (int i = 0; i < expectedMessages.size(); i++) {
+                        String expected = expectedMessages.get(i);
+                        String actual = firsRunLogs.get(i).toString();
+                        assertTrue(actual.endsWith(expected),
+                                "Expected log at index " + i + " to end with: " + expected + "\nActual: "
+                                        + actual);
+                }
         }
 
         @Test
