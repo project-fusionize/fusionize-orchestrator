@@ -1,6 +1,9 @@
 package dev.fusionize.workflow;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import dev.fusionize.common.graph.FlattenResult;
+import dev.fusionize.common.graph.GraphUtil;
+import dev.fusionize.common.graph.NodeAdapter;
 import dev.fusionize.common.utility.KeyUtil;
 import dev.fusionize.user.activity.DomainEntity;
 import org.springframework.data.annotation.Id;
@@ -8,14 +11,13 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @JsonIgnoreProperties({"nodes"})
 @Document(collection = "workflow")
 public class Workflow extends DomainEntity {
+    private static final NodeAdapter<WorkflowNode, String> workflowAdapter =
+            new WorkflowNodeGraphAdapter();
     @Id
     private String id;
     @Indexed(unique = true)
@@ -27,6 +29,31 @@ public class Workflow extends DomainEntity {
     private List<String> rootNodeIds = new ArrayList<>();
     @Transient
     private List<WorkflowNode> nodes = new ArrayList<>();
+
+
+
+    public void flatten() {
+        this.nodeMap.clear();
+        this.rootNodeIds.clear();
+        FlattenResult<WorkflowNode, String> result =
+                GraphUtil.flatten(this.getNodes(), workflowAdapter);
+
+        this.setNodeMap(result.nodeMap());
+        this.setRootNodeIds(new ArrayList<>(result.rootIds()));
+    }
+
+    public void inflate() {
+        this.nodes.clear();
+        Collection<WorkflowNode> roots =
+                GraphUtil.inflate(
+                        this.getNodeMap(),
+                        this.getRootNodeIds(),
+                        workflowAdapter
+                );
+
+        this.setNodes(new ArrayList<>(roots));
+    }
+
 
     public WorkflowNode findNode(String workflowNodeId) {
         if (nodeMap.containsKey(workflowNodeId)) {
@@ -69,58 +96,6 @@ public class Workflow extends DomainEntity {
             this.flatten();
         }
     }
-
-    public void flatten() {
-        this.nodeMap.clear();
-        this.rootNodeIds.clear();
-        if (this.nodes != null) {
-            for (WorkflowNode node : this.nodes) {
-                this.rootNodeIds.add(node.getWorkflowNodeId());
-                flattenNode(node, this.nodeMap);
-            }
-        }
-    }
-
-    private void flattenNode(WorkflowNode node, Map<String, WorkflowNode> nodeMap) {
-        if (nodeMap.containsKey(node.getWorkflowNodeId())) {
-            return; // Already processed (cycle)
-        }
-        nodeMap.put(node.getWorkflowNodeId(), node);
-        node.getChildrenIds().clear();
-        if (node.getChildren() != null) {
-            for (WorkflowNode child : node.getChildren()) {
-                node.getChildrenIds().add(child.getWorkflowNodeId());
-                flattenNode(child, nodeMap);
-            }
-        }
-    }
-
-    public void inflate() {
-        this.nodes.clear();
-        // First pass: link roots
-        if (this.rootNodeIds != null) {
-            for (String rootId : this.rootNodeIds) {
-                WorkflowNode rootNode = this.nodeMap.get(rootId);
-                if (rootNode != null) {
-                    this.nodes.add(rootNode);
-                }
-            }
-        }
-        // Second pass: link children for all nodes
-        for (WorkflowNode node : this.nodeMap.values()) {
-            node.getChildren().clear();
-            if (node.getChildrenIds() != null) {
-                for (String childId : node.getChildrenIds()) {
-                    WorkflowNode child = this.nodeMap.get(childId);
-                    if (child != null) {
-                        node.getChildren().add(child);
-                    }
-                }
-            }
-        }
-    }
-
-
 
     private void updateNodeIds(List<WorkflowNode> incomingNodes, Map<String, WorkflowNode> existingNodes) {
         if (incomingNodes == null) return;
