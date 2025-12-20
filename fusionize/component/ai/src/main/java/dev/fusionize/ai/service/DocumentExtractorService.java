@@ -25,8 +25,8 @@ import java.util.Optional;
 @Service
 public class DocumentExtractorService {
     private static final Logger defaultLogger = LoggerFactory.getLogger(DocumentExtractorService.class);
-    private final ChatClient chatClient;
     private final StorageConfigManager configManager;
+    private final ChatModelManager chatModelManager;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -36,10 +36,9 @@ public class DocumentExtractorService {
     private record DocumentContent(byte[] bytes, String text) {
     }
 
-    public DocumentExtractorService(ChatClient.Builder chatClientBuilder,
-                                    StorageConfigManager configManager) {
-        this.chatClient = chatClientBuilder.build();
+    public DocumentExtractorService(StorageConfigManager configManager, ChatModelManager chatModelManager) {
         this.configManager = configManager;
+        this.chatModelManager = chatModelManager;
     }
 
     public FileStorageService getFileStorageService(String storageDomain) {
@@ -47,7 +46,7 @@ public class DocumentExtractorService {
         return configOptional.map(this.configManager::getFileStorageService).orElse(null);
     }
 
-    public Response extract(Context context, String inputVar, Map<String, Object> example) throws Exception {
+    public Response extract(Context context, String inputVar, Map<String, Object> example, String agent) throws Exception {
         Object documentObj = resolveDocumentObject(context, inputVar);
 
         if (documentObj == null) {
@@ -56,8 +55,9 @@ public class DocumentExtractorService {
 
         DocumentContent content = parseDocumentContent(documentObj);
         String exampleJson = objectMapper.writeValueAsString(new Response(example));
+        ChatClient chatClient = chatModelManager.getChatClient(agent);
 
-        return extractDataFromDocument(content, exampleJson);
+        return extractDataFromDocument(content, exampleJson, chatClient);
     }
 
     private Object resolveDocumentObject(Context context, String inputVar) {
@@ -123,7 +123,7 @@ public class DocumentExtractorService {
         }
     }
 
-    private Response extractDataFromDocument(DocumentContent content, String exampleJson) {
+    private Response extractDataFromDocument(DocumentContent content, String exampleJson, ChatClient chatClient) {
         if (content.bytes != null) {
             MimeType mimeType = guessMimeType(content.bytes);
             defaultLogger.info("Extracting document from {} bytes: mimeType {}", content.bytes.length, mimeType);

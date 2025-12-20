@@ -1,7 +1,6 @@
 package dev.fusionize.ai;
 
 import dev.fusionize.ai.service.DocumentExtractorService;
-import dev.fusionize.storage.file.FileStorageService;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
@@ -11,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DocumentExtractor implements ComponentRuntime {
-
+    public static final String CONF_AGENT_NAME = "agent";
     public static final String CONF_INPUT_VAR = "input";
     public static final String CONF_OUTPUT_VAR = "output";
     public static final String CONF_EXAMPLE = "example";
@@ -20,6 +19,7 @@ public class DocumentExtractor implements ComponentRuntime {
 
     private String inputVar = "document";
     private String outputVar = "extractedData";
+    private String agentName;
 
     private Map<String, Object> example = new HashMap<>();
 
@@ -31,11 +31,16 @@ public class DocumentExtractor implements ComponentRuntime {
     public void configure(ComponentRuntimeConfig config) {
         config.varString(CONF_INPUT_VAR).ifPresent(s -> this.inputVar = s);
         config.varString(CONF_OUTPUT_VAR).ifPresent(s -> this.outputVar = s);
+        config.varString(CONF_AGENT_NAME).ifPresent(s -> this.agentName = s);
         config.varMap(CONF_EXAMPLE).ifPresent(m -> this.example = m);
     }
 
     @Override
     public void canActivate(Context context, ComponentUpdateEmitter emitter) {
+        if(agentName == null || agentName.isEmpty()) {
+            emitter.failure(new IllegalArgumentException("Input '" + inputVar + "' not found in context"));
+            return;
+        }
         if (context.contains(inputVar) || context.getResources().containsKey(inputVar)) {
             emitter.logger().info("Document extractor is activated, extracting {} to {}", inputVar, outputVar);
             emitter.success(context);
@@ -47,7 +52,8 @@ public class DocumentExtractor implements ComponentRuntime {
     @Override
     public void run(Context context, ComponentUpdateEmitter emitter) {
         try {
-            DocumentExtractorService.Response response = documentExtractorService.extract(context, inputVar, example);
+            DocumentExtractorService.Response response = documentExtractorService.extract(
+                    context, inputVar, example, agentName);
 
             if (response == null) {
                 throw new Exception("response is null");
