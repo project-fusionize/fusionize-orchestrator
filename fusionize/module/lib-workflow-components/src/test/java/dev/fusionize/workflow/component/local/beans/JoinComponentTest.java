@@ -268,6 +268,11 @@ class JoinComponentTest {
             return (message, level, throwable) -> {
             };
         }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return null;
+        }
     }
 
     @Test

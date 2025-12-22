@@ -54,6 +54,7 @@ public class MockDataExtractorComponent implements ComponentRuntime {
                     try (is) {
                         String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
                         Map<String, Object> map = JsonParser.MAP.fromJson(content, Map.class);
+                        emitter.interactionLogger().externalMessage("extract from "+content, "mockAi");
                         if (map != null && map.containsKey("extractMe")) {
                             Object value = map.get("extractMe");
                             if (value instanceof String extractedValue) {

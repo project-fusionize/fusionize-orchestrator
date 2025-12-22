@@ -35,16 +35,12 @@ public class WorkflowInteractionRepoLogger implements WorkflowInteractionLogger 
     @Override
     public void log(String workflowId, String workflowDomain, String workflowExecutionId, String workflowNodeId,
                     String nodeKey, String component, String actor,
-                    WorkflowInteraction.InteractionType type, WorkflowInteraction.Visibility visibility, String content) {
+                    WorkflowInteraction.InteractionType type, WorkflowInteraction.Visibility visibility, Object content) {
         WorkflowInteraction interaction = WorkflowInteraction.create(workflowId, workflowDomain, workflowExecutionId,
                 workflowNodeId, nodeKey, component, actor, type, visibility, content);
         
         Logger logger = LoggerFactory.getLogger(component);
-        if (visibility == WorkflowInteraction.Visibility.PUBLIC || visibility == WorkflowInteraction.Visibility.INTERNAL) {
-            logger.info("[{}] {} ({}): {}", type, actor, visibility, content);
-        } else {
-             logger.debug("[{}] {} ({}): {}", type, actor, visibility, content);
-        }
+        logger.debug("[{}] {} ({}): {}", type, actor, visibility, content);
 
         CompletableFuture.runAsync(() -> {
             repository.save(interaction);

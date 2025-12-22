@@ -38,7 +38,7 @@ public class DocumentExtractor implements ComponentRuntime {
     @Override
     public void canActivate(Context context, ComponentUpdateEmitter emitter) {
         if(agentName == null || agentName.isEmpty()) {
-            emitter.failure(new IllegalArgumentException("Input '" + inputVar + "' not found in context"));
+            emitter.failure(new IllegalArgumentException("Agent name not found in configs"));
             return;
         }
         if (context.contains(inputVar) || context.getResources().containsKey(inputVar)) {

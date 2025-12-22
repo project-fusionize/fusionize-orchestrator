@@ -4,10 +4,7 @@ import dev.fusionize.process.Process;
 import dev.fusionize.process.ProcessConverter;
 import dev.fusionize.storage.file.FileStorageService;
 import dev.fusionize.storage.file.FileStorageServiceLocal;
-import dev.fusionize.workflow.Workflow;
-import dev.fusionize.workflow.WorkflowExecution;
-import dev.fusionize.workflow.WorkflowExecutionStatus;
-import dev.fusionize.workflow.WorkflowLog;
+import dev.fusionize.workflow.*;
 import dev.fusionize.workflow.component.Actor;
 import dev.fusionize.workflow.component.WorkflowComponent;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeEngine;
@@ -16,6 +13,7 @@ import dev.fusionize.workflow.component.runtime.ComponentRuntimeRegistry;
 import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import dev.fusionize.workflow.events.Event;
 import dev.fusionize.workflow.events.EventPublisher;
+import dev.fusionize.workflow.logging.WorkflowInteractionRepository;
 import dev.fusionize.workflow.logging.WorkflowLogRepository;
 import dev.fusionize.workflow.orchestrator.helpers.*;
 import dev.fusionize.workflow.orchestrator.helpers.TestConfig;
@@ -85,6 +83,8 @@ class OrchestratorTest {
         WorkflowRepository workflowRepository;
         @Autowired
         WorkflowLogRepository workflowLogRepository;
+        @Autowired
+        WorkflowInteractionRepository workflowInteractionRepository;
         @Autowired
         WorkflowExecutionRepository workflowExecutionRepository;
         List<String> inbox;
@@ -193,6 +193,11 @@ class OrchestratorTest {
         private void logWorkflowLogs(String prefix, List<WorkflowLog> logs) {
                 logger.info(prefix, logs.stream().map(WorkflowLog::toString)
                                 .collect(Collectors.joining("\n")));
+        }
+
+        private void logWorkflowInteractionLogs(String prefix, List<WorkflowInteraction> interactions) {
+                logger.info(prefix, interactions.stream().map(WorkflowInteraction::toString)
+                        .collect(Collectors.joining("\n")));
         }
 
         @Test
@@ -1036,7 +1041,7 @@ class OrchestratorTest {
 
                 List<WorkflowLog> logs = workflowLogRepository.findAll();
                 logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
-                logWorkflowLogs("DB logs orchestrateWithScript ->\n{}", logs);
+                logWorkflowLogs("DB logs orchestrateWithFile ->\n{}", logs);
 
                 List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
                 assertEquals(3, workflowExecutions.size());
@@ -1101,5 +1106,26 @@ class OrchestratorTest {
                 // Order assertions
                 assertNodeOrder(lastRunLogs, "start", "extractData");
                 assertNodeOrder(lastRunLogs, "extractData", "end");
+
+                List<WorkflowInteraction> interactions = workflowInteractionRepository.findAll();
+                interactions.sort(Comparator.comparing(WorkflowInteraction::getTimestamp));
+                logWorkflowInteractionLogs("DB logs orchestrateWithFile ->\n{}", interactions);
+
+                List<String> expectedInteractions = List.of(
+                        "ai:test.mockDataExtractor(mockAi): extract from {\n" +
+                                "  \"extractMe\" : \"123\"\n" +
+                                "}",
+                        "ai:test.mockDataExtractor(mockAi): extract from {\n" +
+                                "  \"extractMe\" : \"456\"\n" +
+                                "}");
+
+                assertEquals(expectedInteractions.size(), interactions.size(), "Log count mismatch");
+                for (int i = 0; i < expectedInteractions.size(); i++) {
+                        String expected = expectedInteractions.get(i);
+                        String actual = interactions.get(i).toString();
+                        assertTrue(actual.endsWith(expected),
+                                "Expected log at index " + i + " to end with: " + expected + "\nActual: "
+                                        + actual);
+                }
         }
 }

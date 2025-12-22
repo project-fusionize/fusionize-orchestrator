@@ -1,6 +1,7 @@
 package dev.fusionize.web;
 
 import dev.fusionize.web.services.HttpInboundConnectorService;
+import dev.fusionize.workflow.WorkflowInteraction;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.context.ContextRuntimeData;
@@ -84,6 +85,15 @@ class HttpInboundConnectorTest {
                     throwable.printStackTrace();
                 }
             };
+        }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return (Object content,
+                    String actor,
+                    WorkflowInteraction.InteractionType type,
+                    WorkflowInteraction.Visibility visibility) ->  System.out.println("[" + actor + "] " + content);
+
         }
     }
 }

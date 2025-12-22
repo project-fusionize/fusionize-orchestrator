@@ -22,8 +22,6 @@ class ChatModelManagerTest {
     @Mock
     private ChatModelConfigRepository repository;
 
-    @Mock
-    private ChatClient.Builder defaultBuilder;
 
     @Mock
     private org.springframework.retry.support.RetryTemplate retryTemplate;
@@ -38,7 +36,7 @@ class ChatModelManagerTest {
 
     @BeforeEach
     void setUp() {
-        manager = new ChatModelManager(repository, defaultBuilder, retryTemplate, observationRegistry,
+        manager = new ChatModelManager(repository, retryTemplate, observationRegistry,
                 toolCallingManager);
     }
 

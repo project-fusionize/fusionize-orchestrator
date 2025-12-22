@@ -2,6 +2,7 @@ package dev.fusionize.web;
 
 import dev.fusionize.storage.file.FileStorageService;
 import dev.fusionize.web.services.FileInboundConnectorService;
+import dev.fusionize.workflow.WorkflowInteraction;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
@@ -123,6 +124,15 @@ class FileInboundConnectorTest {
             return (message, level, throwable) -> {
               // no-op for test
             };
+        }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return (Object content,
+                    String actor,
+                    WorkflowInteraction.InteractionType type,
+                    WorkflowInteraction.Visibility visibility) ->  System.out.println("[" + actor + "] " + content);
+
         }
     }
 }

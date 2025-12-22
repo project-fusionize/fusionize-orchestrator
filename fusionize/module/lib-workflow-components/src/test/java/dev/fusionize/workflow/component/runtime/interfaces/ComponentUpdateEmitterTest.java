@@ -1,5 +1,6 @@
 package dev.fusionize.workflow.component.runtime.interfaces;
 
+import dev.fusionize.workflow.WorkflowInteraction;
 import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
@@ -51,6 +52,15 @@ class ComponentUpdateEmitterTest {
         @Override
         public Logger logger() {
             return (message, level, throwable) -> logs.add(new LogEntry(message, level));
+        }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return (Object content,
+                    String actor,
+                    WorkflowInteraction.InteractionType type,
+                    WorkflowInteraction.Visibility visibility) ->  System.out.println("[" + actor + "] " + content);
+
         }
 
         public List<LogEntry> getLogs() {

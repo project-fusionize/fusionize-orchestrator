@@ -26,20 +26,20 @@ public class WorkflowInteraction {
     private String actor;
     private InteractionType type;
     private Visibility visibility;
-    private String content;
+    private Object content;
     private Map<String, Object> context;
 
     public enum InteractionType {
-        MESSAGE, THOUGHT, TOOL_CALL, OBSERVATION, ERROR
+        MESSAGE, THOUGHT, OBSERVATION
     }
 
     public enum Visibility {
-        PUBLIC, INTERNAL, PRIVATE
+        INTERNAL, EXTERNAL
     }
 
     public static WorkflowInteraction create(String workflowId, String workflowDomain, String workflowExecutionId,
                                            String workflowNodeId, String nodeKey, String component,
-                                           String actor, InteractionType type, Visibility visibility, String content) {
+                                           String actor, InteractionType type, Visibility visibility, Object content) {
         WorkflowInteraction interaction = new WorkflowInteraction();
         interaction.workflowId = workflowId;
         interaction.workflowDomain = workflowDomain;
@@ -143,11 +143,11 @@ public class WorkflowInteraction {
         this.visibility = visibility;
     }
 
-    public String getContent() {
+    public Object getContent() {
         return content;
     }
 
-    public void setContent(String content) {
+    public void setContent(Object content) {
         this.content = content;
     }
 

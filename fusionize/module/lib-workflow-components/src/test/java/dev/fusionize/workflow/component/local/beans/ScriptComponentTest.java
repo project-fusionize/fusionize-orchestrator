@@ -139,5 +139,10 @@ class ScriptComponentTest {
                 // No-op for tests
             };
         }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return null;
+        }
     }
 }

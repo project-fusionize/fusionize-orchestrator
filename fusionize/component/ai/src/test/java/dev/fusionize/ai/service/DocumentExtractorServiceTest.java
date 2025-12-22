@@ -1,5 +1,6 @@
 package dev.fusionize.ai.service;
 
+import dev.fusionize.ai.exception.ChatModelException;
 import dev.fusionize.storage.StorageConfig;
 import dev.fusionize.storage.StorageConfigManager;
 import dev.fusionize.storage.file.FileStorageService;
@@ -23,8 +24,8 @@ import static org.mockito.Mockito.*;
 class DocumentExtractorServiceTest {
 
     @Mock
-    private ChatClient.Builder chatClientBuilder;
-    
+    private ChatModelManager chatModelManager;
+
     // Use Deep Stubs to avoid needing to know exact intermediate types
     @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
     private ChatClient chatClient;
@@ -39,15 +40,14 @@ class DocumentExtractorServiceTest {
     private Map<String, Object> example;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws ChatModelException {
         MockitoAnnotations.openMocks(this);
 
         // Mock ChatClient builder to return our deep stubbed client
-        when(chatClientBuilder.build()).thenReturn(chatClient);
+        when(chatModelManager.getChatClient(anyString())).thenReturn(chatClient);
         when(configManager.getConfig(any())).thenReturn(Optional.of(new StorageConfig()));
         when(configManager.getFileStorageService(any())).thenReturn(storageService);
-
-        service = new DocumentExtractorService(chatClientBuilder, configManager);
+        service = new DocumentExtractorService(configManager, chatModelManager);
         context = new Context();
         example = new HashMap<>();
         example.put("key", "value");
@@ -67,7 +67,7 @@ class DocumentExtractorServiceTest {
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", example);
+        DocumentExtractorService.Response response = service.extract(context, "input", example, "mockAgent");
 
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -86,7 +86,7 @@ class DocumentExtractorServiceTest {
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", example);
+        DocumentExtractorService.Response response = service.extract(context, "input", example, "mockAgent");
 
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -106,7 +106,7 @@ class DocumentExtractorServiceTest {
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        service.extract(context, "input", example);
+        service.extract(context, "input", example, "mockAgent");
         
         // Verify invocation (using deep verify is tricky, but result being present assumes success)
         // We can just rely on the return value being non-null and correct
@@ -135,7 +135,7 @@ class DocumentExtractorServiceTest {
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", example);
+        DocumentExtractorService.Response response = service.extract(context, "input", example, "mockAgent");
         
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -164,7 +164,7 @@ class DocumentExtractorServiceTest {
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", example);
+        DocumentExtractorService.Response response = service.extract(context, "input", example, "mockAgent");
         
         assertNotNull(response);
         assertEquals("fallbackData", response.data().get("extracted"));
@@ -174,7 +174,7 @@ class DocumentExtractorServiceTest {
     @Test
     void testExtract_Throws_WhenInputMissing() {
         assertThrows(IllegalArgumentException.class, () -> {
-            service.extract(context, "missing", example);
+            service.extract(context, "missing", example, "mockAgent");
         });
     }
 }

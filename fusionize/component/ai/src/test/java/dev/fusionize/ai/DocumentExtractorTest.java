@@ -2,6 +2,7 @@ package dev.fusionize.ai;
 
 import dev.fusionize.ai.service.DocumentExtractorService;
 import dev.fusionize.storage.file.FileStorageService;
+import dev.fusionize.workflow.WorkflowInteraction;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
@@ -35,6 +36,8 @@ class DocumentExtractorTest {
     void testRun_ExtractsData() throws Exception {
         // Configure
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "mockAgent");
+
         Map<String, Object> example = new HashMap<>();
         example.put("key", "value");
         config.set(DocumentExtractor.CONF_EXAMPLE, example);
@@ -47,7 +50,7 @@ class DocumentExtractorTest {
         // Mock Service response
         DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of(
                 "key", "extractedValue"));
-        when(documentExtractorService.extract(any(), any(), any())).thenReturn(response);
+        when(documentExtractorService.extract(eq(context), eq("document"), eq(example), eq("mockAgent"))).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -60,13 +63,14 @@ class DocumentExtractorTest {
         assertNotNull(result);
         assertEquals("extractedValue", result.get("key"));
         
-        verify(documentExtractorService).extract(eq(context), eq("document"), eq(example));
+        verify(documentExtractorService).extract(eq(context), eq("document"), eq(example), eq("mockAgent"));
     }
 
     @Test
     void testRun_WithStorage() throws Exception {
         // Configure
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "mockAgent");
         documentExtractor.configure(config);
 
         // Setup context
@@ -80,7 +84,7 @@ class DocumentExtractorTest {
 
         // Mock Service response
         DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of("key", "val"));
-        when(documentExtractorService.extract(any(), any(), any())).thenReturn(response);
+        when(documentExtractorService.extract(eq(context), eq("document"), any(), eq("mockAgent"))).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -88,7 +92,7 @@ class DocumentExtractorTest {
         // Verify success
         assertTrue(emitter.successCalled);
         
-        verify(documentExtractorService).extract(eq(context), eq("document"), any());
+        verify(documentExtractorService).extract(eq(context), eq("document"), any(), eq("mockAgent"));
     }
 
     @Test
@@ -101,7 +105,7 @@ class DocumentExtractorTest {
         context.set("document", "some text");
 
         // Mock Service response to null
-        when(documentExtractorService.extract(any(), any(), any())).thenReturn(null);
+        when(documentExtractorService.extract(any(), any(), any(), anyString())).thenReturn(null);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -136,6 +140,15 @@ class DocumentExtractorTest {
                     throwable.printStackTrace();
                 }
             };
+        }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return (Object content,
+                    String actor,
+                    WorkflowInteraction.InteractionType type,
+                    WorkflowInteraction.Visibility visibility) ->  System.out.println("[" + actor + "] " + content);
+
         }
     }
 }
