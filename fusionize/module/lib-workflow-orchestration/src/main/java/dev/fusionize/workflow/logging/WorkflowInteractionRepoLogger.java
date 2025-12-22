@@ -2,6 +2,7 @@ package dev.fusionize.workflow.logging;
 
 import dev.fusionize.workflow.WorkflowInteraction;
 import dev.fusionize.workflow.WorkflowInteractionLogger;
+import dev.fusionize.workflow.listeners.InteractionListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

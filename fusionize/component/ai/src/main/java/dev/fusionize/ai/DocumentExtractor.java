@@ -53,7 +53,9 @@ public class DocumentExtractor implements ComponentRuntime {
     public void run(Context context, ComponentUpdateEmitter emitter) {
         try {
             DocumentExtractorService.Response response = documentExtractorService.extract(
-                    context, inputVar, example, agentName);
+                    new DocumentExtractorService.ExtractionPackage(
+                            context, inputVar, example, agentName, emitter.logger(), emitter.interactionLogger())
+            );
 
             if (response == null) {
                 throw new Exception("response is null");

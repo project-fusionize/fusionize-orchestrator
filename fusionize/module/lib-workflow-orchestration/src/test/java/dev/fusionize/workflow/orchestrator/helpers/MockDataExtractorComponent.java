@@ -1,5 +1,6 @@
 package dev.fusionize.workflow.orchestrator.helpers;
 
+import dev.fusionize.workflow.WorkflowInteraction;
 import dev.fusionize.workflow.context.ContextResourceReference;
 import dev.fusionize.storage.file.FileStorageService;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
@@ -54,7 +55,8 @@ public class MockDataExtractorComponent implements ComponentRuntime {
                     try (is) {
                         String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
                         Map<String, Object> map = JsonParser.MAP.fromJson(content, Map.class);
-                        emitter.interactionLogger().externalMessage("extract from "+content, "mockAi");
+                        emitter.interactionLogger().log("extract from "+content, "mockAi",
+                                WorkflowInteraction.InteractionType.MESSAGE, WorkflowInteraction.Visibility.EXTERNAL);
                         if (map != null && map.containsKey("extractMe")) {
                             Object value = map.get("extractMe");
                             if (value instanceof String extractedValue) {

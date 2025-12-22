@@ -1,4 +1,6 @@
-package dev.fusionize.workflow;
+package dev.fusionize.workflow.listeners;
+
+import dev.fusionize.workflow.WorkflowLog;
 
 /**
  * Functional interface for listening to workflow logs.

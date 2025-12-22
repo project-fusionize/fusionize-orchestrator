@@ -1,6 +1,6 @@
 package dev.fusionize.worker.stomp;
 
-import dev.fusionize.workflow.LogListener;
+import dev.fusionize.workflow.listeners.LogListener;
 import dev.fusionize.workflow.WorkflowLog;
 import org.springframework.stereotype.Component;
 

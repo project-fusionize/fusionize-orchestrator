@@ -50,7 +50,7 @@ class DocumentExtractorTest {
         // Mock Service response
         DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of(
                 "key", "extractedValue"));
-        when(documentExtractorService.extract(eq(context), eq("document"), eq(example), eq("mockAgent"))).thenReturn(response);
+        when(documentExtractorService.extract(any(DocumentExtractorService.ExtractionPackage.class))).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -63,7 +63,7 @@ class DocumentExtractorTest {
         assertNotNull(result);
         assertEquals("extractedValue", result.get("key"));
         
-        verify(documentExtractorService).extract(eq(context), eq("document"), eq(example), eq("mockAgent"));
+        verify(documentExtractorService).extract(any(DocumentExtractorService.ExtractionPackage.class));
     }
 
     @Test
@@ -84,7 +84,7 @@ class DocumentExtractorTest {
 
         // Mock Service response
         DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of("key", "val"));
-        when(documentExtractorService.extract(eq(context), eq("document"), any(), eq("mockAgent"))).thenReturn(response);
+        when(documentExtractorService.extract(any(DocumentExtractorService.ExtractionPackage.class))).thenReturn(response);
 
         // Run
         documentExtractor.run(context, emitter);
@@ -92,7 +92,7 @@ class DocumentExtractorTest {
         // Verify success
         assertTrue(emitter.successCalled);
         
-        verify(documentExtractorService).extract(eq(context), eq("document"), any(), eq("mockAgent"));
+        verify(documentExtractorService).extract(any(DocumentExtractorService.ExtractionPackage.class));
     }
 
     @Test
@@ -105,7 +105,7 @@ class DocumentExtractorTest {
         context.set("document", "some text");
 
         // Mock Service response to null
-        when(documentExtractorService.extract(any(), any(), any(), anyString())).thenReturn(null);
+        when(documentExtractorService.extract(any(DocumentExtractorService.ExtractionPackage.class))).thenReturn(null);
 
         // Run
         documentExtractor.run(context, emitter);

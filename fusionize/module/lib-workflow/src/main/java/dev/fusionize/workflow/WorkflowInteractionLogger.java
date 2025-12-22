@@ -1,5 +1,7 @@
 package dev.fusionize.workflow;
 
+import dev.fusionize.workflow.listeners.InteractionListener;
+
 import java.util.List;
 
 public interface WorkflowInteractionLogger {
@@ -16,7 +18,4 @@ public interface WorkflowInteractionLogger {
     default void removeListener(InteractionListener listener) {
     }
 
-    interface InteractionListener {
-        void onInteraction(WorkflowInteraction interaction);
-    }
 }

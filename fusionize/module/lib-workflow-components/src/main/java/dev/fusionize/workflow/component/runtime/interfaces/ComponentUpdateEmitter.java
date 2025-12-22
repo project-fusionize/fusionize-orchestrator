@@ -76,38 +76,5 @@ public interface ComponentUpdateEmitter {
                  WorkflowInteraction.Visibility visibility);
 
 
-        // ---------------------------
-        // InteractionType-specific logging
-        // ---------------------------
-        default void internalMessage(Object content,
-                                     String actor) {
-            log(content, actor, WorkflowInteraction.InteractionType.MESSAGE, WorkflowInteraction.Visibility.INTERNAL);
-        }
-
-        default void externalMessage(Object content,
-                                     String actor) {
-            log(content, actor, WorkflowInteraction.InteractionType.MESSAGE, WorkflowInteraction.Visibility.EXTERNAL);
-        }
-
-        default void internalThought(Object content,
-                                     String actor) {
-            log(content, actor, WorkflowInteraction.InteractionType.THOUGHT, WorkflowInteraction.Visibility.INTERNAL);
-        }
-
-        default void externalThought(Object content,
-                                     String actor) {
-            log(content, actor, WorkflowInteraction.InteractionType.THOUGHT, WorkflowInteraction.Visibility.EXTERNAL);
-        }
-
-        default void internalObservation(Object content,
-                                     String actor) {
-            log(content, actor, WorkflowInteraction.InteractionType.OBSERVATION, WorkflowInteraction.Visibility.INTERNAL);
-        }
-
-        default void externalObservation(Object content,
-                                     String actor) {
-            log(content, actor, WorkflowInteraction.InteractionType.OBSERVATION, WorkflowInteraction.Visibility.EXTERNAL);
-        }
-
     }
 }
