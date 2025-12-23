@@ -2,6 +2,7 @@ package dev.fusionize.orchestrator.workflow;
 
 import dev.fusionize.workflow.Workflow;
 import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.WorkflowInteractionLogger;
 import dev.fusionize.workflow.WorkflowLogger;
 import dev.fusionize.workflow.registry.WorkflowExecutionRepoRegistry;
 import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
@@ -32,6 +33,9 @@ class WorkflowControllerTest {
 
     @MockitoBean
     private WorkflowLogger workflowLogger;
+
+    @MockitoBean
+    private WorkflowInteractionLogger workflowInteractionLogger;
 
     @MockitoBean
     private WorkflowExecutionRepoRegistry workflowExecutionRepoRegistry;
