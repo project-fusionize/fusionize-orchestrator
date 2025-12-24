@@ -1,6 +1,5 @@
 package dev.fusionize.workflow.component.local.beans;
 
-import dev.fusionize.workflow.component.local.beans.ScriptComponent;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
@@ -30,7 +29,7 @@ class ScriptComponentTest {
     void testJsContextUpdate() {
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
         // JS: Return a new object with updates
-        config.set(ScriptComponent.CONF_SCRIPT, "context['foo']='js'");
+        config.set(ScriptComponent.CONF_SCRIPT, "context['foo']='js'; logger.info('asd')");
         config.set(ScriptComponent.CONF_PARSER, "js");
         component.configure(config);
 
@@ -62,7 +61,7 @@ class ScriptComponentTest {
         // Groovy: Can update context directly (if supported) or return map
         // Based on previous debugging, Groovy might support direct put if context is
         // exposed as Map
-        config.set(ScriptComponent.CONF_SCRIPT, "context.foo = 'groovy';");
+        config.set(ScriptComponent.CONF_SCRIPT, "context.foo = 'groovy'; logger.info('asd');");
         config.set(ScriptComponent.CONF_PARSER, "groovy");
         component.configure(config);
 
@@ -78,7 +77,7 @@ class ScriptComponentTest {
         // Groovy: Can update context directly (if supported) or return map
         // Based on previous debugging, Groovy might support direct put if context is
         // exposed as Map
-        config.set(ScriptComponent.CONF_SCRIPT, "context[\"foo\"]= \"kotlin\"");
+        config.set(ScriptComponent.CONF_SCRIPT, "context[\"foo\"]= \"kotlin\"; logger.info(\"kotlin\");");
         config.set(ScriptComponent.CONF_PARSER, "kts");
         component.configure(config);
 
@@ -136,7 +135,7 @@ class ScriptComponentTest {
         @Override
         public Logger logger() {
             return (message, level, throwable) -> {
-                // No-op for tests
+                System.out.println(message);
             };
         }
 

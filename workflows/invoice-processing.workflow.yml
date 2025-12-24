@@ -19,7 +19,7 @@ nodes:
   extract-data:
     type: TASK
     actor: AI
-    component: fuz.DocumentExtractor
+    component: fuz.ai.DocumentExtractor
     config:
       agent: my.finance.invoice.agent
       input: invoiceFile

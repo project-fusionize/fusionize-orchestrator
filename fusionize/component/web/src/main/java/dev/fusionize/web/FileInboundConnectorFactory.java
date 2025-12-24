@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
         domain = "fuz.connector.FileInbound",
         name = "File Inbound Connector",
         description = "File Inbound Connector component",
-        actors = { Actor.SYSTEM })
+        actors = { Actor.SYSTEM, Actor.HUMAN  })
 public class FileInboundConnectorFactory implements ComponentRuntimeFactory<FileInboundConnector> {
     private final FileInboundConnectorService fileInboundConnectorService;
 

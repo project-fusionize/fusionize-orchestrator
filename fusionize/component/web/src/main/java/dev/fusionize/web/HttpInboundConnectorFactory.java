@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
         domain = "fuz.connector.HttpInbound",
         name = "Http Inbound Connector",
         description = "Http Inbound Connector component",
-        actors = { Actor.SYSTEM })
+        actors = { Actor.SYSTEM, Actor.HUMAN})
 public class HttpInboundConnectorFactory implements ComponentRuntimeFactory<HttpInboundConnector> {
     private final HttpInboundConnectorService httpInboundConnectorService;
 

@@ -4,6 +4,7 @@ import javax.script.*;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.function.Predicate;
 
 /**
  * Secure, generic ScriptRunner for executing Kotlin, Groovy, and GraalJS scripts
@@ -49,6 +50,12 @@ public class ScriptRunner {
         if (this.engine == null) {
             throw new IllegalArgumentException("Script engine not found: " + engineType.getName());
         }
+
+        Bindings engineBindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+        if(engineType == ScriptRunnerEngine.JS) {
+            engineBindings.put("polyglot.js.allowHostAccess", true);
+        }
+
     }
 
     /**

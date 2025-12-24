@@ -1,0 +1,232 @@
+kind: Workflow
+apiVersion: v1
+name: Loan Processing
+domain: loan.origination
+key: loan-origination-key
+description: Automated loan origination processing
+version: 1
+active: true
+
+nodes:
+
+  start-portal:
+    type: START
+    actor: HUMAN
+    component: fuz.connector.HttpInbound
+    next: [ validate-portal-data ]
+
+  validate-portal-data:
+    type: TASK
+    component: script
+    config:
+      parser: js
+      script: |
+        if (!context.validatedData) {
+          context.validatedData = {};
+        }
+        
+        logger.info("hi");
+        logger.info(entry_form);
+
+        if (
+          entry_form &&
+          entry_form.first_name &&
+          entry_form.last_name &&
+          entry_form.ssn &&
+          entry_form.dob
+        ) {
+          context.validatedData.entry_form = entry_form;
+        } else {
+          throw new Error("Invalid portal submission");
+        }
+    next:
+      - receive-id-card
+      - receive-pay-stub
+      - receive-bank-statement
+
+  # -------------------------
+  # ID CARD
+  # -------------------------
+
+  receive-id-card:
+    type: WAIT
+    actor: HUMAN
+    component: fuz.connector.FileInbound
+    config:
+      storage: test-s3-storage
+      output: id_card_scan
+    next: [ extract-id-card-data ]
+
+  extract-id-card-data:
+    type: TASK
+    actor: AI
+    component: fuz.ai.DocumentExtractor
+    config:
+      agent: my.loan.originator.agent
+      input: id_card_scan
+      output: id_card_data
+      example:
+        firstName: string
+        lastName: string
+        dob: "ISO-8601 date"
+        idNumber: string
+        issuer: string
+        dateOfExpiry: "ISO-8601 date"
+        address: string
+    next: [ validate-id-card-data ]
+
+  validate-id-card-data:
+    type: TASK
+    component: script
+    config:
+      parser: js
+      script: |
+        const now = Date.now();
+        const dob = new Date(id_card_data.dob).getTime();
+        const expiry = new Date(id_card_data.dateOfExpiry).getTime();
+
+        const ageMs = now - dob;
+        const minAgeMs = 18 * 365 * 24 * 60 * 60 * 1000;
+
+        if (ageMs >= minAgeMs && expiry > now) {
+          context.validatedData.id_card_data = id_card_data;
+        } else {
+          throw new Error("Invalid ID card");
+        }
+    next: [ wait-for-all-documents ]
+
+  # -------------------------
+  # PAY STUB
+  # -------------------------
+
+  receive-pay-stub:
+    type: WAIT
+    actor: HUMAN
+    component: fuz.connector.FileInbound
+    config:
+      storage: test-s3-storage
+      output: pay_stub_scan
+    next: [ extract-pay-stub-data ]
+
+  extract-pay-stub-data:
+    type: TASK
+    actor: AI
+    component: fuz.ai.DocumentExtractor
+    config:
+      agent: my.loan.originator.agent
+      input: pay_stub_scan
+      output: pay_stub_data
+      example:
+        employeeFirstName: string
+        employeeLastName: string
+        employerName: string
+        payFrequency: "weekly | bi-weekly | monthly"
+        grossPay: number
+        netPay: number
+        ytdGross: number
+    next: [ validate-pay-stub-data ]
+
+  validate-pay-stub-data:
+    type: TASK
+    component: script
+    config:
+      parser: js
+      script: |
+        if (
+          pay_stub_data &&
+          pay_stub_data.grossPay > 0 &&
+          pay_stub_data.ytdGross > 0 &&
+          pay_stub_data.employerName
+        ) {
+          context.validatedData.pay_stub_data = pay_stub_data;
+        } else {
+          throw new Error("Invalid pay stub");
+        }
+    next: [ wait-for-all-documents ]
+
+  # -------------------------
+  # BANK STATEMENT
+  # -------------------------
+
+  receive-bank-statement:
+    type: WAIT
+    actor: HUMAN
+    component: fuz.connector.FileInbound
+    config:
+      storage: test-s3-storage
+      output: bank_statement_scan
+    next: [ extract-bank-statement-data ]
+
+  extract-bank-statement-data:
+    type: TASK
+    actor: AI
+    component: fuz.ai.DocumentExtractor
+    config:
+      agent: my.loan.originator.agent
+      input: bank_statement_scan
+      output: bank_statement_data
+      example:
+        accountHolderFirstName: string
+        accountHolderLastName: string
+        bankName: string
+        statementPeriod: string
+        endingBalance: number
+        totalDeposits: number
+        totalWithdrawals: number
+        overdraftCount: number
+        payrollDetected: boolean
+    next: [ validate-bank-statement-data ]
+
+  validate-bank-statement-data:
+    type: TASK
+    component: script
+    config:
+      parser: js
+      script: |
+        if (
+          bank_statement_data &&
+          bank_statement_data.endingBalance >= 0 &&
+          bank_statement_data.overdraftCount >= 0
+        ) {
+          context.validatedData.bank_statement_data = bank_statement_data;
+        } else {
+          throw new Error("Invalid bank statement");
+        }
+    next: [ wait-for-all-documents ]
+
+  # -------------------------
+  # JOIN & CONSOLIDATION
+  # -------------------------
+
+  wait-for-all-documents:
+    type: WAIT
+    component: join
+    config:
+      await:
+        - validate-id-card-data
+        - validate-pay-stub-data
+        - validate-bank-statement-data
+    next: [ document-consolidation ]
+
+  document-consolidation:
+    type: TASK
+    actor: AI
+    component: fuz.ai.DataProcessor
+    config:
+      agent: my.loan.originator.agent
+      prompt: |
+        Review entry_form, id_card_data, pay_stub_data, and bank_statement_data.
+        Determine if all documents belong to the same person.
+        Validate income consistency between pay stub and bank deposits.
+        Flag any risks such as overdrafts or mismatches.
+      input: validatedData
+      output: consolidationResult
+      example:
+        consolidated: boolean
+        confidence: number
+        recommendation: "Approve | Review | Reject"
+        riskFlags: array
+    next: [ end ]
+
+  end:
+    type: END
