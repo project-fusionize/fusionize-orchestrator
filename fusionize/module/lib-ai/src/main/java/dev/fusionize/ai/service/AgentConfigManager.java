@@ -1,12 +1,11 @@
 package dev.fusionize.ai.service;
 
+import dev.fusionize.ai.exception.*;
 import dev.fusionize.ai.model.AgentConfig;
+import dev.fusionize.ai.model.ChatModelConfig;
 import dev.fusionize.ai.repo.AgentConfigRepository;
-import dev.fusionize.ai.repo.ChatModelConfigRepository;
-import dev.fusionize.ai.repo.McpClientConfigRepository;
-import dev.fusionize.ai.exception.AgentConfigException;
-import dev.fusionize.ai.exception.AgentConfigDomainAlreadyExistsException;
-import dev.fusionize.ai.exception.InvalidAgentConfigException;
+import dev.fusionize.ai.repo.AgentConfigRepository;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -17,15 +16,15 @@ import java.util.Optional;
 public class AgentConfigManager {
 
     private final AgentConfigRepository repository;
-    private final ChatModelConfigRepository chatModelConfigRepository;
-    private final McpClientConfigRepository mcpClientConfigRepository;
+    private final ChatModelManager chatModelManager;
+    private final McpManager mcpManager;
 
     public AgentConfigManager(AgentConfigRepository repository,
-                              ChatModelConfigRepository chatModelConfigRepository,
-                              McpClientConfigRepository mcpClientConfigRepository) {
+                              ChatModelManager chatModelManager,
+                              McpManager mcpManager) {
         this.repository = repository;
-        this.chatModelConfigRepository = chatModelConfigRepository;
-        this.mcpClientConfigRepository = mcpClientConfigRepository;
+        this.chatModelManager = chatModelManager;
+        this.mcpManager = mcpManager;
     }
 
     public AgentConfig saveConfig(AgentConfig config) throws AgentConfigException {
@@ -70,7 +69,7 @@ public class AgentConfigManager {
         
         // Validate modelConfigDomain references a valid ChatModelConfig
         if (StringUtils.hasText(config.getModelConfigDomain())) {
-            if (chatModelConfigRepository.findByDomain(config.getModelConfigDomain()).isEmpty()) {
+            if (chatModelManager.getModel(config.getModelConfigDomain()).isEmpty()) {
                 throw new InvalidAgentConfigException("Referenced ChatModelConfig domain not found: " + config.getModelConfigDomain());
             }
         }
@@ -78,10 +77,21 @@ public class AgentConfigManager {
         // Validate allowedMcpTools refer to valid McpClientConfig domains
         if (config.getAllowedMcpTools() != null && !config.getAllowedMcpTools().isEmpty()) {
             for (String toolDomain : config.getAllowedMcpTools()) {
-                if (mcpClientConfigRepository.findByDomain(toolDomain).isEmpty()) {
+                if (mcpManager.getConfigByDomain(toolDomain).isEmpty()) {
                     throw new InvalidAgentConfigException("Referenced McpClientConfig domain not found: " + toolDomain);
                 }
             }
         }
+    }
+
+    public ChatClient getChatClient(String domain) throws AgentConfigNotFoundException, ChatModelException {
+        Optional<AgentConfig> configOptional = getConfig(domain);
+        if (configOptional.isEmpty()) {
+            throw new AgentConfigNotFoundException("No config found for domain: " + domain);
+        }
+        AgentConfig aConfig = configOptional.get();
+        ChatClient defaultClient = chatModelManager.getChatClient(aConfig.getModelConfigDomain());
+        return defaultClient.mutate()
+                .defaultSystem(aConfig.getInstructionPrompt()).build();
     }
 }

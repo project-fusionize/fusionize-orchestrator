@@ -2,6 +2,8 @@ package dev.fusionize.ai.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.fusionize.ai.advisors.ComponentLogAdvisor;
+import dev.fusionize.ai.exception.AgentConfigNotFoundException;
+import dev.fusionize.ai.exception.ChatModelException;
 import dev.fusionize.storage.StorageConfig;
 import dev.fusionize.storage.StorageConfigManager;
 import dev.fusionize.storage.file.FileStorageService;
@@ -28,7 +30,7 @@ import java.util.Optional;
 public class DocumentExtractorService {
     private static final Logger defaultLogger = LoggerFactory.getLogger(DocumentExtractorService.class);
     private final StorageConfigManager configManager;
-    private final ChatModelManager chatModelManager;
+    private final AgentConfigManager agentConfigManager;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -47,9 +49,10 @@ public class DocumentExtractorService {
     private record DocumentContent(byte[] bytes, String text) {
     }
 
-    public DocumentExtractorService(StorageConfigManager configManager, ChatModelManager chatModelManager) {
+    public DocumentExtractorService(StorageConfigManager configManager,
+                                    AgentConfigManager agentConfigManager) {
         this.configManager = configManager;
-        this.chatModelManager = chatModelManager;
+        this.agentConfigManager = agentConfigManager;
     }
 
     public FileStorageService getFileStorageService(String storageDomain) {
@@ -66,9 +69,7 @@ public class DocumentExtractorService {
 
         DocumentContent content = parseDocumentContent(documentObj);
         String exampleJson = objectMapper.writeValueAsString(new Response(pkg.example()));
-        ChatClient chatClient = chatModelManager.getChatClient(pkg.agent());
-
-        return extractDataFromDocument(content, exampleJson, chatClient, pkg);
+        return extractDataFromDocument(content, exampleJson, pkg);
     }
 
     private Object resolveDocumentObject(ExtractionPackage pkg) {
@@ -140,8 +141,8 @@ public class DocumentExtractorService {
 
     private Response extractDataFromDocument(DocumentContent content,
                                              String exampleJson,
-                                             ChatClient chatClient,
-                                             ExtractionPackage pkg) {
+                                             ExtractionPackage pkg) throws AgentConfigNotFoundException, ChatModelException {
+        ChatClient chatClient = this.agentConfigManager.getChatClient(pkg.agent);
         if (content.bytes != null) {
             MimeType mimeType = guessMimeType(content.bytes);
             if (pkg.logger != null) {

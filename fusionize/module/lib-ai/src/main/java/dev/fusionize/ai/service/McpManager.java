@@ -30,6 +30,10 @@ public class McpManager {
         return repository.findByKey(key);
     }
 
+    public Optional<McpClientConfig> getConfigByDomain(String domain) {
+        return repository.findByDomain(domain);
+    }
+
     public McpSyncClient getSyncClient(String key) {
         McpClientConfig config = repository.findByKey(key)
                 .orElseThrow(() -> new IllegalArgumentException("MCP client config not found for key: " + key));

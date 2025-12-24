@@ -21,7 +21,7 @@ nodes:
     actor: AI
     component: fuz.DocumentExtractor
     config:
-      agent: my.llm
+      agent: my.finance.invoice.agent
       input: invoiceFile
       output: invoice_data
       example:

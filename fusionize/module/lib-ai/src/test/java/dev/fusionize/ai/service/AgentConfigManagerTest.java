@@ -5,8 +5,6 @@ import dev.fusionize.ai.model.AgentConfig;
 import dev.fusionize.ai.model.ChatModelConfig;
 import dev.fusionize.ai.model.McpClientConfig;
 import dev.fusionize.ai.repo.AgentConfigRepository;
-import dev.fusionize.ai.repo.ChatModelConfigRepository;
-import dev.fusionize.ai.repo.McpClientConfigRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,15 +25,15 @@ class AgentConfigManagerTest {
     @Mock
     private AgentConfigRepository repository;
     @Mock
-    private ChatModelConfigRepository chatModelConfigRepository;
+    private ChatModelManager chatModelManager;
     @Mock
-    private McpClientConfigRepository mcpClientConfigRepository;
+    private McpManager mcpManager;
 
     private AgentConfigManager manager;
 
     @BeforeEach
     void setUp() {
-        manager = new AgentConfigManager(repository, chatModelConfigRepository, mcpClientConfigRepository);
+        manager = new AgentConfigManager(repository, chatModelManager, mcpManager);
     }
 
     @Test
@@ -79,7 +77,7 @@ class AgentConfigManagerTest {
         config.setDomain("test.agent");
         config.setModelConfigDomain("invalid.model");
 
-        when(chatModelConfigRepository.findByDomain("invalid.model")).thenReturn(Optional.empty());
+        when(chatModelManager.getModel("invalid.model")).thenReturn(Optional.empty());
 
         assertThrows(InvalidAgentConfigException.class, () -> manager.saveConfig(config));
     }
@@ -90,7 +88,7 @@ class AgentConfigManagerTest {
         config.setDomain("test.agent");
         config.setAllowedMcpTools(List.of("invalid.tool"));
 
-        when(mcpClientConfigRepository.findByDomain("invalid.tool")).thenReturn(Optional.empty());
+        when(mcpManager.getConfigByDomain("invalid.tool")).thenReturn(Optional.empty());
 
         assertThrows(InvalidAgentConfigException.class, () -> manager.saveConfig(config));
     }
@@ -103,8 +101,8 @@ class AgentConfigManagerTest {
         config.setAllowedMcpTools(List.of("valid.tool"));
 
         when(repository.findByDomain("test.agent")).thenReturn(Optional.empty());
-        when(chatModelConfigRepository.findByDomain("valid.model")).thenReturn(Optional.of(new ChatModelConfig()));
-        when(mcpClientConfigRepository.findByDomain("valid.tool")).thenReturn(Optional.of(new McpClientConfig()));
+        when(chatModelManager.getModel("valid.model")).thenReturn(Optional.of(new ChatModelConfig()));
+        when(mcpManager.getConfigByDomain("valid.tool")).thenReturn(Optional.of(new McpClientConfig()));
         when(repository.save(any(AgentConfig.class))).thenReturn(config);
 
         AgentConfig saved = manager.saveConfig(config);

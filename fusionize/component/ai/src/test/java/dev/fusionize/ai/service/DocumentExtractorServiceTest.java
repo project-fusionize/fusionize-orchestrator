@@ -1,6 +1,7 @@
 package dev.fusionize.ai.service;
 
 import dev.fusionize.ai.advisors.ComponentLogAdvisor;
+import dev.fusionize.ai.exception.AgentConfigNotFoundException;
 import dev.fusionize.ai.exception.ChatModelException;
 import dev.fusionize.storage.StorageConfig;
 import dev.fusionize.storage.StorageConfigManager;
@@ -25,7 +26,7 @@ import static org.mockito.Mockito.*;
 class DocumentExtractorServiceTest {
 
     @Mock
-    private ChatModelManager chatModelManager;
+    private AgentConfigManager agentConfigManager;
 
     // Use Deep Stubs to avoid needing to know exact intermediate types
     @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
@@ -41,14 +42,14 @@ class DocumentExtractorServiceTest {
     private Map<String, Object> example;
 
     @BeforeEach
-    void setUp() throws ChatModelException {
+    void setUp() throws ChatModelException, AgentConfigNotFoundException {
         MockitoAnnotations.openMocks(this);
 
         // Mock ChatClient builder to return our deep stubbed client
-        when(chatModelManager.getChatClient(anyString())).thenReturn(chatClient);
+        when(agentConfigManager.getChatClient(anyString())).thenReturn(chatClient);
         when(configManager.getConfig(any())).thenReturn(Optional.of(new StorageConfig()));
         when(configManager.getFileStorageService(any())).thenReturn(storageService);
-        service = new DocumentExtractorService(configManager, chatModelManager);
+        service = new DocumentExtractorService(configManager, agentConfigManager);
         context = new Context();
         example = new HashMap<>();
         example.put("key", "value");
