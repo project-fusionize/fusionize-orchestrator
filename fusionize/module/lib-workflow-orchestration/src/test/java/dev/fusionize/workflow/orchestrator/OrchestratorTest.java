@@ -1128,4 +1128,54 @@ class OrchestratorTest {
                                         + actual);
                 }
         }
+
+        @Test
+        void testReplayExecution() throws InterruptedException, IOException {
+                loadWorkflow("/email-workflow-with-script.yml");
+
+                // Simulate asynchronous email arrivals
+                Thread.sleep(200);
+                inbox.add("invoice help needed.");
+
+                waitForWorkflowCompletion(1, 15);
+
+                List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
+                WorkflowExecution we = workflowExecutions.stream()
+                        .filter(e -> e.getStatus() == WorkflowExecutionStatus.SUCCESS)
+                        .findFirst()
+                        .orElseThrow();
+
+                Workflow workflow = workflowRegistry.getWorkflow(we.getWorkflowId());
+                WorkflowNode extractFieldsNode = workflow.getNodes().stream()
+                        .filter(n -> "extractFields".equals(n.getWorkflowNodeKey())) // Assuming key is populated
+                        .findFirst()
+                        .orElse(workflow.getNodeMap().values().stream()
+                                .filter(n -> "extractFields".equals(n.getWorkflowNodeKey()))
+                                .findFirst() // Check map if nodes list is empty
+                                .orElseThrow(() -> new RuntimeException("Node extractFields not found in workflow")));
+
+                List<WorkflowNodeExecution> executions = we.findNodesByWorkflowNodeId(
+                        extractFieldsNode.getWorkflowNodeId());
+                assertEquals(1, executions.size());
+
+                // Replay
+                service.replayExecution(workflow.getWorkflowId(),
+                        we.getWorkflowExecutionId(),
+                        executions.getFirst().getWorkflowNodeExecutionId());
+
+                Thread.sleep(1000);
+
+                List<WorkflowLog> logs = workflowLogRepository.findByWorkflowExecutionIdOrderByTimestampAsc(we.getWorkflowExecutionId());
+
+                long count = logs.stream()
+                        .filter(l -> "extractFields".equals(l.getNodeKey()))
+                        .count();
+                assertEquals(2, count, "Expected extractFields to be executed twice");
+
+                count = logs.stream()
+                        .filter(l -> l.getMessage().contains("ComponentFinishedEvent finished after"))
+                        .count();
+                assertEquals(2, count, "ComponentFinishedEvent to be executed twice");
+
+        }
 }

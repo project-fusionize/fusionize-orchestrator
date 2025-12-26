@@ -40,7 +40,7 @@ public class DataProcessorService {
     }
 
     public Response process(ProcessPackage pkg) throws AgentConfigNotFoundException, ChatModelException, JsonProcessingException {
-        if(!pkg.context.contains(pkg.inputVar) || pkg.context.getData().get(pkg.agent)==null){
+        if(!pkg.context.contains(pkg.inputVar) || pkg.context.getData().get(pkg.inputVar)==null){
             throw new IllegalArgumentException("input var not found "+pkg.inputVar);
         }
         String dataString = pkg.context.var(pkg.inputVar,Object.class).toString();

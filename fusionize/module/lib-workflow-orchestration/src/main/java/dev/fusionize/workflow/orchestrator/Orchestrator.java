@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -47,6 +48,7 @@ public class Orchestrator {
         nodes.forEach(ne -> componentDispatcher.dispatchActivation(we, ne));
     }
 
+
     private void proceedExecution(WorkflowExecution we, WorkflowNodeExecution ne) {
         workflowNavigator.navigate(we, ne, (
                 WorkflowExecution nextWe, WorkflowNodeExecution nextNe) -> {
@@ -54,6 +56,20 @@ public class Orchestrator {
             nextNe.getChildren().forEach(cne -> componentDispatcher.dispatchActivation(nextWe, cne));
         });
 
+    }
+
+    public void replayExecution(String workflowId, String workflowExecutionId, String workflowNodeExecutionId) {
+        Workflow workflow = workflowRegistry.getWorkflow(workflowId);
+        WorkflowExecution workflowExecution = workflowExecutionRegistry.getWorkflowExecution(workflowExecutionId);
+        workflowExecution.setWorkflow(workflow);
+        WorkflowNodeExecution workflowNodeExecution = workflowExecution.findNodeByWorkflowNodeExecutionId(workflowNodeExecutionId);
+        WorkflowNode workflowNode = workflow.findNode(workflowNodeExecution.getWorkflowNodeId());
+        workflowNodeExecution.setWorkflowNode(workflowNode);
+        workflowNodeExecution.setChildren(new ArrayList<>());
+        workflowNodeExecution.setChildren(new ArrayList<>());
+        workflowExecutionRegistry.register(workflowExecution);
+
+        componentDispatcher.dispatchActivation(workflowExecution, workflowNodeExecution);
     }
 
     public void onActivated(ActivationResponseEvent activationResponseEvent) {

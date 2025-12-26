@@ -71,7 +71,7 @@ public class DataProcessor implements ComponentRuntime {
             emitter.success(context);
 
         } catch (Exception e) {
-            emitter.logger().error("Error processing data", e);
+            emitter.logger().error("Error processing data {}", e.getMessage(), e);
             emitter.failure(e);
         }
     }
