@@ -1,6 +1,7 @@
 package dev.fusionize.workflow.component.runtime.interfaces;
 
 import dev.fusionize.workflow.WorkflowLog;
+import dev.fusionize.workflow.WorkflowInteraction;
 import dev.fusionize.workflow.context.Context;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
@@ -11,6 +12,7 @@ public interface ComponentUpdateEmitter {
     void failure(Exception ex);
 
     Logger logger();
+    InteractionLogger interactionLogger();
 
     interface Logger {
 
@@ -61,5 +63,18 @@ public interface ComponentUpdateEmitter {
             FormattingTuple ft = MessageFormatter.arrayFormat(message, args);
             log(ft.getMessage(), level, ft.getThrowable());
         }
+    }
+
+    interface InteractionLogger {
+
+        /**
+         * Core logging method
+         */
+        void log(Object content,
+                 String actor,
+                 WorkflowInteraction.InteractionType type,
+                 WorkflowInteraction.Visibility visibility);
+
+
     }
 }

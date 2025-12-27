@@ -1,9 +1,6 @@
 package dev.fusionize.workflow.component.local.beans;
 
-import dev.fusionize.workflow.WorkflowExecution;
-import dev.fusionize.workflow.WorkflowExecutionStatus;
-import dev.fusionize.workflow.WorkflowNodeExecution;
-import dev.fusionize.workflow.WorkflowNodeExecutionState;
+import dev.fusionize.workflow.*;
 import dev.fusionize.workflow.component.local.beans.JoinComponent;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
@@ -253,6 +250,15 @@ class JoinComponentWaitModeTest {
         public Logger logger() {
             return (message, level, throwable) -> {
             };
+        }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return (Object content,
+                    String actor,
+                    WorkflowInteraction.InteractionType type,
+                    WorkflowInteraction.Visibility visibility) ->  System.out.println("[" + actor + "] " + content);
+
         }
     }
 }

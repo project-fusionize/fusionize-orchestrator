@@ -3,9 +3,6 @@ package dev.fusionize.ai.model;
 import dev.fusionize.user.activity.DomainEntity;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.List;
-import java.util.Map;
-
 @Document(collection = "ai_mcp_client_config")
 public class McpClientConfig extends DomainEntity {
 

@@ -188,22 +188,10 @@ public class JoinComponent implements LocalComponentRuntime {
     private Context mergeContexts(List<Context> contexts) {
         Context mergedContext = new Context();
 
-        // Merge Data
-        if (mergeStrategy == MergeStrategy.PICK_FIRST) {
-            for (Context ctx : contexts) {
-                for (Map.Entry<String, Object> entry : ctx.getData().entrySet()) {
-                    if (!mergedContext.contains(entry.getKey())) {
-                        mergedContext.set(entry.getKey(), entry.getValue());
-                    }
-                }
-            }
-        } else { // PICK_LAST (Default)
-            for (Context ctx : contexts) {
-                mergedContext.getData().putAll(ctx.getData());
-            }
+        for (Context ctx : contexts) {
+            mergeRecursive(mergedContext.getData(), ctx.getData());
         }
 
-        // Merge Decisions and GraphNodes (Append all)
         // Merge Decisions and GraphNodes (Deduplicate by ID)
         Map<String, dev.fusionize.workflow.context.WorkflowDecision> decisionsMap = new java.util.HashMap<>();
         Map<String, dev.fusionize.workflow.context.WorkflowGraphNode> graphNodesMap = new java.util.HashMap<>();
@@ -241,6 +229,37 @@ public class JoinComponent implements LocalComponentRuntime {
         mergedContext.getGraphNodes().addAll(graphNodesMap.values());
 
         return mergedContext;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeRecursive(Map<String, Object> target, Map<String, Object> source) {
+        for (Map.Entry<String, Object> entry : source.entrySet()) {
+            String key = entry.getKey();
+            Object sourceValue = entry.getValue();
+
+            if (!target.containsKey(key)) {
+                target.put(key, sourceValue);
+            } else {
+                Object targetValue = target.get(key);
+                if (targetValue instanceof Map && sourceValue instanceof Map) {
+                    mergeRecursive((Map<String, Object>) targetValue, (Map<String, Object>) sourceValue);
+                } else if (targetValue instanceof List && sourceValue instanceof List) {
+                    List<Object> targetList = (List<Object>) targetValue;
+                    List<Object> sourceList = (List<Object>) sourceValue;
+                    for (Object item : sourceList) {
+                        if (!targetList.contains(item)) {
+                            targetList.add(item);
+                        }
+                    }
+                } else {
+                    // Collision with non-mergeable types
+                    if (mergeStrategy == MergeStrategy.PICK_LAST) {
+                        target.put(key, sourceValue);
+                    }
+                    // If PICK_FIRST, do nothing (keep targetValue)
+                }
+            }
+        }
     }
 
     private boolean isNodeInHistory(WorkflowGraphNodeRecursive node, List<String> targets,

@@ -1,5 +1,7 @@
 package dev.fusionize.workflow;
 
+import dev.fusionize.workflow.listeners.LogListener;
+
 import java.util.List;
 
 public interface WorkflowLogger {

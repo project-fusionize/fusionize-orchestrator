@@ -1,5 +1,8 @@
 package dev.fusionize.ai.service;
 
+import dev.fusionize.ai.advisors.ComponentLogAdvisor;
+import dev.fusionize.ai.exception.AgentConfigNotFoundException;
+import dev.fusionize.ai.exception.ChatModelException;
 import dev.fusionize.storage.StorageConfig;
 import dev.fusionize.storage.StorageConfigManager;
 import dev.fusionize.storage.file.FileStorageService;
@@ -23,8 +26,8 @@ import static org.mockito.Mockito.*;
 class DocumentExtractorServiceTest {
 
     @Mock
-    private ChatClient.Builder chatClientBuilder;
-    
+    private AgentConfigManager agentConfigManager;
+
     // Use Deep Stubs to avoid needing to know exact intermediate types
     @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
     private ChatClient chatClient;
@@ -39,15 +42,14 @@ class DocumentExtractorServiceTest {
     private Map<String, Object> example;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws ChatModelException, AgentConfigNotFoundException {
         MockitoAnnotations.openMocks(this);
 
         // Mock ChatClient builder to return our deep stubbed client
-        when(chatClientBuilder.build()).thenReturn(chatClient);
+        when(agentConfigManager.getChatClient(anyString())).thenReturn(chatClient);
         when(configManager.getConfig(any())).thenReturn(Optional.of(new StorageConfig()));
         when(configManager.getFileStorageService(any())).thenReturn(storageService);
-
-        service = new DocumentExtractorService(chatClientBuilder, configManager);
+        service = new DocumentExtractorService(configManager, agentConfigManager);
         context = new Context();
         example = new HashMap<>();
         example.put("key", "value");
@@ -63,11 +65,14 @@ class DocumentExtractorServiceTest {
         // Mock deep call chain
         when(chatClient.prompt()
                 .user(any(Consumer.class))
+                .advisors(any(ComponentLogAdvisor.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", example);
+        DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                context, "input", example, "mockAgent", null, null);
+        DocumentExtractorService.Response response = service.extract(pkg);
 
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -82,11 +87,14 @@ class DocumentExtractorServiceTest {
         // Mock chain for text path
         when(chatClient.prompt()
                 .user(any(Consumer.class))
+                .advisors(any(ComponentLogAdvisor.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", example);
+        DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                context, "input", example, "mockAgent", null, null);
+        DocumentExtractorService.Response response = service.extract(pkg);
 
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -102,11 +110,14 @@ class DocumentExtractorServiceTest {
         // Mock deep call chain for bytes path (decoded from base64)
         when(chatClient.prompt()
                 .user(any(Consumer.class))
+                .advisors(any(ComponentLogAdvisor.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        service.extract(context, "input", example);
+        DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                context, "input", example, "mockAgent", null, null);
+        service.extract(pkg);
         
         // Verify invocation (using deep verify is tricky, but result being present assumes success)
         // We can just rely on the return value being non-null and correct
@@ -131,11 +142,14 @@ class DocumentExtractorServiceTest {
         
         when(chatClient.prompt()
                 .user(any(Consumer.class))
+                .advisors(any(ComponentLogAdvisor.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", example);
+        DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                context, "input", example, "mockAgent", null, null);
+        DocumentExtractorService.Response response = service.extract(pkg);
         
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
@@ -160,11 +174,14 @@ class DocumentExtractorServiceTest {
         DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("extracted", "fallbackData"));
         when(chatClient.prompt()
                 .user(any(Consumer.class))
+                .advisors(any(ComponentLogAdvisor.class))
                 .call()
                 .entity(DocumentExtractorService.Response.class))
                 .thenReturn(mockResponse);
 
-        DocumentExtractorService.Response response = service.extract(context, "input", example);
+        DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                context, "input", example, "mockAgent", null, null);
+        DocumentExtractorService.Response response = service.extract(pkg);
         
         assertNotNull(response);
         assertEquals("fallbackData", response.data().get("extracted"));
@@ -174,7 +191,9 @@ class DocumentExtractorServiceTest {
     @Test
     void testExtract_Throws_WhenInputMissing() {
         assertThrows(IllegalArgumentException.class, () -> {
-            service.extract(context, "missing", example);
+            DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                    context, "missing", example, "mockAgent", null, null);
+            service.extract(pkg);
         });
     }
 }

@@ -1,5 +1,7 @@
 package dev.fusionize.workflow.component.runtime;
 
+import dev.fusionize.workflow.WorkflowInteraction;
+import dev.fusionize.workflow.WorkflowInteractionLogger;
 import dev.fusionize.workflow.WorkflowLogger;
 import dev.fusionize.workflow.component.ComponentConfig;
 import dev.fusionize.workflow.component.exceptions.ComponentNotFoundException;
@@ -30,15 +32,17 @@ public class ComponentRuntimeEngine {
     private final ComponentRuntimeRegistry componentRuntimeRegistry;
     private final EventPublisher<Event> eventPublisher;
     private final WorkflowLogger workflowLogger;
+    private final WorkflowInteractionLogger interactionLogger;
     private final ExecutorService executor;
 
     public ComponentRuntimeEngine(ComponentRuntimeRegistry componentRuntimeRegistry,
-            EventPublisher<Event> eventPublisher,
-            WorkflowLogger workflowLogger,
-            @Qualifier("componentExecutor") ExecutorService executor) {
+                                  EventPublisher<Event> eventPublisher,
+                                  WorkflowLogger workflowLogger, WorkflowInteractionLogger interactionLogger,
+                                  @Qualifier("componentExecutor") ExecutorService executor) {
         this.componentRuntimeRegistry = componentRuntimeRegistry;
         this.eventPublisher = eventPublisher;
         this.workflowLogger = workflowLogger;
+        this.interactionLogger = interactionLogger;
         this.executor = executor;
     }
 
@@ -102,6 +106,27 @@ public class ComponentRuntimeEngine {
                         };
                     }
 
+                    @Override
+                    public InteractionLogger interactionLogger() {
+                        ActivationResponseEvent responseEvent = supplier.get();
+                        var oc = responseEvent.getOrchestrationEventContext();
+                        return (Object content,
+                                String actor,
+                                WorkflowInteraction.InteractionType type,
+                                WorkflowInteraction.Visibility visibility) -> {
+                            interactionLogger.log(
+                                    oc.workflowExecution().getWorkflowId(),
+                                    oc.workflowExecution().getWorkflow().getDomain(),
+                                    oc.workflowExecution().getWorkflowExecutionId(),
+                                    oc.nodeExecution().getWorkflowNodeId(),
+                                    oc.nodeExecution().getWorkflowNode().getWorkflowNodeKey(),
+                                    oc.nodeExecution().getWorkflowNode().getComponent(),
+                                    actor, type, visibility, content
+                            );
+
+                        };
+                    }
+
                 }), executor).whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         ActivationResponseEvent responseEvent = supplier.get();
@@ -161,6 +186,27 @@ public class ComponentRuntimeEngine {
                                     oc.nodeExecution().getWorkflowNodeId(),
                                     oc.nodeExecution().getWorkflowNode().getWorkflowNodeKey(),
                                     oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
+                        };
+                    }
+
+                    @Override
+                    public InteractionLogger interactionLogger() {
+                        InvocationResponseEvent responseEvent = supplier.get();
+                        var oc = responseEvent.getOrchestrationEventContext();
+                        return (Object content,
+                                String actor,
+                                WorkflowInteraction.InteractionType type,
+                                WorkflowInteraction.Visibility visibility) -> {
+                            interactionLogger.log(
+                                    oc.workflowExecution().getWorkflowId(),
+                                    oc.workflowExecution().getWorkflow().getDomain(),
+                                    oc.workflowExecution().getWorkflowExecutionId(),
+                                    oc.nodeExecution().getWorkflowNodeId(),
+                                    oc.nodeExecution().getWorkflowNode().getWorkflowNodeKey(),
+                                    oc.nodeExecution().getWorkflowNode().getComponent(),
+                                    actor, type, visibility, content
+                            );
+
                         };
                     }
                 }), executor).whenComplete((result, throwable) -> {

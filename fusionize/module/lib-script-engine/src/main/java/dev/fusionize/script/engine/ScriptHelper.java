@@ -1,5 +1,7 @@
 package dev.fusionize.script.engine;
 
+import org.graalvm.polyglot.Value;
+
 import java.util.Map;
 
 public class ScriptHelper {
@@ -18,7 +20,7 @@ public class ScriptHelper {
 
         // JavaScript (GraalJS)
         if (ScriptRunnerEngine.JS.equals(engine))  {
-            return org.graalvm.polyglot.proxy.ProxyObject.fromMap(ctxData);
+            return new JsContextWrapper(ctxData);
         }
 
         // Fallback: plain map
@@ -35,7 +37,11 @@ public class ScriptHelper {
 
         @Override
         public Object getProperty(String name) {
-            return data.get(name);
+            Object val = data.get(name);
+            if (val instanceof Map) {
+                return new ContextGroovyObject((Map<String, Object>) val);
+            }
+            return val;
         }
 
         @Override
@@ -52,7 +58,11 @@ public class ScriptHelper {
         }
 
         public Object get(String key) {
-            return data.get(key);
+            Object val = data.get(key);
+            if (val instanceof Map) {
+                return new ContextWrapper((Map<String, Object>) val);
+            }
+            return val;
         }
 
         public void set(String key, Object value) {
@@ -61,6 +71,47 @@ public class ScriptHelper {
 
         public Map<String,Object> asMap() {
             return data;
+        }
+    }
+
+    public static class JsContextWrapper implements org.graalvm.polyglot.proxy.ProxyObject {
+        private final Map<String, Object> data;
+
+        public JsContextWrapper(Map<String, Object> data) {
+            this.data = data;
+        }
+
+        @Override
+        public Object getMember(String key) {
+            Object val = data.get(key);
+            if (val instanceof Map) {
+                return new JsContextWrapper((Map<String, Object>) val);
+            }
+            return val;
+        }
+
+        @Override
+        public Object getMemberKeys() {
+            return org.graalvm.polyglot.proxy.ProxyArray.fromList(new java.util.ArrayList<>(data.keySet()));
+        }
+
+        @Override
+        public boolean hasMember(String key) {
+            return data.containsKey(key);
+        }
+
+        @Override
+        public void putMember(String key, Value value) {
+            data.put(key, value);
+        }
+
+        @Override
+        public boolean removeMember(String key) {
+            if (data.containsKey(key)) {
+                data.remove(key);
+                return true;
+            }
+            return false;
         }
     }
 }

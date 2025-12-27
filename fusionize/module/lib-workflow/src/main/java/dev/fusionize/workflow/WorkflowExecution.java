@@ -1,6 +1,9 @@
 package dev.fusionize.workflow;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import dev.fusionize.common.graph.FlattenResult;
+import dev.fusionize.common.graph.GraphUtil;
+import dev.fusionize.common.graph.NodeAdapter;
 import dev.fusionize.common.utility.KeyUtil;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
@@ -19,6 +22,8 @@ import java.util.stream.Stream;
 @JsonIgnoreProperties({"workflow"})
 @Document(collection = "workflow-execution")
 public class WorkflowExecution {
+    private static final NodeAdapter<WorkflowNodeExecution, String> workflowExecutionAdapter =
+            new WorkflowNodeExecutionGraphAdapter();
     @Id
     private String id;
     private String workflowExecutionId;
@@ -33,6 +38,28 @@ public class WorkflowExecution {
     private Workflow workflow;
     @Transient
     private List<WorkflowNodeExecution> nodes = new ArrayList<>();
+
+    public void flatten() {
+        this.nodeExecutionMap.clear();
+        this.rootNodeExecutionIds.clear();
+        FlattenResult<WorkflowNodeExecution, String> result =
+                GraphUtil.flatten(this.getNodes(), workflowExecutionAdapter);
+
+        this.setNodeExecutionMap(result.nodeMap());
+        this.setRootNodeExecutionIds(new ArrayList<>(result.rootIds()));
+    }
+
+    public void inflate() {
+        this.nodes.clear();
+        Collection<WorkflowNodeExecution> roots =
+                GraphUtil.inflate(
+                        this.getNodeExecutionMap(),
+                        this.getRootNodeExecutionIds(),
+                        workflowExecutionAdapter
+                );
+
+        this.setNodes(new ArrayList<>(roots));
+    }
 
     public static WorkflowExecution of(Workflow workflow) {
         WorkflowExecution execution = new WorkflowExecution();
@@ -106,56 +133,6 @@ public class WorkflowExecution {
         clone.flatten(); // Prepare the clone with flattened structure
 
         return clone;
-    }
-
-    public void flatten() {
-        this.nodeExecutionMap.clear();
-        this.rootNodeExecutionIds.clear();
-        if (this.nodes != null) {
-            for (WorkflowNodeExecution node : this.nodes) {
-                this.rootNodeExecutionIds.add(node.getWorkflowNodeExecutionId());
-                flattenNode(node);
-            }
-        }
-    }
-
-    private void flattenNode(WorkflowNodeExecution node) {
-        if (nodeExecutionMap.containsKey(node.getWorkflowNodeExecutionId())) {
-            return;
-        }
-        nodeExecutionMap.put(node.getWorkflowNodeExecutionId(), node);
-        node.getChildrenIds().clear();
-        if (node.getChildren() != null) {
-            for (WorkflowNodeExecution child : node.getChildren()) {
-                node.getChildrenIds().add(child.getWorkflowNodeExecutionId());
-                flattenNode(child);
-            }
-        }
-    }
-
-    public void inflate() {
-        this.nodes.clear();
-        // First pass: link roots
-        if (this.rootNodeExecutionIds != null) {
-            for (String rootId : this.rootNodeExecutionIds) {
-                WorkflowNodeExecution rootNode = this.nodeExecutionMap.get(rootId);
-                if (rootNode != null) {
-                    this.nodes.add(rootNode);
-                }
-            }
-        }
-        // Second pass: link children for all nodes
-        for (WorkflowNodeExecution node : this.nodeExecutionMap.values()) {
-            node.getChildren().clear();
-            if (node.getChildrenIds() != null) {
-                for (String childId : node.getChildrenIds()) {
-                    WorkflowNodeExecution child = this.nodeExecutionMap.get(childId);
-                    if (child != null) {
-                        node.getChildren().add(child);
-                    }
-                }
-            }
-        }
     }
 
     public String getId() {

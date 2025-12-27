@@ -8,6 +8,7 @@ import dev.fusionize.workflow.component.local.beans.JoinComponent;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
+import dev.fusionize.workflow.context.ContextRuntimeData;
 import dev.fusionize.workflow.context.WorkflowGraphNode;
 import dev.fusionize.workflow.registry.WorkflowExecutionRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -268,6 +271,11 @@ class JoinComponentTest {
             return (message, level, throwable) -> {
             };
         }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return null;
+        }
     }
 
     @Test
@@ -298,5 +306,156 @@ class JoinComponentTest {
 
         assertFalse(emitter.successCalled,
                 "Should not succeed because awaited node is behind the previous execution of the join node");
+    }
+    @Test
+    void testDeepMerge_NestedMapsAndLists() {
+        configureComponent(List.of("A", "B")); // Default is PICK_LAST
+
+        // Context A: { nested: { a: 1 }, list: [x] }
+        Context contextA = new Context();
+        dev.fusionize.workflow.context.ContextRuntimeData runtimeDataA = new dev.fusionize.workflow.context.ContextRuntimeData();
+        runtimeDataA.setWorkflowExecutionId("execDeep");
+        runtimeDataA.setWorkflowNodeId("joinDeep");
+        runtimeDataA.setWorkflowNodeExecutionId("execA");
+        contextA.setRuntimeData(runtimeDataA);
+        
+        java.util.Map<String, Object> nestedA = new java.util.HashMap<>();
+        nestedA.put("a", 1);
+        contextA.set("nested", nestedA);
+        
+        List<Object> listA = new ArrayList<>();
+        listA.add("x");
+        contextA.set("list", listA);
+        
+        addNodeToContext(contextA, "A", Collections.emptyList());
+        registerExecution(contextA);
+        joinComponent.run(contextA, emitter);
+
+        // Context B: { nested: { b: 2 }, list: [x, y] }
+        Context contextB = new Context();
+        dev.fusionize.workflow.context.ContextRuntimeData runtimeDataB = new dev.fusionize.workflow.context.ContextRuntimeData();
+        runtimeDataB.setWorkflowExecutionId("execDeep");
+        runtimeDataB.setWorkflowNodeId("joinDeep");
+        runtimeDataB.setWorkflowNodeExecutionId("execB");
+        contextB.setRuntimeData(runtimeDataB);
+
+        java.util.Map<String, Object> nestedB = new java.util.HashMap<>();
+        nestedB.put("b", 2);
+        contextB.set("nested", nestedB);
+
+        List<Object> listB = new ArrayList<>();
+        listB.add("x");
+        listB.add("y");
+        contextB.set("list", listB);
+
+        addNodeToContext(contextB, "B", Collections.emptyList());
+        registerExecution(contextB);
+        joinComponent.run(contextB, emitter);
+
+        assertTrue(emitter.successCalled);
+
+        // Verification
+        Context result = emitter.capturedContext;
+        
+        // Check Nested Map Merge: { a: 1, b: 2 }
+        java.util.Map<String, Object> resultNested = (java.util.Map<String, Object>) result.getData().get("nested");
+        assertEquals(1, resultNested.get("a"));
+        assertEquals(2, resultNested.get("b"));
+
+        // Check List Merge Deduplication: [x, y] (order matter for list, set for unique)
+        List<Object> resultList = (List<Object>) result.getData().get("list");
+        assertEquals(2, resultList.size());
+        assertTrue(resultList.contains("x"));
+        assertTrue(resultList.contains("y"));
+    }
+
+    @Test
+    void testMultipleEmissions() {
+        // Configure to await A, B, C
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set(JoinComponent.CONF_AWAIT, List.of("A", "B", "C"));
+        joinComponent.configure(config);
+
+        String executionId = "exec-1";
+        String nodeId = "join-node";
+
+        // Create 3 contexts representing 3 parents finishing
+        Context ctxA = createContext(executionId, nodeId, "A");
+        Context ctxB = createContext(executionId, nodeId, "B");
+        Context ctxC = createContext(executionId, nodeId, "C");
+
+        // Create 3 executions
+        WorkflowNodeExecution execA = createExecution(ctxA);
+        WorkflowNodeExecution execB = createExecution(ctxB);
+        WorkflowNodeExecution execC = createExecution(ctxC);
+
+        // Simulate Orchestrator adding them to the execution list
+        nodeExecutions.add(execA);
+        nodeExecutions.add(execB);
+        nodeExecutions.add(execC);
+
+        TestEmitterAtomic emitter = new TestEmitterAtomic();
+
+        // Run JoinComponent for each execution (simulating 3 concurrent activations)
+        // Since all 3 are in the list, each run will see all 3.
+
+        joinComponent.run(ctxA, emitter);
+        joinComponent.run(ctxB, emitter);
+        joinComponent.run(ctxC, emitter);
+
+        // Expectation: Currently it emits 3 times. We want 1 time.
+
+        // This assertion confirms the FIX.
+        assertEquals(1, emitter.successCount.get(), "Should emit 1 time (fix verified)");
+    }
+
+    private Context createContext(String executionId, String nodeId, String parentNodeId) {
+        Context ctx = new Context();
+        ContextRuntimeData runtimeData = new ContextRuntimeData();
+        runtimeData.setWorkflowExecutionId(executionId);
+        runtimeData.setWorkflowNodeId(nodeId);
+        ctx.setRuntimeData(runtimeData);
+
+        WorkflowGraphNode node = new WorkflowGraphNode();
+        node.setNode(parentNodeId);
+        node.setState(WorkflowNodeExecutionState.DONE);
+        ctx.getGraphNodes().add(node);
+
+        return ctx;
+    }
+
+    private WorkflowNodeExecution createExecution(Context ctx) {
+        WorkflowNodeExecution ne = new WorkflowNodeExecution();
+        ne.setStageContext(ctx);
+        String id = UUID.randomUUID().toString();
+        ne.setWorkflowNodeExecutionId(id);
+        ctx.getRuntimeData().setWorkflowNodeExecutionId(id);
+        return ne;
+    }
+
+    static class TestEmitterAtomic implements ComponentUpdateEmitter {
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        @Override
+        public void success(Context updatedContext) {
+            successCount.incrementAndGet();
+        }
+
+        @Override
+        public void failure(Exception ex) {
+            throw new RuntimeException(ex);
+        }
+
+        @Override
+        public Logger logger() {
+            return (message, level, throwable) -> {
+            };
+        }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return null;
+        }
+
     }
 }

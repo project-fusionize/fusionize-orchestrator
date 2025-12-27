@@ -13,7 +13,7 @@ import dev.fusionize.ai.service.DocumentExtractorService;
 @RuntimeComponentDefinition(
         name = "document-extractor",
         description = "Extracts data from documents",
-        domain = "fuz.DocumentExtractor",
+        domain = "fuz.ai.DocumentExtractor",
         type = DocumentExtractor.class,
         actors = { Actor.AI })
 public class DocumentExtractorFactory implements ComponentRuntimeFactory<DocumentExtractor> {

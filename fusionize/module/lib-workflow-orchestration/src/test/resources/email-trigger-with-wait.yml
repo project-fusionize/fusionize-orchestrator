@@ -1,0 +1,43 @@
+kind: Workflow
+apiVersion: v1
+name: Test Email Trigger Workflow
+domain: test.emailWorkflow
+key: test-email-workflow-key
+description: A test workflow for email processing
+version: 1
+active: true
+nodes:
+  start:
+    type: START
+    actor: system
+    component: test.receivedIncomingEmail
+    config:
+      address: start@email.com
+    next: [send]
+
+  send:
+    type: TASK
+    actor: ai
+    component: test.sendEmail
+    config:
+      address: outgoing1@email.com
+    next: [waiting]
+
+  waiting:
+    type: WAIT
+    component: delay
+    config:
+      delay: 100
+    next: [ waiting4email ]
+
+  waiting4email:
+    type: WAIT
+    actor: system
+    component: test.waitUtil
+    next: [ end ]
+
+  end:
+    type: END
+    actor: system
+    component: test.endEmailWorkflow
+    next: []

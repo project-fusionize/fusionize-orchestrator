@@ -1,9 +1,6 @@
 package dev.fusionize.workflow.component.runtime;
 
-import dev.fusionize.workflow.WorkflowLogger;
-import dev.fusionize.workflow.WorkflowNode;
-import dev.fusionize.workflow.WorkflowNodeExecution;
-import dev.fusionize.workflow.WorkflowExecution;
+import dev.fusionize.workflow.*;
 import dev.fusionize.workflow.component.ComponentConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
@@ -38,6 +35,8 @@ class ComponentRuntimeEngineTest {
     @Mock
     private WorkflowLogger workflowLogger;
     @Mock
+    private WorkflowInteractionLogger interactionLogger;
+    @Mock
     private ExecutorService executor;
     @Mock
     private ComponentRuntime componentRuntime;
@@ -47,7 +46,7 @@ class ComponentRuntimeEngineTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        engine = new ComponentRuntimeEngine(registry, eventPublisher, workflowLogger, executor);
+        engine = new ComponentRuntimeEngine(registry, eventPublisher, workflowLogger, interactionLogger, executor);
 
         // Mock executor to run immediately
         doAnswer(invocation -> {

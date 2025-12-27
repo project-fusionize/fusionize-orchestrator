@@ -1,9 +1,13 @@
 package dev.fusionize.ai.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.fusionize.ai.advisors.ComponentLogAdvisor;
+import dev.fusionize.ai.exception.AgentConfigNotFoundException;
+import dev.fusionize.ai.exception.ChatModelException;
 import dev.fusionize.storage.StorageConfig;
 import dev.fusionize.storage.StorageConfigManager;
 import dev.fusionize.storage.file.FileStorageService;
+import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.context.ContextResourceReference;
 import org.apache.tika.Tika;
@@ -25,21 +29,30 @@ import java.util.Optional;
 @Service
 public class DocumentExtractorService {
     private static final Logger defaultLogger = LoggerFactory.getLogger(DocumentExtractorService.class);
-    private final ChatClient chatClient;
     private final StorageConfigManager configManager;
+    private final AgentConfigManager agentConfigManager;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public record Response(Map<String, Object> data) implements Serializable {
     }
 
+    public record ExtractionPackage(
+            Context context,
+            String inputVar,
+            Map<String, Object> example,
+            String agent,
+            ComponentUpdateEmitter.Logger logger,
+            ComponentUpdateEmitter.InteractionLogger interactionLogger) {
+    }
+
     private record DocumentContent(byte[] bytes, String text) {
     }
 
-    public DocumentExtractorService(ChatClient.Builder chatClientBuilder,
-                                    StorageConfigManager configManager) {
-        this.chatClient = chatClientBuilder.build();
+    public DocumentExtractorService(StorageConfigManager configManager,
+                                    AgentConfigManager agentConfigManager) {
         this.configManager = configManager;
+        this.agentConfigManager = agentConfigManager;
     }
 
     public FileStorageService getFileStorageService(String storageDomain) {
@@ -47,36 +60,35 @@ public class DocumentExtractorService {
         return configOptional.map(this.configManager::getFileStorageService).orElse(null);
     }
 
-    public Response extract(Context context, String inputVar, Map<String, Object> example) throws Exception {
-        Object documentObj = resolveDocumentObject(context, inputVar);
+    public Response extract(ExtractionPackage pkg) throws Exception {
+        Object documentObj = resolveDocumentObject(pkg);
 
         if (documentObj == null) {
-            throw new IllegalArgumentException("Input '" + inputVar + "' not found in context (data or resource)");
+            throw new IllegalArgumentException("Input '" + pkg.inputVar() + "' not found in context (data or resource)");
         }
 
         DocumentContent content = parseDocumentContent(documentObj);
-        String exampleJson = objectMapper.writeValueAsString(new Response(example));
-
-        return extractDataFromDocument(content, exampleJson);
+        String exampleJson = objectMapper.writeValueAsString(new Response(pkg.example()));
+        return extractDataFromDocument(content, exampleJson, pkg);
     }
 
-    private Object resolveDocumentObject(Context context, String inputVar) {
-        if (context == null || inputVar == null) {
+    private Object resolveDocumentObject(ExtractionPackage pkg) {
+        if (pkg.context == null || pkg.inputVar == null) {
             return null;
         }
 
         // 1. Try resolving from Context Resources
-        Object resourceContent = tryReadFromResource(context, inputVar);
+        Object resourceContent = tryReadFromResource(pkg);
         if (resourceContent != null) {
             return resourceContent;
         }
 
         // 2. Fallback to Context Data
-        return context.getData().get(inputVar);
+        return pkg.context.getData().get(pkg.inputVar);
     }
 
-    private Object tryReadFromResource(Context context, String inputVar) {
-        Optional<ContextResourceReference> resourceRefOpt = context.resource(inputVar);
+    private Object tryReadFromResource(ExtractionPackage pkg) {
+        Optional<ContextResourceReference> resourceRefOpt = pkg.context.resource(pkg.inputVar);
         if (resourceRefOpt.isEmpty()) {
             return null;
         }
@@ -90,7 +102,11 @@ public class DocumentExtractorService {
         try {
             return readContentFromStorage(storageService, ref.getReferenceKey());
         } catch (Exception e) {
-            defaultLogger.warn("Failed to read resource reference '{}': {}", ref.getReferenceKey(), e.getMessage());
+            if (pkg.logger != null) {
+                pkg.logger.warn("Failed to read resource reference '{}': {}", ref.getReferenceKey(), e.getMessage());
+            }else{
+                defaultLogger.warn("Failed to read resource reference '{}': {}", ref.getReferenceKey(), e.getMessage());
+            }
             return null;
         }
     }
@@ -123,29 +139,43 @@ public class DocumentExtractorService {
         }
     }
 
-    private Response extractDataFromDocument(DocumentContent content, String exampleJson) {
+    private Response extractDataFromDocument(DocumentContent content,
+                                             String exampleJson,
+                                             ExtractionPackage pkg) throws AgentConfigNotFoundException, ChatModelException {
+        ChatClient chatClient = this.agentConfigManager.getChatClient(pkg.agent);
         if (content.bytes != null) {
             MimeType mimeType = guessMimeType(content.bytes);
-            defaultLogger.info("Extracting document from {} bytes: mimeType {}", content.bytes.length, mimeType);
+            if (pkg.logger != null) {
+                pkg.logger.info("Extracting document from {} bytes: mimeType {}", content.bytes.length, mimeType);
+            }else {
+                defaultLogger.info("Extracting document from {} bytes: mimeType {}", content.bytes.length, mimeType);
+            }
             return chatClient.prompt()
                     .user(u -> u.text(
                             "Check this file and extract this json out of it. Here is the example JSON structure: {example}")
                             .param("example", exampleJson)
                             .media(mimeType, new ByteArrayResource(content.bytes)))
+                    .advisors(new ComponentLogAdvisor(pkg.interactionLogger))
                     .call()
                     .entity(Response.class);
         } else {
             String text = content.text;
-            defaultLogger.info("Extracting document from text: {}",
-                    text.substring(0, Math.min(text.length(), 50)) + "...");
+            String textSubstring = text.substring(0, Math.min(text.length(), 50));
+            if (pkg.logger !=  null) {
+                pkg.logger.info("Extracting document from text: {}...",textSubstring);
+            }else {
+                defaultLogger.info("Extracting document from text: {}...",textSubstring);
+            }
             return chatClient.prompt()
                     .user(u -> u.text(
                             "Check this text and extract this json out of it. Here is the example JSON structure: {example}\n\nText content:\n{text}")
                             .param("example", exampleJson)
                             .param("text", text))
+                    .advisors(new ComponentLogAdvisor(pkg.interactionLogger))
                     .call()
                     .entity(Response.class);
         }
+
     }
 
     private MimeType guessMimeType(byte[] data) {

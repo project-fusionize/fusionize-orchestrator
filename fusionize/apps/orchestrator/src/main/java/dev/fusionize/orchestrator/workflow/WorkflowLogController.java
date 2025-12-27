@@ -18,7 +18,7 @@ public class WorkflowLogController {
 
     public WorkflowLogController(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
-        logger.info("WorkflowLogController initialized and ready to handle /workflow/log");
+        logger.debug("WorkflowLogController initialized and ready to handle /workflow/log");
     }
 
     @MessageMapping("/workflow/log")

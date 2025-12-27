@@ -219,6 +219,11 @@ class ForkComponentTest {
             return (msg, level, throwable) -> {
                 /* ignore */ };
         }
+
+        @Override
+        public InteractionLogger interactionLogger() {
+            return null;
+        }
     }
 
     // ────────────────────────────────────────────────

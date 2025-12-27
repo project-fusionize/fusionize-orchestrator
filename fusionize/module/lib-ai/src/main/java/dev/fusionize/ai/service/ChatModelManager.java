@@ -20,18 +20,15 @@ import java.util.Optional;
 public class ChatModelManager {
 
     private final ChatModelConfigRepository repository;
-    private final ChatClient.Builder defaultBuilder;
     private final RetryTemplate retryTemplate;
     private final ObservationRegistry observationRegistry;
     private final ToolCallingManager toolCallingManager;
 
     public ChatModelManager(ChatModelConfigRepository repository,
-            ChatClient.Builder defaultBuilder,
             RetryTemplate retryTemplate,
             ObservationRegistry observationRegistry,
             ToolCallingManager toolCallingManager) {
         this.repository = repository;
-        this.defaultBuilder = defaultBuilder;
         this.retryTemplate = retryTemplate;
         this.observationRegistry = observationRegistry;
         this.toolCallingManager = toolCallingManager;
@@ -75,7 +72,6 @@ public class ChatModelManager {
 
             OpenAiChatOptions options = OpenAiChatOptions.builder()
                     .model(config.getModelName())
-                    .temperature(config.getTemperature())
                     .build();
 
             OpenAiChatModel chatModel = new OpenAiChatModel(openAiApi, options, toolCallingManager, retryTemplate,

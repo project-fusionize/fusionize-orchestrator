@@ -4,6 +4,7 @@ import dev.fusionize.common.utility.TextUtil;
 import dev.fusionize.script.engine.ScriptHelper;
 import dev.fusionize.script.engine.ScriptRunner;
 import dev.fusionize.script.engine.ScriptRunnerEngine;
+import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.component.local.LocalComponentRuntime;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
@@ -64,6 +65,7 @@ public class ScriptComponent implements LocalComponentRuntime {
 
             Map<String, Object> evalContext = new HashMap<>(cloneContext.getData());
             evalContext.put("context", nativeCtx);
+            evalContext.put("logger", new LoggerWrapper(emitter.logger()));
 
             // Evaluate script; returning 'context' ensures scripts can modify and return it
             if(ScriptRunnerEngine.JS.equals(engine)){
@@ -90,6 +92,39 @@ public class ScriptComponent implements LocalComponentRuntime {
         } catch (Exception e) {
             emitter.logger().error("Script failed: {}", e.getMessage());
             emitter.failure(e);
+        }
+    }
+
+    public static class LoggerWrapper{
+        private final ComponentUpdateEmitter.Logger innerLogger;
+
+        public LoggerWrapper(ComponentUpdateEmitter.Logger innerLogger) {
+            this.innerLogger = innerLogger;
+        }
+
+
+        public void log(Object message, WorkflowLog.LogLevel level, Throwable throwable) {
+            innerLogger.log(message==null ? "null" : message.toString(), level, throwable);
+        }
+
+        public void log(Object message, WorkflowLog.LogLevel level) {
+            innerLogger.log(message==null ? "null" : message.toString(), level);
+        }
+
+        public void info(Object message, Object... args) {
+            innerLogger.info(message==null ? "null" : message.toString(), args);
+        }
+
+        public void warn(Object message, Object... args) {
+            innerLogger.warn(message==null ? "null" : message.toString(), args);
+        }
+
+        public void error(Object message, Object... args) {
+            innerLogger.error(message==null ? "null" : message.toString(), args);
+        }
+
+        public void debug(Object message, Object... args) {
+            innerLogger.debug(message==null ? "null" : message.toString(), args);
         }
     }
 

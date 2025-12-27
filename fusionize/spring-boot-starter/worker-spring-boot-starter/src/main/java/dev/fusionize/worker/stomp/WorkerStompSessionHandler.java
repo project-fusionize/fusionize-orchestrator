@@ -20,17 +20,20 @@ public class WorkerStompSessionHandler extends StompSessionHandlerAdapter {
     }
 
     public <T> void send(String destination, T payload) {
-        if (session != null && session.isConnected()) {
-            logger.debug("sending message to {}", destination);
-            try {
-                session.send(destination, payload);
-                logger.debug("sent message to {}", destination);
-            } catch (Exception e) {
-                logger.error("Failed to send message to {}", destination, e);
+        synchronized (session) {
+            if (session != null && session.isConnected()) {
+                logger.debug("sending message to {}", destination);
+                try {
+                    session.send(destination, payload);
+                    logger.debug("sent message to {}", destination);
+                } catch (Exception e) {
+                    logger.error("Failed to send message to {}", destination, e);
+                }
+            } else {
+                logger.warn("Cannot send message to {}, session is not connected", destination);
             }
-        } else {
-            logger.warn("Cannot send message to {}, session is not connected", destination);
         }
+
     }
 
     @Override

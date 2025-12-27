@@ -3,10 +3,7 @@ package dev.fusionize.orchestrator.workflow;
 import dev.fusionize.Application;
 import dev.fusionize.common.payload.ServicePayload;
 import dev.fusionize.common.payload.ServiceResponse;
-import dev.fusionize.workflow.Workflow;
-import dev.fusionize.workflow.WorkflowExecution;
-import dev.fusionize.workflow.WorkflowLog;
-import dev.fusionize.workflow.WorkflowLogger;
+import dev.fusionize.workflow.*;
 import dev.fusionize.workflow.descriptor.WorkflowDescriptor;
 import dev.fusionize.workflow.registry.WorkflowExecutionRepoRegistry;
 import dev.fusionize.workflow.registry.WorkflowRepoRegistry;
@@ -31,14 +28,17 @@ public class WorkflowController {
     private final WorkflowRepoRegistry workflowRepoRegistry;
     private final WorkflowExecutionRepoRegistry workflowExecutionRepoRegistry;
     private final WorkflowLogger workflowLogger;
+    private final WorkflowInteractionLogger interactionLogger;
     private final WorkflowDescriptor workflowDescriptor;
 
     public WorkflowController(WorkflowRepoRegistry workflowRepoRegistry,
                               WorkflowExecutionRepoRegistry workflowExecutionRepoRegistry,
-                              WorkflowLogger workflowLogger) {
+                              WorkflowLogger workflowLogger,
+                              WorkflowInteractionLogger interactionLogger) {
         this.workflowRepoRegistry = workflowRepoRegistry;
         this.workflowExecutionRepoRegistry = workflowExecutionRepoRegistry;
         this.workflowLogger = workflowLogger;
+        this.interactionLogger = interactionLogger;
         this.workflowDescriptor = new WorkflowDescriptor();
     }
 
@@ -91,6 +91,18 @@ public class WorkflowController {
                 .response(new ServiceResponse.Builder<List<WorkflowLog>>()
                         .status(200)
                         .message(logs)
+                        .build())
+                .build();
+    }
+
+    @GetMapping("/{workflowId}/executions/{workflowExecutionId}/interaction")
+    public ServicePayload<List<WorkflowInteraction>> getWorkflowExecutionInteractions(@PathVariable String workflowId,
+                                                                      @PathVariable String workflowExecutionId) {
+        List<WorkflowInteraction> interactions = interactionLogger.getInteractions(workflowExecutionId);
+        return new ServicePayload.Builder<List<WorkflowInteraction>>()
+                .response(new ServiceResponse.Builder<List<WorkflowInteraction>>()
+                        .status(200)
+                        .message(interactions)
                         .build())
                 .build();
     }

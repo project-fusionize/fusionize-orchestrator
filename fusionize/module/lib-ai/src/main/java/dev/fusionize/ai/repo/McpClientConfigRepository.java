@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface McpClientConfigRepository extends MongoRepository<McpClientConfig, String> {
     Optional<McpClientConfig> findByKey(String key);
+    Optional<McpClientConfig> findByDomain(String domain);
 }

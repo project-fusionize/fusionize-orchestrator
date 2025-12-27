@@ -1,6 +1,6 @@
 package dev.fusionize.workflow.logging;
 
-import dev.fusionize.workflow.LogListener;
+import dev.fusionize.workflow.listeners.LogListener;
 import dev.fusionize.workflow.WorkflowLog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,7 +8,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;

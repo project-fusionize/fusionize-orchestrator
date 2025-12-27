@@ -1,6 +1,6 @@
 package dev.fusionize.workflow.logging;
 
-import dev.fusionize.workflow.LogListener;
+import dev.fusionize.workflow.listeners.LogListener;
 import dev.fusionize.workflow.WorkflowLog;
 import dev.fusionize.workflow.WorkflowLogger;
 import org.slf4j.Logger;
