@@ -5,6 +5,7 @@ import dev.fusionize.ai.service.ChatModelManager;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 
 @Component
 public class WorkflowAgentService {
@@ -26,5 +27,16 @@ public class WorkflowAgentService {
                 .call()
                 .content();
 
+    }
+
+    public Flux<String> processStream(UserRequest request) throws ChatModelException {
+        ChatClient client = chatModelManager.getChatClient(request.getModelConfig());
+        client = client.mutate().defaultToolCallbacks(MethodToolCallbackProvider.builder()
+                .toolObjects(workflowToolService)
+                .build()).build();
+        return client.prompt()
+                .user(request.getMessage())
+                .stream()
+                .content();
     }
 }
