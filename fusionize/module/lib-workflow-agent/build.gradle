@@ -1,0 +1,33 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version "${springBootVersion}" apply false
+    id 'io.spring.dependency-management' version "${springBootDependencyMangementVersion}"
+}
+
+
+dependencyManagement {
+    imports {
+        mavenBom SpringBootPlugin.BOM_COORDINATES
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
+}
+
+dependencies {
+    implementation project(':fusionize:module:lib-common')
+    implementation project(':fusionize:module:lib-user')
+    implementation project(':fusionize:module:lib-workflow')
+    implementation project(':fusionize:module:lib-workflow-components')
+    implementation project(':fusionize:module:lib-ai')
+
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation "org.springframework.ai:spring-ai-starter-mcp-server-webmvc"
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation project(':fusionize:module:lib-common-test')
+}

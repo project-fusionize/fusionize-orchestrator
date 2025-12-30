@@ -9,6 +9,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+
 @Component
 public class WorkflowComponentRepoRegistry implements WorkflowComponentRegistry {
 
@@ -17,6 +19,11 @@ public class WorkflowComponentRepoRegistry implements WorkflowComponentRegistry 
 
     public WorkflowComponentRepoRegistry(WorkflowComponentRepository repository) {
         this.repository = repository;
+    }
+
+    @Override
+    public List<WorkflowComponent> getComponents() {
+        return repository.findAllByDomainStartingWith("");
     }
 
     @Override

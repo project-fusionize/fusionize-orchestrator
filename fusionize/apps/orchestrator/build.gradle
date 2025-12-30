@@ -13,6 +13,7 @@ dependencyManagement {
 dependencies {
     implementation project(':fusionize:module:lib-security')
     implementation project(':fusionize:module:lib-storage')
+    implementation project(':fusionize:module:lib-workflow-agent')
 
     implementation project(':fusionize:component:ai')
     implementation project(':fusionize:component:web')
