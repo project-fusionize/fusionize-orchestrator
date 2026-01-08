@@ -1,4 +1,19 @@
 services:
+
+  fusionize-hub:
+    image: fusionize/hub:latest
+    container_name: fusionize-hub
+    restart: always
+    ports:
+      - "3131:80"
+    networks:
+      - fusionize-network
+    environment:
+      - APP_API_BASE_URL=http://localhost:8081
+      - APP_KEYCLOAK_URL=http://localhost:8080/
+      - APP_KEYCLOAK_REALM=fuz
+      - APP_KEYCLOAK_CLIENT_ID=fusionize-hub
+
   mongodb:
     image: mongo:7.0
     container_name: fusionize-mongo
