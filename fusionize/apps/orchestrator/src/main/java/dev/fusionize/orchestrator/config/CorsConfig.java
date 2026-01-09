@@ -18,7 +18,7 @@ public class CorsConfig {
     @Bean("allowedOriginPattern")
     @Profile("local")
     List<String> localAllowedOriginPattern() {
-        return List.of("http://localhost:[*]");
+        return List.of("*");
     }
 
     @Bean("allowedOriginPattern")

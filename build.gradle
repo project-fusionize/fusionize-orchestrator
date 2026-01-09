@@ -40,3 +40,9 @@ subprojects {
     }
 }
 
+tasks.register('dev') {
+    group = 'fusionize'
+    description = 'Run Fusionize locally'
+
+    dependsOn ':fusionize:apps:orchestrator:bootRun'
+}

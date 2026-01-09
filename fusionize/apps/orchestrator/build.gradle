@@ -13,6 +13,7 @@ dependencyManagement {
 dependencies {
     implementation project(':fusionize:module:lib-security')
     implementation project(':fusionize:module:lib-storage')
+    implementation project(':fusionize:module:lib-workflow-agent')
 
     implementation project(':fusionize:component:ai')
     implementation project(':fusionize:component:web')
@@ -34,4 +35,9 @@ dependencies {
     implementation 'org.freemarker:freemarker'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+bootRun {
+    systemProperty 'spring.profiles.active',
+            System.getProperty('spring.profiles.active', 'local')
 }
