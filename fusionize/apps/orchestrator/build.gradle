@@ -36,3 +36,8 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
+
+bootRun {
+    systemProperty 'spring.profiles.active',
+            System.getProperty('spring.profiles.active', 'local')
+}
