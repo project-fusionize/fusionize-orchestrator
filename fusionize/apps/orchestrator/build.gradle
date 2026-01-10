@@ -38,6 +38,7 @@ dependencies {
 }
 
 bootRun {
+    workingDir = rootProject.projectDir
     systemProperty 'spring.profiles.active',
             System.getProperty('spring.profiles.active', 'local')
 }
