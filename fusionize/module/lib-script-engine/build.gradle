@@ -14,7 +14,7 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation 'org.apache.groovy:groovy-all:5.0.2'
+    implementation 'org.apache.groovy:groovy-all:5.0.3'
     implementation 'org.graalvm.js:js-scriptengine:25.0.1'
     implementation 'org.graalvm.js:js-language:25.0.1'
 
