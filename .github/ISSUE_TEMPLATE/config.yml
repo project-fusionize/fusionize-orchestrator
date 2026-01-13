@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Issues
+    url: https://github.com/project-fusionize/fusionize-orchestrator/security/policy
+    about: Report security vulnerabilities privately
+  - name: Ask a question
+    url: https://github.com/project-fusionize/fusionize-orchestrator/discussions/new?category=q-a
+    about: Ask a question or ask for help
+  - name: Request a feature
+    url: https://github.com/project-fusionize/fusionize-orchestrator/discussions/new?category=ideas
+    about: Share ideas for new features
