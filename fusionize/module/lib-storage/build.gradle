@@ -18,7 +18,7 @@ dependencies {
     implementation project(':fusionize:module:lib-common')
     implementation project(':fusionize:module:lib-user')
 
-    implementation 'commons-io:commons-io:2.14.0'
+    implementation 'commons-io:commons-io:2.21.0'
 
     implementation platform("software.amazon.awssdk:bom:2.20.140")
     implementation 'software.amazon.awssdk:s3'
