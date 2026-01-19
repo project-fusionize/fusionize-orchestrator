@@ -1,0 +1,12 @@
+kind: AgentConfig
+apiVersion: v1
+name: Sample Analyst Agent
+domain: sample.analyst
+role: ANALYZER
+instructionPrompt: |
+  You are an expert data analyst.
+  Your goal is to analyze provided data and offer insights.
+modelConfigDomain: sample.gpt4
+allowedMcpTools: []
+properties:
+  temperature: "0.7"

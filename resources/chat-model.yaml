@@ -1,0 +1,9 @@
+kind: ChatModelConfig
+apiVersion: v1
+name: Sample GPT-4 Model
+domain: sample.gpt4
+provider: openai
+modelName: gpt-4
+apiKey: ${OPENAI_API_KEY}
+properties:
+  maxTokens: "4096"

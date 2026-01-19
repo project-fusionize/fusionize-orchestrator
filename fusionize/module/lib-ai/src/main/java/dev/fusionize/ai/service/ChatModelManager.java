@@ -34,19 +34,22 @@ public class ChatModelManager {
         this.toolCallingManager = toolCallingManager;
     }
 
+    public ChatModelConfig createModel(ChatModelConfig config) throws ChatModelException {
+        validateConfig(config);
+        if (repository.findByDomain(config.getDomain()).isPresent()) {
+            throw new ChatModelDomainAlreadyExistsException(config.getDomain());
+        }
+        return repository.save(config);
+    }
+
     public ChatModelConfig saveModel(ChatModelConfig config) throws ChatModelException {
         validateConfig(config);
 
-        // Check if domain already exists for new records (id is null)
-        if (config.getId() == null && repository.findByDomain(config.getDomain()).isPresent()) {
-            throw new ChatModelDomainAlreadyExistsException(config.getDomain());
-        }
-
-        // For updates, ensure we are not changing the domain to one that already exists
-        // on another record
-        if (config.getId() != null) {
-            Optional<ChatModelConfig> existing = repository.findByDomain(config.getDomain());
-            if (existing.isPresent() && !existing.get().getId().equals(config.getId())) {
+        Optional<ChatModelConfig> existing = repository.findByDomain(config.getDomain());
+        if (existing.isPresent()) {
+            if (config.getId() == null) {
+                config.setId(existing.get().getId());
+            } else if (!existing.get().getId().equals(config.getId())) {
                 throw new ChatModelDomainAlreadyExistsException(config.getDomain());
             }
         }

@@ -12,7 +12,7 @@ public class WorkerProperties {
     private String orchestratorAmqp;
     private String oidcClientId;
     private String oidcClientSecret;
-    private String workflowDefinitionsRoot = "workflows";
+    private String resourceRoot = "resources";
 
     public String getOrchestratorUrl() {
         return orchestratorUrl;
@@ -54,12 +54,12 @@ public class WorkerProperties {
         this.oidcClientSecret = oidcClientSecret;
     }
 
-    public String getWorkflowDefinitionsRoot() {
-        return workflowDefinitionsRoot;
+    public String getResourceRoot() {
+        return resourceRoot;
     }
 
-    public void setWorkflowDefinitionsRoot(String workflowDefinitionsRoot) {
-        this.workflowDefinitionsRoot = workflowDefinitionsRoot;
+    public void setResourceRoot(String resourceRoot) {
+        this.resourceRoot = resourceRoot;
     }
 
     public static String toWebSocketUrl(String httpUrl) {

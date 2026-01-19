@@ -48,7 +48,7 @@ public class StorageConfigController {
 
     @PostMapping
     public ServicePayload<StorageConfig> create(@RequestBody StorageConfig config) throws StorageException {
-        StorageConfig saved = storageConfigManager.saveConfig(config);
+        StorageConfig saved = storageConfigManager.createConfig(config);
         return new ServicePayload.Builder<StorageConfig>()
                 .response(new ServiceResponse.Builder<StorageConfig>()
                         .status(200)

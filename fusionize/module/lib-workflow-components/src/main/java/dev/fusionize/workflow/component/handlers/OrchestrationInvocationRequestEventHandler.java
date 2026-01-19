@@ -30,7 +30,7 @@ public class OrchestrationInvocationRequestEventHandler implements EventHandler<
     }
 
     @Override
-    public Event handle(InvocationRequestEvent event) {
+    public Event handle(InvocationRequestEvent event) throws Exception {
         event.ensureOrchestrationEventContext(workflowExecutionRegistry, workflowRegistry);
         return componentRuntimeEngine.invokeComponent(event);
     }

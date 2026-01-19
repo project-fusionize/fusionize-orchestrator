@@ -77,7 +77,7 @@ class AgentConfigControllerTest {
     void create_Success() throws Exception {
         AgentConfig config = new AgentConfig();
         config.setDomain("test.agent");
-        when(agentConfigManager.saveConfig(any(AgentConfig.class))).thenReturn(config);
+        when(agentConfigManager.createConfig(any(AgentConfig.class))).thenReturn(config);
 
         mockMvc.perform(post("/api/1.0/agent-config")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -89,7 +89,7 @@ class AgentConfigControllerTest {
     @Test
     void create_InvalidConfig() throws Exception {
         AgentConfig config = new AgentConfig();
-        when(agentConfigManager.saveConfig(any(AgentConfig.class)))
+        when(agentConfigManager.createConfig(any(AgentConfig.class)))
                 .thenThrow(new InvalidAgentConfigException("Invalid config"));
 
         mockMvc.perform(post("/api/1.0/agent-config")
@@ -102,7 +102,7 @@ class AgentConfigControllerTest {
     @Test
     void create_Conflict() throws Exception {
         AgentConfig config = new AgentConfig();
-        when(agentConfigManager.saveConfig(any(AgentConfig.class)))
+        when(agentConfigManager.createConfig(any(AgentConfig.class)))
                 .thenThrow(new AgentConfigDomainAlreadyExistsException("exists"));
 
         mockMvc.perform(post("/api/1.0/agent-config")

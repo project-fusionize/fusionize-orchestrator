@@ -47,7 +47,7 @@ public class ChatModelConfigController {
 
     @PostMapping
     public ServicePayload<ChatModelConfig> create(@RequestBody ChatModelConfig config) throws ChatModelException {
-        ChatModelConfig saved = chatModelManager.saveModel(config);
+        ChatModelConfig saved = chatModelManager.createModel(config);
         return new ServicePayload.Builder<ChatModelConfig>()
                 .response(new ServiceResponse.Builder<ChatModelConfig>()
                         .status(200)

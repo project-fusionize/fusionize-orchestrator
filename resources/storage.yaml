@@ -1,0 +1,12 @@
+kind: StorageConfig
+apiVersion: v1
+name: Sample Local Storage
+domain: test-s3-storage
+enabled: true
+provider: AWS_S3
+storageType: FILE_STORAGE
+properties:
+  bucket: my-sample-bucket
+  region: us-east-1
+  accessKey: ${AWS_ACCESS_KEY}
+  secretKey: ${AWS_SECRET_KEY}
