@@ -25,9 +25,6 @@ public class FileStorageServiceLocal implements FileStorageService {
         if (filePath == null)
             filePath = "";
 
-        if (!filePath.matches(".*/"))
-            filePath += "/";
-
         this.fileStorageLocation = Paths.get(filePath)
                 .toAbsolutePath().normalize();
 

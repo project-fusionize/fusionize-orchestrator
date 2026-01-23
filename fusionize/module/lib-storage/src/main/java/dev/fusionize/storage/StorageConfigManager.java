@@ -22,6 +22,7 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -92,14 +93,16 @@ public class StorageConfigManager {
         if(fileStorageServiceMap.containsKey(config.getDomain())) {
             return fileStorageServiceMap.get(config.getDomain());
         }
-        FileStorageServiceLocal local = null;
+        FileStorageServiceLocal tempLocal = null;
         try {
-            local = new FileStorageServiceLocal("/tmp/" + KeyUtil.getFlatUUID());
+            String defaultPath = Paths.get(System.getProperty("java.io.tmpdir"),
+                    "fusionize", "storage", KeyUtil.getFlatUUID()).toString();
+            tempLocal = new FileStorageServiceLocal(defaultPath);
         } catch (IOException e) {
-            log.error("failed to get local file storage service", e);
+            log.error("failed to get temp local file storage service", e);
         }
 
-        FileStorageService fileStorageService = getFileStorageService(config, local);
+        FileStorageService fileStorageService = getFileStorageService(config, tempLocal);
         fileStorageServiceMap.put(config.getDomain(), fileStorageService);
         return fileStorageServiceMap.get(config.getDomain());
     }
@@ -107,6 +110,17 @@ public class StorageConfigManager {
     private FileStorageService getFileStorageService(StorageConfig config, FileStorageServiceLocal local) {
         return switch (config.getProvider()) {
             case AWS_S3 -> FileStorageServiceS3.instantiate(config, local);
+            case LOCAL -> {
+                try {
+                    String defaultPath = Paths.get(System.getProperty("java.io.tmpdir"),
+                            "fusionize", "storage", config.getDomain()).toString();
+                    String path = (String) config.getProperties().getOrDefault("path", defaultPath);
+                    yield new FileStorageServiceLocal(path);
+                } catch (IOException e) {
+                    log.error("Failed to instantiate Local File Storage", e);
+                    yield null;
+                }
+            }
             default -> null;
         };
     }
