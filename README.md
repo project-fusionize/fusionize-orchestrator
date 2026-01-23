@@ -1,5 +1,10 @@
 # Fusionize
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Java](https://img.shields.io/badge/Java-21%2B-ed8b00?style=flat&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Build Status](https://github.com/project-fusionize/fusionize-orchestrator/actions/workflows/gradle-build.yml/badge.svg)](https://github.com/project-fusionize/fusionize-orchestrator/actions/workflows/gradle-build.yml)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.6-6db33f?style=flat&logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
+
 **Distributed, AI-Native Business Process Management Engine**
 
 Fusionize is an open-source, event-driven BPMS (Business Process Management System) designed for scalability, reliability, and native AI integration. It orchestrates distributed workflows where **AI and humans collaborate** through a unified event-driven architecture.
