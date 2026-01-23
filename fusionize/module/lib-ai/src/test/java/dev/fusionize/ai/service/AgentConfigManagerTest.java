@@ -51,13 +51,45 @@ class AgentConfigManagerTest {
     }
 
     @Test
-    void saveConfig_DomainExists() {
+    void createConfig_Success() throws AgentConfigException {
+        AgentConfig config = new AgentConfig();
+        config.setDomain("test.agent");
+
+        when(repository.findByDomain("test.agent")).thenReturn(Optional.empty());
+        when(repository.save(any(AgentConfig.class))).thenReturn(config);
+
+        AgentConfig saved = manager.createConfig(config);
+        assertNotNull(saved);
+        assertEquals("test.agent", saved.getDomain());
+        verify(repository).save(config);
+    }
+
+    @Test
+    void createConfig_DomainExists() {
         AgentConfig config = new AgentConfig();
         config.setDomain("test.agent");
 
         when(repository.findByDomain("test.agent")).thenReturn(Optional.of(config));
 
-        assertThrows(AgentConfigDomainAlreadyExistsException.class, () -> manager.saveConfig(config));
+        assertThrows(AgentConfigDomainAlreadyExistsException.class, () -> manager.createConfig(config));
+    }
+
+    @Test
+    void saveConfig_Upsert() throws AgentConfigException {
+        AgentConfig config = new AgentConfig();
+        config.setDomain("test.agent"); // No ID
+
+        AgentConfig existing = new AgentConfig();
+        existing.setDomain("test.agent");
+        existing.setId("existing-id");
+
+        when(repository.findByDomain("test.agent")).thenReturn(Optional.of(existing));
+        when(repository.save(any(AgentConfig.class))).thenReturn(config);
+
+        AgentConfig saved = manager.saveConfig(config);
+        
+        assertEquals("existing-id", config.getId()); // Verify ID was copied
+        verify(repository).save(config);
     }
 
     @Test

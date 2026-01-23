@@ -112,10 +112,13 @@ public abstract class OrchestrationEvent extends RuntimeEvent {
     public void ensureOrchestrationEventContext(
             WorkflowExecutionRegistry workflowExecutionRegistry,
             WorkflowRegistry workflowRegistry
-    ) {
+    ) throws Exception {
         if (orchestrationEventContext == null) {
             Workflow workflow = workflowRegistry.getWorkflow(workflowId);
             WorkflowExecution workflowExecution = workflowExecutionRegistry.getWorkflowExecution(workflowExecutionId);
+            if(workflowExecution == null) {
+                throw new Exception("Workflow execution not found: " + workflowId);
+            }
             workflowExecution.setWorkflow(workflow);
             WorkflowNodeExecution workflowNodeExecution = workflowExecution.findNodeByWorkflowNodeExecutionId(workflowNodeExecutionId);
             workflowNodeExecution.setWorkflowNode(workflow.findNode(workflowNodeId));

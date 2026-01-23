@@ -48,7 +48,7 @@ public class AgentConfigController {
 
     @PostMapping
     public ServicePayload<AgentConfig> create(@RequestBody AgentConfig config) throws AgentConfigException {
-        AgentConfig saved = agentConfigManager.saveConfig(config);
+        AgentConfig saved = agentConfigManager.createConfig(config);
         return new ServicePayload.Builder<AgentConfig>()
                 .response(new ServiceResponse.Builder<AgentConfig>()
                         .status(200)

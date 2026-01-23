@@ -31,7 +31,7 @@ public class OrchestrationActivateRequestEventHandler implements EventHandler<Ac
     }
 
     @Override
-    public Event handle(ActivationRequestEvent event) {
+    public Event handle(ActivationRequestEvent event) throws Exception {
         event.ensureOrchestrationEventContext(workflowExecutionRegistry, workflowRegistry);
         return componentRuntimeEngine.activateComponent(event);
     }

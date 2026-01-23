@@ -4,7 +4,7 @@ import dev.fusionize.ai.exception.*;
 import dev.fusionize.ai.model.AgentConfig;
 import dev.fusionize.ai.model.ChatModelConfig;
 import dev.fusionize.ai.repo.AgentConfigRepository;
-import dev.fusionize.ai.repo.AgentConfigRepository;
+
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -27,19 +27,22 @@ public class AgentConfigManager {
         this.mcpManager = mcpManager;
     }
 
+    public AgentConfig createConfig(AgentConfig config) throws AgentConfigException {
+        validateConfig(config);
+        if (repository.findByDomain(config.getDomain()).isPresent()) {
+            throw new AgentConfigDomainAlreadyExistsException(config.getDomain());
+        }
+        return repository.save(config);
+    }
+
     public AgentConfig saveConfig(AgentConfig config) throws AgentConfigException {
         validateConfig(config);
 
-        // Check availability of domain
-        // For new records
-        if (config.getId() == null && repository.findByDomain(config.getDomain()).isPresent()) {
-            throw new AgentConfigDomainAlreadyExistsException(config.getDomain());
-        }
-
-        // For updates, ensure we are not changing the domain to one that already exists on another record
-        if (config.getId() != null) {
-            Optional<AgentConfig> existing = repository.findByDomain(config.getDomain());
-            if (existing.isPresent() && !existing.get().getId().equals(config.getId())) {
+        Optional<AgentConfig> existing = repository.findByDomain(config.getDomain());
+        if (existing.isPresent()) {
+            if (config.getId() == null) {
+                config.setId(existing.get().getId());
+            } else if (!existing.get().getId().equals(config.getId())) {
                 throw new AgentConfigDomainAlreadyExistsException(config.getDomain());
             }
         }

@@ -69,7 +69,7 @@ class StorageConfigControllerTest {
     void create() throws Exception {
         StorageConfig config = new StorageConfig();
         config.setProvider(dev.fusionize.storage.StorageProvider.AWS_S3);
-        when(storageConfigManager.saveConfig(any(StorageConfig.class))).thenReturn(config);
+        when(storageConfigManager.createConfig(any(StorageConfig.class))).thenReturn(config);
 
         mockMvc.perform(post("/api/1.0/storage-config")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -82,7 +82,7 @@ class StorageConfigControllerTest {
     @Test
     void create_InvalidConfig() throws Exception {
         StorageConfig config = new StorageConfig();
-        when(storageConfigManager.saveConfig(any(StorageConfig.class)))
+        when(storageConfigManager.createConfig(any(StorageConfig.class)))
                 .thenThrow(new IllegalArgumentException("Invalid config"));
 
         mockMvc.perform(post("/api/1.0/storage-config")

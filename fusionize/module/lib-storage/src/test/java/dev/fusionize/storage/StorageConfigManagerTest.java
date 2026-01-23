@@ -15,11 +15,14 @@ import org.springframework.ai.document.Document;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 
 @ExtendWith(MockitoExtension.class)
 class StorageConfigManagerTest {
@@ -102,5 +105,58 @@ class StorageConfigManagerTest {
         assertThat(addCaptor.getValue().get(0).getText()).isEqualTo("Test Connection");
 
         verify(vectorStorageService).delete(anyList());
+    }
+    @Test
+    void createConfig_Success() throws StorageException {
+        StorageConfig config = StorageConfig.builder("test-domain")
+                .withName("file-config")
+                .withStorageType(StorageType.FILE_STORAGE)
+                .withProvider(StorageProvider.AWS_S3)
+                .build();
+
+        when(repository.findByDomain(config.getDomain())).thenReturn(Optional.empty());
+        when(repository.save(any(StorageConfig.class))).thenReturn(config);
+
+        StorageConfig saved = manager.createConfig(config);
+        assertThat(saved).isNotNull();
+        verify(repository).save(config);
+    }
+
+    @Test
+    void createConfig_DomainExists() {
+        StorageConfig config = StorageConfig.builder("test-domain")
+                .withName("file-config")
+                .withStorageType(StorageType.FILE_STORAGE)
+                .withProvider(StorageProvider.AWS_S3)
+                .build();
+
+        when(repository.findByDomain(config.getDomain())).thenReturn(Optional.of(config));
+
+        org.junit.jupiter.api.Assertions.assertThrows(dev.fusionize.storage.exception.StorageDomainAlreadyExistsException.class, () -> manager.createConfig(config));
+    }
+
+    @Test
+    void saveConfig_Upsert() throws StorageException {
+        StorageConfig config = StorageConfig.builder("test-domain")
+                .withName("file-config")
+                .withStorageType(StorageType.FILE_STORAGE)
+                .withProvider(StorageProvider.AWS_S3)
+                .build();
+        // ID is null by default
+
+        StorageConfig existing = StorageConfig.builder("test-domain")
+                .withName("existing")
+                .withStorageType(StorageType.FILE_STORAGE)
+                .withProvider(StorageProvider.AWS_S3)
+                .build();
+        existing.setId("existing-id");
+
+        when(repository.findByDomain(config.getDomain())).thenReturn(Optional.of(existing));
+        when(repository.save(any(StorageConfig.class))).thenReturn(config);
+
+        StorageConfig saved = manager.saveConfig(config);
+
+        assertThat(config.getId()).isEqualTo("existing-id");
+        verify(repository).save(config);
     }
 }

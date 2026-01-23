@@ -39,4 +39,4 @@ fusionize:
     orchestrator-amqp: amqp://fusionize:fusionize@localhost:5672
     oidc-client-id: fusionize-workers
     oidc-client-secret: fusionize-secret
-    workflow-definitions-root: ./workflows
+    resource-root: ./resources

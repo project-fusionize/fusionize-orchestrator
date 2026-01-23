@@ -31,7 +31,7 @@ public class OrchestrationActivateResponseEventHandler implements EventHandler<A
     }
 
     @Override
-    public Event handle(ActivationResponseEvent event) {
+    public Event handle(ActivationResponseEvent event) throws Exception {
         event.ensureOrchestrationEventContext(workflowExecutionRegistry, workflowRegistry);
         orchestrator.onActivated(event);
         return null;

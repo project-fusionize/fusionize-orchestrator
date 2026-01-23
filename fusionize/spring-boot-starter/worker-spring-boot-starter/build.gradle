@@ -21,6 +21,7 @@ dependencies {
     api project(':fusionize:module:lib-workflow')
     api project(':fusionize:module:lib-workflow-components')
     api project(':fusionize:module:lib-workflow-orchestration')
+    api project(':fusionize:module:lib-storage')
 
     implementation 'commons-io:commons-io:2.21.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind'

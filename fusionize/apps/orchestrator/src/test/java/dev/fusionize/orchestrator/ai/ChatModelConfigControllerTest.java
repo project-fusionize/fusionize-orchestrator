@@ -67,7 +67,7 @@ class ChatModelConfigControllerTest {
     void create() throws Exception {
         ChatModelConfig config = new ChatModelConfig();
         config.setProvider("openai");
-        when(chatModelManager.saveModel(any(ChatModelConfig.class))).thenReturn(config);
+        when(chatModelManager.createModel(any(ChatModelConfig.class))).thenReturn(config);
 
         mockMvc.perform(post("/api/1.0/chat-model-config")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -80,7 +80,7 @@ class ChatModelConfigControllerTest {
     @Test
     void create_InvalidConfig() throws Exception {
         ChatModelConfig config = new ChatModelConfig();
-        when(chatModelManager.saveModel(any(ChatModelConfig.class)))
+        when(chatModelManager.createModel(any(ChatModelConfig.class)))
                 .thenThrow(new dev.fusionize.ai.exception.InvalidChatModelConfigException("Invalid config"));
 
         mockMvc.perform(post("/api/1.0/chat-model-config")

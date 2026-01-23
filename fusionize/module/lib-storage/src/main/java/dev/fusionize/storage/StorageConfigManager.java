@@ -37,20 +37,30 @@ public class StorageConfigManager {
         this.repository = repository;
     }
 
+    public StorageConfig createConfig(StorageConfig config) throws StorageException {
+        validateConfig(config);
+        if (repository.findByDomain(config.getDomain()).isPresent()) {
+            throw new StorageDomainAlreadyExistsException(config.getDomain());
+        }
+        return saveConfigInternal(config);
+    }
+
     public StorageConfig saveConfig(StorageConfig config) throws StorageException {
         validateConfig(config);
 
-        if (config.getId() == null && repository.findByDomain(config.getDomain()).isPresent()) {
-            throw new StorageDomainAlreadyExistsException(config.getDomain());
-        }
-
-        if (config.getId() != null) {
-            Optional<StorageConfig> existing = repository.findByDomain(config.getDomain());
-            if (existing.isPresent() && !existing.get().getId().equals(config.getId())) {
+        Optional<StorageConfig> existing = repository.findByDomain(config.getDomain());
+        if (existing.isPresent()) {
+            if (config.getId() == null) {
+                config.setId(existing.get().getId());
+            } else if (!existing.get().getId().equals(config.getId())) {
                 throw new StorageDomainAlreadyExistsException(config.getDomain());
             }
         }
 
+        return saveConfigInternal(config);
+    }
+
+    private StorageConfig saveConfigInternal(StorageConfig config) {
         Map<Boolean, Map<String, Object>> splitProperties = config.getProperties().entrySet().stream()
                 .collect(Collectors.partitioningBy(
                         entry -> entry.getKey().endsWith("Key") || entry.getKey().endsWith("key"),

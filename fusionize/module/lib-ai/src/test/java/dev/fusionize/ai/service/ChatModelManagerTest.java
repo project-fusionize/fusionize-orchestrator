@@ -61,7 +61,26 @@ class ChatModelManagerTest {
     }
 
     @Test
-    void saveModel_DomainExists() {
+    void createModel_Success() throws ChatModelException {
+        ChatModelConfig config = ChatModelConfig.builder("test")
+                .withKey("gpt-4")
+                .withProvider("openai")
+                .withApiKey("sk-test")
+                .withModelName("gpt-4")
+                .build();
+        config.setDomain("test.gpt-4");
+
+        when(repository.save(any(ChatModelConfig.class))).thenReturn(config);
+        when(repository.findByDomain(config.getDomain())).thenReturn(Optional.empty());
+
+        ChatModelConfig saved = manager.createModel(config);
+        assertNotNull(saved);
+        assertEquals("gpt-4", saved.getKey());
+        verify(repository).save(config);
+    }
+
+    @Test
+    void createModel_DomainExists() {
         ChatModelConfig config = ChatModelConfig.builder("test")
                 .withKey("gpt-4")
                 .withProvider("openai")
@@ -72,7 +91,30 @@ class ChatModelManagerTest {
 
         when(repository.findByDomain(config.getDomain())).thenReturn(Optional.of(config));
 
-        assertThrows(ChatModelDomainAlreadyExistsException.class, () -> manager.saveModel(config));
+        assertThrows(ChatModelDomainAlreadyExistsException.class, () -> manager.createModel(config));
+    }
+
+    @Test
+    void saveModel_Upsert() throws ChatModelException {
+        ChatModelConfig config = ChatModelConfig.builder("test")
+                .withKey("gpt-4")
+                .withProvider("openai")
+                .withApiKey("sk-test")
+                .withModelName("gpt-4")
+                .build();
+        config.setDomain("test.gpt-4"); // No ID
+
+        ChatModelConfig existing = new ChatModelConfig();
+        existing.setDomain("test.gpt-4");
+        existing.setId("existing-id");
+
+        when(repository.findByDomain("test.gpt-4")).thenReturn(Optional.of(existing));
+        when(repository.save(any(ChatModelConfig.class))).thenReturn(config);
+
+        ChatModelConfig saved = manager.saveModel(config);
+        
+        assertEquals("existing-id", config.getId());
+        verify(repository).save(config);
     }
 
     @Test

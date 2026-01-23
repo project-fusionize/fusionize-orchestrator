@@ -41,12 +41,18 @@ public class EventRouter {
         for (EventHandler<? extends Event> handler : handlers) {
             EventHandler<E> typedHandler = (EventHandler<E>) handler;
             if (typedHandler.shouldHandle(event)) {
-                Event outgoing = typedHandler.handle(event);
-                event.setProcessedDate(new Date());
-                eventStore.save(event);
-                if(outgoing != null) {
-                    eventPublisher.publish(outgoing);
+                Event outgoing = null;
+                try {
+                    outgoing = typedHandler.handle(event);
+                    event.setProcessedDate(new Date());
+                    eventStore.save(event);
+                    if(outgoing != null) {
+                        eventPublisher.publish(outgoing);
+                    }
+                } catch (Exception e) {
+                    logger.error("Event Handler Failed Exception", e);
                 }
+
             }
         }
     }
