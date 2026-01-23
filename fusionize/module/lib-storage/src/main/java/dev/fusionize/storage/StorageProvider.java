@@ -8,7 +8,8 @@ public enum StorageProvider {
 
     // File Storage Providers
     AWS_S3(StorageType.FILE_STORAGE),
-    AZURE_BLOB(StorageType.FILE_STORAGE);
+    AZURE_BLOB(StorageType.FILE_STORAGE),
+    LOCAL(StorageType.FILE_STORAGE);
 
     private final StorageType type;
 

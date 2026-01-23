@@ -1,0 +1,9 @@
+kind: StorageConfig
+apiVersion: v1
+name: Local File Storage
+domain: test-local-storage
+enabled: true
+provider: LOCAL
+storageType: FILE_STORAGE
+properties:
+  path: ./.fuz/data/local-storage

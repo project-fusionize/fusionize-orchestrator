@@ -1,8 +1,6 @@
 package dev.fusionize.storage.descriptor;
 
 import dev.fusionize.common.parser.descriptor.Description;
-import dev.fusionize.storage.StorageProvider;
-import dev.fusionize.storage.StorageType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,8 +8,8 @@ import java.util.Map;
 public class StorageConfigDescription extends Description {
     private String name;
     private String domain;
-    private StorageProvider provider;
-    private StorageType storageType;
+    private String provider;
+    private String storageType;
     private Map<String, Object> secrets = new HashMap<>();
     private Map<String, Object> properties = new HashMap<>();
     private boolean enabled = true;
@@ -32,19 +30,19 @@ public class StorageConfigDescription extends Description {
         this.domain = domain;
     }
 
-    public StorageProvider getProvider() {
+    public String getProvider() {
         return provider;
     }
 
-    public void setProvider(StorageProvider provider) {
+    public void setProvider(String provider) {
         this.provider = provider;
     }
 
-    public StorageType getStorageType() {
+    public String getStorageType() {
         return storageType;
     }
 
-    public void setStorageType(StorageType storageType) {
+    public void setStorageType(String storageType) {
         this.storageType = storageType;
     }
 

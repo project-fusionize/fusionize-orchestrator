@@ -12,7 +12,7 @@ nodes:
     actor: SYSTEM
     component: fuz.connector.FileInbound
     config:
-      storage: test-s3-storage
+      storage: test-local-storage
       output: invoiceFile
     next: [extract-data]
 
