@@ -14,7 +14,7 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation 'commons-codec:commons-codec:1.15'
+    implementation 'commons-codec:commons-codec:1.20.0'
     implementation 'org.apache.commons:commons-text:1.15.0'
     implementation 'org.freemarker:freemarker:2.3.34'
     implementation 'com.google.code.gson:gson:2.10.1'
