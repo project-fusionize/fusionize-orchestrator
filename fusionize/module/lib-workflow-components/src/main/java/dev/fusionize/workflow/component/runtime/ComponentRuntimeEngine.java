@@ -102,7 +102,8 @@ public class ComponentRuntimeEngine {
                                     oc.workflowExecution().getWorkflowExecutionId(),
                                     oc.nodeExecution().getWorkflowNodeId(),
                                     oc.nodeExecution().getWorkflowNode().getWorkflowNodeKey(),
-                                    oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
+                                    oc.nodeExecution().getWorkflowNode().getComponent(), level, message, throwable);
+                                    
                         };
                     }
 
@@ -185,7 +186,8 @@ public class ComponentRuntimeEngine {
                                     oc.workflowExecution().getWorkflowExecutionId(),
                                     oc.nodeExecution().getWorkflowNodeId(),
                                     oc.nodeExecution().getWorkflowNode().getWorkflowNodeKey(),
-                                    oc.nodeExecution().getWorkflowNode().getComponent(), level, message);
+                                    oc.nodeExecution().getWorkflowNode().getComponent(), level, message, throwable);
+                                  
                         };
                     }
 
