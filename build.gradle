@@ -8,7 +8,7 @@ repositories {
 
 buildscript {
     ext{
-        springBootVersion  = '3.5.6'
+        springBootVersion  = '4.0.2'
         springBootDependencyMangementVersion  = '1.1.7'
         springAiVersion = '1.0.3'
     }
