@@ -8,11 +8,11 @@ public interface WorkflowLogger {
 
     void log(String workflowId, String workflowDomain, String workflowExecutionId, String workflowNodeId,
             String nodeKey, String component,
-            WorkflowLog.LogLevel level, String message);
+            WorkflowLog.LogLevel level, String message, Throwable throwable);
 
     default void log(String workflowId, String workflowDomain, String workflowExecutionId, String workflowNodeId,
             String nodeKey, String component,
-            WorkflowLog.LogLevel level, String message, Throwable throwable)
+            WorkflowLog.LogLevel level, String message)
 
     {
         log(
@@ -23,7 +23,8 @@ public interface WorkflowLogger {
                 nodeKey,
                 component,
                 level,
-                message
+                message,
+                null
         );
     }
 
