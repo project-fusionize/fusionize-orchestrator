@@ -91,6 +91,17 @@ public class WorkflowNodeTransformer {
             description.setNext(new ArrayList<>());
         }
 
+        // Transform compensateNodes to "compensate" field containing the keys of compensation nodes
+        if (workflowNode.getCompensateNodes() != null && !workflowNode.getCompensateNodes().isEmpty()) {
+            List<String> compensateKeys = workflowNode.getCompensateNodes().stream()
+                    .map(WorkflowNode::getWorkflowNodeKey)
+                    .filter(key -> key != null && !key.isEmpty())
+                    .collect(Collectors.toList());
+            description.setCompensate(compensateKeys);
+        } else {
+            description.setCompensate(new ArrayList<>());
+        }
+
         return description;
     }
 }

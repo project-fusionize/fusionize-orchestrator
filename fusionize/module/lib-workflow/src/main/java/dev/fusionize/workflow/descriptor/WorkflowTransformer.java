@@ -90,13 +90,32 @@ public class WorkflowTransformer {
                 }
                 currentNode.setChildren(children);
             }
+
+            // Build compensation relationships using "compensate" field
+            if (nodeDescription.getCompensate() != null && !nodeDescription.getCompensate().isEmpty()) {
+                List<WorkflowNode> compensateNodes = new ArrayList<>();
+                for (String compensateKey : nodeDescription.getCompensate()) {
+                    WorkflowNode compensateNode = nodeMap.get(compensateKey);
+                    if (compensateNode != null) {
+                        compensateNodes.add(compensateNode);
+                    }
+                }
+                currentNode.setCompensateNodes(compensateNodes);
+            }
         }
 
-        // Find root nodes: nodes that are not referenced in any "next" field
+        // Find root nodes: nodes that are not referenced in any "next" or "compensate" field
         Set<String> referencedNodes = nodeDescriptions.values().stream()
                 .filter(desc -> desc.getNext() != null)
                 .flatMap(desc -> desc.getNext().stream())
                 .collect(Collectors.toSet());
+
+        Set<String> compensateReferencedNodes = nodeDescriptions.values().stream()
+                .filter(desc -> desc.getCompensate() != null)
+                .flatMap(desc -> desc.getCompensate().stream())
+                .collect(Collectors.toSet());
+
+        referencedNodes.addAll(compensateReferencedNodes);
 
         return nodeDescriptions.keySet().stream()
                 .filter(workflowNodeDescription -> !referencedNodes.contains(workflowNodeDescription))
@@ -154,6 +173,11 @@ public class WorkflowTransformer {
             // Recursively process children
             if (node.getChildren() != null && !node.getChildren().isEmpty()) {
                 transformNodeRecursive(node.getChildren(), nodeMap, transformer);
+            }
+
+            // Recursively process compensation nodes
+            if (node.getCompensateNodes() != null && !node.getCompensateNodes().isEmpty()) {
+                transformNodeRecursive(node.getCompensateNodes(), nodeMap, transformer);
             }
         }
     }

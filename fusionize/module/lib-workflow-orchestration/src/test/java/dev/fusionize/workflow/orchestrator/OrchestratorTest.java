@@ -174,7 +174,22 @@ class OrchestratorTest {
                                 .build(),
                         waitUtilFactory);
 
+                ComponentRuntimeFactory<MockFailingTaskComponent> failingTaskFactory = MockFailingTaskComponent::new;
+                ComponentRuntimeFactory<MockCompensationComponent> compensationFactory = MockCompensationComponent::new;
 
+                componentRegistry.registerFactory(
+                        WorkflowComponent.builder("test")
+                                .withDomain("failingTask")
+                                .withActor(Actor.SYSTEM)
+                                .build(),
+                        failingTaskFactory);
+
+                componentRegistry.registerFactory(
+                        WorkflowComponent.builder("test")
+                                .withDomain("compensationTask")
+                                .withActor(Actor.SYSTEM)
+                                .build(),
+                        compensationFactory);
 
         }
 
@@ -1127,6 +1142,101 @@ class OrchestratorTest {
                                 "Expected log at index " + i + " to end with: " + expected + "\nActual: "
                                         + actual);
                 }
+        }
+
+        /**
+         * Waits until at least one workflow node execution reaches the given state,
+         * or times out after the specified number of seconds.
+         */
+        private void waitForNodeState(WorkflowNodeExecutionState targetState, int timeoutSeconds) throws InterruptedException {
+                long endTime = System.currentTimeMillis() + (timeoutSeconds * 1000L);
+                while (System.currentTimeMillis() < endTime) {
+                        List<WorkflowExecution> executions = workflowExecutionRepository.findAll();
+                        boolean found = executions.stream()
+                                .flatMap(we -> we.getNodeExecutionMap().values().stream())
+                                .anyMatch(ne -> ne.getState() == targetState);
+                        if (found) return;
+                        Thread.sleep(500);
+                }
+        }
+
+        @Test
+        void orchestrateWithCompensation() throws InterruptedException, IOException {
+                Workflow workflow = loadWorkflow("/email-workflow-with-compensation.yml");
+
+                // Verify the workflow model has compensation nodes properly parsed
+                WorkflowNode processEmailNode = workflow.getNodeMap().values().stream()
+                        .filter(n -> "processEmail".equals(n.getWorkflowNodeKey()))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException("processEmail node not found"));
+
+                assertNotNull(processEmailNode.getCompensateNodeIds(),
+                        "Compensation node IDs should be set after flatten");
+                assertFalse(processEmailNode.getCompensateNodeIds().isEmpty(),
+                        "processEmail should have at least one compensation node");
+
+                // Verify the compensation target node exists in the workflow
+                String compensateNodeId = processEmailNode.getCompensateNodeIds().getFirst();
+                WorkflowNode undoNode = workflow.getNodeMap().get(compensateNodeId);
+                assertNotNull(undoNode, "Compensation target node should be in nodeMap");
+                assertEquals("undoProcess", undoNode.getWorkflowNodeKey());
+
+                // Trigger the workflow by sending an email
+                Thread.sleep(200);
+                inbox.add("test email for compensation");
+
+                // Wait for the failing task node to reach FAILED state
+                waitForNodeState(WorkflowNodeExecutionState.FAILED, 10);
+
+                List<WorkflowLog> logs = workflowLogRepository.findAll();
+                logs.sort(Comparator.comparing(WorkflowLog::getTimestamp));
+                logWorkflowLogs("DB logs orchestrateWithCompensation ->\n{}", logs);
+
+                // Get the in-progress execution (the one where the task failed)
+                List<WorkflowExecution> workflowExecutions = workflowExecutionRepository.findAll();
+                List<WorkflowExecution> inProgress = workflowExecutions.stream()
+                        .filter(we -> we.getStatus() == WorkflowExecutionStatus.IN_PROGRESS).toList();
+
+                assertFalse(inProgress.isEmpty(),
+                        "There should be at least one IN_PROGRESS execution (task failed, workflow stuck)");
+
+                WorkflowExecution failedExecution = inProgress.getFirst();
+
+                // Find the processEmail node execution and verify it's FAILED
+                WorkflowNodeExecution failedNodeExecution = failedExecution.getNodeExecutionMap().values().stream()
+                        .filter(ne -> ne.getWorkflowNodeId().equals(processEmailNode.getWorkflowNodeId()))
+                        .findFirst()
+                        .orElse(null);
+                assertNotNull(failedNodeExecution, "processEmail node execution should exist");
+                assertEquals(WorkflowNodeExecutionState.FAILED, failedNodeExecution.getState(),
+                        "processEmail node should be in FAILED state");
+
+                // Verify logs show the task was activated and then failed
+                List<WorkflowLog> processEmailLogs = logs.stream()
+                        .filter(l -> "processEmail".equals(l.getNodeKey()))
+                        .toList();
+                assertFalse(processEmailLogs.isEmpty(), "processEmail should have log entries");
+                assertTrue(processEmailLogs.stream().anyMatch(
+                                l -> l.getMessage().contains("MockFailingTaskComponent activated")),
+                        "Should log activation");
+                assertTrue(processEmailLogs.stream().anyMatch(
+                                l -> l.getMessage().contains("MockFailingTaskComponent about to fail")),
+                        "Should log the failure attempt");
+
+                // Verify that compensation was NOT triggered (not yet implemented in Orchestrator)
+                // This documents the current behavior — compensation execution is TODO 1.2
+                List<WorkflowLog> compensationLogs = logs.stream()
+                        .filter(l -> "undoProcess".equals(l.getNodeKey()))
+                        .toList();
+                assertTrue(compensationLogs.isEmpty(),
+                        "Compensation should NOT be triggered yet (pending TODO 1.2 implementation)");
+
+                // Verify the execution did NOT reach SUCCESS (stuck at IN_PROGRESS)
+                long successCount = workflowExecutions.stream()
+                        .filter(we -> we.getStatus() == WorkflowExecutionStatus.SUCCESS)
+                        .count();
+                assertEquals(0, successCount,
+                        "No execution should complete successfully when the task fails");
         }
 
         @Test

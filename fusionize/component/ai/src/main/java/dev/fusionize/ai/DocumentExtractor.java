@@ -58,7 +58,7 @@ public class DocumentExtractor implements ComponentRuntime {
             );
 
             if (response == null) {
-                throw new Exception("response is null");
+                throw new IllegalStateException("Document extractor returned null response");
             }
             emitter.logger().info("Document extraction was successful, {}", response.data());
             context.getData().put(outputVar, response.data());

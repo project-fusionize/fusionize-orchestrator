@@ -1,10 +1,7 @@
 package dev.fusionize.ai;
 
 import dev.fusionize.ai.service.DocumentExtractorService;
-import dev.fusionize.storage.file.FileStorageService;
-import dev.fusionize.workflow.WorkflowInteraction;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
-import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +11,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class DocumentExtractorTest {
@@ -32,123 +28,156 @@ class DocumentExtractorTest {
         emitter = new TestEmitter();
     }
 
+    // --- configure tests ---
+
     @Test
-    void testRun_ExtractsData() throws Exception {
-        // Configure
+    void configure_usesDefaults_whenNoConfigProvided() {
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "testAgent");
+        documentExtractor.configure(config);
+
+        context.set("document", "content");
+        documentExtractor.canActivate(context, emitter);
+
+        assertTrue(emitter.successCalled);
+    }
+
+    @Test
+    void configure_overridesInputAndOutputVars() throws Exception {
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "testAgent");
+        config.set("input", "myInput");
+        config.set("output", "myOutput");
+        documentExtractor.configure(config);
+
+        context.set("myInput", "content");
+
+        DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of("k", "v"));
+        when(documentExtractorService.extract(any())).thenReturn(response);
+
+        documentExtractor.run(context, emitter);
+
+        assertTrue(emitter.successCalled);
+        assertNotNull(context.getData().get("myOutput"));
+    }
+
+    // --- canActivate tests ---
+
+    @Test
+    void canActivate_failsWhenAgentNameMissing() {
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        documentExtractor.configure(config);
+
+        documentExtractor.canActivate(context, emitter);
+
+        assertTrue(emitter.failureCalled);
+        assertInstanceOf(IllegalArgumentException.class, emitter.lastFailure);
+        assertTrue(emitter.lastFailure.getMessage().contains("Agent name"));
+    }
+
+    @Test
+    void canActivate_failsWhenAgentNameEmpty() {
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "");
+        documentExtractor.configure(config);
+
+        documentExtractor.canActivate(context, emitter);
+
+        assertTrue(emitter.failureCalled);
+    }
+
+    @Test
+    void canActivate_failsWhenInputNotInContext() {
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "testAgent");
+        documentExtractor.configure(config);
+
+        documentExtractor.canActivate(context, emitter);
+
+        assertTrue(emitter.failureCalled);
+        assertTrue(emitter.lastFailure.getMessage().contains("document"));
+    }
+
+    @Test
+    void canActivate_succeedsWhenInputInContextData() {
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "testAgent");
+        documentExtractor.configure(config);
+
+        context.set("document", "some content");
+        documentExtractor.canActivate(context, emitter);
+
+        assertTrue(emitter.successCalled);
+    }
+
+    @Test
+    void canActivate_succeedsWhenInputInContextResources() {
+        ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "testAgent");
+        documentExtractor.configure(config);
+
+        context.getResources().put("document", new dev.fusionize.workflow.context.ContextResourceReference());
+        documentExtractor.canActivate(context, emitter);
+
+        assertTrue(emitter.successCalled);
+    }
+
+    // --- run tests ---
+
+    @Test
+    void run_extractsDataSuccessfully() throws Exception {
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
         config.set("agent", "mockAgent");
-
         Map<String, Object> example = new HashMap<>();
         example.put("key", "value");
         config.set(DocumentExtractor.CONF_EXAMPLE, example);
         documentExtractor.configure(config);
 
-        // Setup context
-        byte[] docBytes = "test content".getBytes();
-        context.set("document", docBytes);
+        context.set("document", "test content".getBytes());
 
-        // Mock Service response
-        DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of(
-                "key", "extractedValue"));
-        when(documentExtractorService.extract(any(DocumentExtractorService.ExtractionPackage.class))).thenReturn(response);
+        DocumentExtractorService.Response response = new DocumentExtractorService.Response(
+                Map.of("key", "extractedValue"));
+        when(documentExtractorService.extract(any())).thenReturn(response);
 
-        // Run
         documentExtractor.run(context, emitter);
 
-        // Verify success
         assertTrue(emitter.successCalled);
-
-        // Verify output
+        @SuppressWarnings("unchecked")
         Map<String, Object> result = (Map<String, Object>) context.getData().get("extractedData");
         assertNotNull(result);
         assertEquals("extractedValue", result.get("key"));
-        
-        verify(documentExtractorService).extract(any(DocumentExtractorService.ExtractionPackage.class));
+        verify(documentExtractorService).extract(any());
     }
 
     @Test
-    void testRun_WithStorage() throws Exception {
-        // Configure
+    void run_handlesNullResponse() throws Exception {
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
         config.set("agent", "mockAgent");
         documentExtractor.configure(config);
 
-        // Setup context
-        context.set("document", "some ref");
+        context.set("document", "some text");
 
-        // Mock getFileStorageService
-        FileStorageService mockStorage = mock(FileStorageService.class);
-        when(documentExtractorService.getFileStorageService("my-storage")).thenReturn(mockStorage);
-        // Re-configure to pick up the mock
-        documentExtractor.configure(config);
+        when(documentExtractorService.extract(any())).thenReturn(null);
 
-        // Mock Service response
-        DocumentExtractorService.Response response = new DocumentExtractorService.Response(Map.of("key", "val"));
-        when(documentExtractorService.extract(any(DocumentExtractorService.ExtractionPackage.class))).thenReturn(response);
-
-        // Run
         documentExtractor.run(context, emitter);
 
-        // Verify success
-        assertTrue(emitter.successCalled);
-        
-        verify(documentExtractorService).extract(any(DocumentExtractorService.ExtractionPackage.class));
+        assertTrue(emitter.failureCalled);
+        assertInstanceOf(IllegalStateException.class, emitter.lastFailure);
     }
 
     @Test
-    void testRun_HandlesNullResponse() throws Exception {
-        // Configure
+    void run_handlesServiceException() throws Exception {
         ComponentRuntimeConfig config = new ComponentRuntimeConfig();
+        config.set("agent", "mockAgent");
         documentExtractor.configure(config);
 
-        // Setup context
         context.set("document", "some text");
 
-        // Mock Service response to null
-        when(documentExtractorService.extract(any(DocumentExtractorService.ExtractionPackage.class))).thenReturn(null);
+        when(documentExtractorService.extract(any())).thenThrow(new RuntimeException("AI service down"));
 
-        // Run
         documentExtractor.run(context, emitter);
 
-        // Verify failure
         assertTrue(emitter.failureCalled);
-    }
-
-
-    static class TestEmitter implements ComponentUpdateEmitter {
-        boolean successCalled = false;
-        boolean failureCalled = false;
-
-        @Override
-        public void success(Context updatedContext) {
-            System.err.println("SUCCESS CALLED");
-            successCalled = true;
-        }
-
-        @Override
-        public void failure(Exception ex) {
-            System.err.println("FAILURE CALLED: " + ex.getMessage());
-            ex.printStackTrace(System.err);
-            failureCalled = true;
-        }
-
-        @Override
-        public ComponentUpdateEmitter.Logger logger() {
-            return (message, level, throwable) -> {
-                System.out.println("[" + level + "] " + message);
-                if (throwable != null) {
-                    throwable.printStackTrace();
-                }
-            };
-        }
-
-        @Override
-        public InteractionLogger interactionLogger() {
-            return (Object content,
-                    String actor,
-                    WorkflowInteraction.InteractionType type,
-                    WorkflowInteraction.Visibility visibility) ->  System.out.println("[" + actor + "] " + content);
-
-        }
+        assertTrue(emitter.lastFailure.getMessage().contains("AI service down"));
     }
 }

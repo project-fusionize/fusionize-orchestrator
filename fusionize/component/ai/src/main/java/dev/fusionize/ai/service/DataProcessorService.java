@@ -17,9 +17,8 @@ import java.util.Map;
 
 @Service
 public class DataProcessorService {
-    private static final Logger defaultLogger = LoggerFactory.getLogger(DataProcessorService.class);
+    private static final Logger log = LoggerFactory.getLogger(DataProcessorService.class);
     private final AgentConfigManager agentConfigManager;
-
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public DataProcessorService(AgentConfigManager agentConfigManager) {
@@ -40,17 +39,15 @@ public class DataProcessorService {
     }
 
     public Response process(ProcessPackage pkg) throws AgentConfigNotFoundException, ChatModelException, JsonProcessingException {
-        if(!pkg.context.contains(pkg.inputVar) || pkg.context.getData().get(pkg.inputVar)==null){
-            throw new IllegalArgumentException("input var not found "+pkg.inputVar);
+        if (!pkg.context.contains(pkg.inputVar) || pkg.context.getData().get(pkg.inputVar) == null) {
+            throw new IllegalArgumentException("Input var not found: " + pkg.inputVar);
         }
-        String dataString = pkg.context.var(pkg.inputVar,Object.class).toString();
+        String dataString = pkg.context.getData().get(pkg.inputVar).toString();
         ChatClient chatClient = this.agentConfigManager.getChatClient(pkg.agent);
-        if (pkg.logger !=  null) {
-            pkg.logger.info("Processing data from: {}",dataString);
-        }else {
-            defaultLogger.info("Processing data from: {}",dataString);
-        }
-        String exampleJson = objectMapper.writeValueAsString(new DocumentExtractorService.Response(pkg.example()));
+
+        logInfo(pkg.logger, "Processing data from: {}", dataString);
+
+        String exampleJson = objectMapper.writeValueAsString(new Response(pkg.example()));
 
         return chatClient.prompt()
                 .user(u -> u.text(
@@ -60,7 +57,7 @@ public class DataProcessorService {
 
                                         Instruction:
                                         {instruction}
-                                        
+
                                         Input:
                                         {input}
                                         """)
@@ -70,5 +67,13 @@ public class DataProcessorService {
                 .advisors(new ComponentLogAdvisor(pkg.interactionLogger))
                 .call()
                 .entity(Response.class);
+    }
+
+    private void logInfo(ComponentUpdateEmitter.Logger logger, String message, Object... args) {
+        if (logger != null) {
+            logger.info(message, args);
+        } else {
+            log.info(message, args);
+        }
     }
 }

@@ -23,6 +23,8 @@ class WorkflowDescriptorTest {
     private URL workflowTestYamlUrl;
     private URL workflowSimpleJsonUrl;
     private URL workflowSimpleYamlUrl;
+    private URL workflowCompensationJsonUrl;
+    private URL workflowCompensationYamlUrl;
 
     @BeforeEach
     void setUp() {
@@ -31,11 +33,15 @@ class WorkflowDescriptorTest {
         workflowTestYamlUrl = this.getClass().getResource("/workflow-test.yml");
         workflowSimpleJsonUrl = this.getClass().getResource("/workflow-simple.json");
         workflowSimpleYamlUrl = this.getClass().getResource("/workflow-simple.yml");
+        workflowCompensationJsonUrl = this.getClass().getResource("/workflow-compensation.json");
+        workflowCompensationYamlUrl = this.getClass().getResource("/workflow-compensation.yml");
 
         assertNotNull(workflowTestJsonUrl, "workflow-test.json resource not found");
         assertNotNull(workflowTestYamlUrl, "workflow-test.yml resource not found");
         assertNotNull(workflowSimpleJsonUrl, "workflow-simple.json resource not found");
         assertNotNull(workflowSimpleYamlUrl, "workflow-simple.yml resource not found");
+        assertNotNull(workflowCompensationJsonUrl, "workflow-compensation.json resource not found");
+        assertNotNull(workflowCompensationYamlUrl, "workflow-compensation.yml resource not found");
     }
 
     @Test
@@ -451,6 +457,82 @@ class WorkflowDescriptorTest {
         assertEquals("Empty Workflow", workflow.getName());
         assertNotNull(workflow.getNodes());
         assertTrue(workflow.getNodes().isEmpty());
+    }
+
+    @Test
+    void fromYamlDescription_WithCompensation_ShouldParseCompensateNodes() throws IOException {
+        String yaml = Files.readString(new File(workflowCompensationYamlUrl.getFile()).toPath());
+
+        Workflow workflow = descriptor.fromYamlDescription(yaml);
+
+        assertNotNull(workflow);
+        assertEquals("Payment Workflow", workflow.getName());
+
+        // Find the chargePayment node (child of start)
+        WorkflowNode start = workflow.getNodes().get(0);
+        assertEquals("start", start.getWorkflowNodeKey());
+        WorkflowNode charge = start.getChildren().get(0);
+        assertEquals("chargePayment", charge.getWorkflowNodeKey());
+
+        // Verify compensation relationship
+        assertNotNull(charge.getCompensateNodes());
+        assertEquals(1, charge.getCompensateNodes().size());
+        assertEquals("refundPayment", charge.getCompensateNodes().get(0).getWorkflowNodeKey());
+
+        // Verify compensation node has its own children
+        WorkflowNode refund = charge.getCompensateNodes().get(0);
+        assertEquals(1, refund.getChildren().size());
+        assertEquals("notifyFailure", refund.getChildren().get(0).getWorkflowNodeKey());
+    }
+
+    @Test
+    void fromJsonDescription_WithCompensation_ShouldParseCompensateNodes() throws IOException {
+        String json = Files.readString(new File(workflowCompensationJsonUrl.getFile()).toPath());
+
+        Workflow workflow = descriptor.fromJsonDescription(json);
+
+        assertNotNull(workflow);
+        assertEquals("Payment Workflow", workflow.getName());
+
+        WorkflowNode start = workflow.getNodes().get(0);
+        WorkflowNode charge = start.getChildren().get(0);
+        assertEquals("chargePayment", charge.getWorkflowNodeKey());
+
+        assertNotNull(charge.getCompensateNodes());
+        assertEquals(1, charge.getCompensateNodes().size());
+        assertEquals("refundPayment", charge.getCompensateNodes().get(0).getWorkflowNodeKey());
+    }
+
+    @Test
+    void roundTrip_WithCompensation_JsonShouldPreserveCompensateField() throws IOException {
+        String originalJson = Files.readString(new File(workflowCompensationJsonUrl.getFile()).toPath());
+
+        Workflow workflow = descriptor.fromJsonDescription(originalJson);
+        String generatedJson = descriptor.toJsonDescription(workflow);
+        Workflow roundTrip = descriptor.fromJsonDescription(generatedJson);
+
+        assertNotNull(roundTrip);
+        WorkflowNode start = roundTrip.getNodes().get(0);
+        WorkflowNode charge = start.getChildren().get(0);
+        assertEquals("chargePayment", charge.getWorkflowNodeKey());
+        assertEquals(1, charge.getCompensateNodes().size());
+        assertEquals("refundPayment", charge.getCompensateNodes().get(0).getWorkflowNodeKey());
+    }
+
+    @Test
+    void roundTrip_WithCompensation_YamlShouldPreserveCompensateField() throws IOException {
+        String originalYaml = Files.readString(new File(workflowCompensationYamlUrl.getFile()).toPath());
+
+        Workflow workflow = descriptor.fromYamlDescription(originalYaml);
+        String generatedYaml = descriptor.toYamlDescription(workflow);
+        Workflow roundTrip = descriptor.fromYamlDescription(generatedYaml);
+
+        assertNotNull(roundTrip);
+        WorkflowNode start = roundTrip.getNodes().get(0);
+        WorkflowNode charge = start.getChildren().get(0);
+        assertEquals("chargePayment", charge.getWorkflowNodeKey());
+        assertEquals(1, charge.getCompensateNodes().size());
+        assertEquals("refundPayment", charge.getCompensateNodes().get(0).getWorkflowNodeKey());
     }
 
     // Helper method to create a test workflow

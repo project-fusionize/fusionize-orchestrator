@@ -9,9 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-@JsonIgnoreProperties({"children"})
+@JsonIgnoreProperties({"children", "compensateNodes"})
 public class WorkflowNode {
     private List<String> childrenIds = new ArrayList<>();
+    private List<String> compensateNodeIds = new ArrayList<>();
     private WorkflowNodeType type;
     private String workflowNodeId;
     private String workflowNodeKey;
@@ -20,6 +21,9 @@ public class WorkflowNode {
 
     @Transient
     private List<WorkflowNode> children = new ArrayList<>();
+
+    @Transient
+    private List<WorkflowNode> compensateNodes = new ArrayList<>();
 
     public WorkflowNode(){}
 
@@ -32,6 +36,7 @@ public class WorkflowNode {
 
     private WorkflowNode(Builder builder) {
         this.children = builder.children;
+        this.compensateNodes = builder.compensateNodes;
         this.type = builder.type;
         this.workflowNodeId = Objects.requireNonNullElseGet(
                 builder.workflowNodeId, () -> KeyUtil.getTimestampId("WNOD"));
@@ -54,6 +59,22 @@ public class WorkflowNode {
 
     public void setChildrenIds(List<String> childrenIds) {
         this.childrenIds = childrenIds;
+    }
+
+    public List<WorkflowNode> getCompensateNodes() {
+        return compensateNodes;
+    }
+
+    public void setCompensateNodes(List<WorkflowNode> compensateNodes) {
+        this.compensateNodes = compensateNodes;
+    }
+
+    public List<String> getCompensateNodeIds() {
+        return compensateNodeIds;
+    }
+
+    public void setCompensateNodeIds(List<String> compensateNodeIds) {
+        this.compensateNodeIds = compensateNodeIds;
     }
 
     public WorkflowNodeType getType() {
@@ -119,6 +140,7 @@ public class WorkflowNode {
 
     public static class Builder {
         private List<WorkflowNode> children = new ArrayList<>();
+        private List<WorkflowNode> compensateNodes = new ArrayList<>();
         private WorkflowNodeType type;
         private String workflowNodeId;
         private String workflowNodeKey;
@@ -133,6 +155,18 @@ public class WorkflowNode {
         public Builder addChild(WorkflowNode child) {
             if (child != null) {
                 this.children.add(child);
+            }
+            return this;
+        }
+
+        public Builder compensateNodes(List<WorkflowNode> compensateNodes) {
+            this.compensateNodes = compensateNodes != null ? new ArrayList<>(compensateNodes) : new ArrayList<>();
+            return this;
+        }
+
+        public Builder addCompensateNode(WorkflowNode compensateNode) {
+            if (compensateNode != null) {
+                this.compensateNodes.add(compensateNode);
             }
             return this;
         }

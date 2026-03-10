@@ -5,8 +5,6 @@ import dev.fusionize.workflow.component.runtime.ComponentRuntimeConfig;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class HttpInboundConnector implements ComponentRuntime {
     private final HttpInboundConnectorService httpInboundConnectorService;
@@ -42,7 +40,6 @@ public class HttpInboundConnector implements ComponentRuntime {
         httpInboundConnectorService.addListener(key, body -> {
             emitter.logger().info("Http listener triggered for key: {}, body: {}", key, body);
             context.getData().putAll(body);
-//            httpInboundConnectorService.removeListener(key); // Cleanup
             emitter.success(context);
         });
     }

@@ -14,6 +14,7 @@ public class WorkflowNodeDescription extends Description {
     private String component;
     private Map<String, Object> config = new HashMap<>();
     private List<String> next = new ArrayList<>();
+    private List<String> compensate = new ArrayList<>();
 
     public WorkflowNodeDescription() {
     }
@@ -56,5 +57,13 @@ public class WorkflowNodeDescription extends Description {
 
     public void setNext(List<String> next) {
         this.next = next;
+    }
+
+    public List<String> getCompensate() {
+        return compensate;
+    }
+
+    public void setCompensate(List<String> compensate) {
+        this.compensate = compensate;
     }
 }

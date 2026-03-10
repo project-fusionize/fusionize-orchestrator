@@ -1,0 +1,43 @@
+kind: Workflow
+apiVersion: v1
+name: Test Email Workflow With Compensation
+domain: test.emailWorkflow
+key: test-email-workflow-compensation-key
+description: A test workflow that exercises the compensation node pattern
+version: 1
+active: true
+nodes:
+  start:
+    type: START
+    actor: system
+    component: test.receivedIncomingEmail
+    config:
+      address: incoming@email.com
+    next: [processEmail]
+
+  processEmail:
+    type: TASK
+    actor: system
+    component: test.failingTask
+    config: {}
+    next: [end]
+    compensate: [undoProcess]
+
+  undoProcess:
+    type: TASK
+    actor: system
+    component: test.compensationTask
+    config: {}
+    next: [compensateEnd]
+
+  compensateEnd:
+    type: END
+    actor: system
+    component: test.endEmailWorkflow
+    next: []
+
+  end:
+    type: END
+    actor: system
+    component: test.endEmailWorkflow
+    next: []

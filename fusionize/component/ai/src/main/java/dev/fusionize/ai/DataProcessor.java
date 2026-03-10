@@ -10,18 +10,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DataProcessor implements ComponentRuntime {
-    private final DataProcessorService dataProcessorService;
     public static final String CONF_AGENT_NAME = "agent";
     public static final String CONF_PROMPT = "prompt";
     public static final String CONF_INPUT_VAR = "input";
     public static final String CONF_OUTPUT_VAR = "output";
     public static final String CONF_EXAMPLE = "example";
 
-    private String inputVar;
-    private String outputVar;
+    private final DataProcessorService dataProcessorService;
+
+    private String inputVar = "data";
+    private String outputVar = "processedData";
     private String agentName;
     private String prompt;
-
     private Map<String, Object> example = new HashMap<>();
 
     public DataProcessor(DataProcessorService dataProcessorService) {
@@ -39,12 +39,12 @@ public class DataProcessor implements ComponentRuntime {
 
     @Override
     public void canActivate(Context context, ComponentUpdateEmitter emitter) {
-        if(agentName == null || agentName.isEmpty()) {
+        if (agentName == null || agentName.isEmpty()) {
             emitter.failure(new IllegalArgumentException("Agent name not found in configs"));
             return;
         }
-        if(prompt == null || prompt.isEmpty()) {
-            emitter.failure(new IllegalArgumentException("prompt not found in configs"));
+        if (prompt == null || prompt.isEmpty()) {
+            emitter.failure(new IllegalArgumentException("Prompt not found in configs"));
             return;
         }
         if (context.contains(inputVar)) {
@@ -64,14 +64,14 @@ public class DataProcessor implements ComponentRuntime {
             );
 
             if (response == null) {
-                throw new Exception("response is null");
+                throw new IllegalStateException("Data processor returned null response");
             }
             emitter.logger().info("Data processing was successful, {}", response.data());
             context.getData().put(outputVar, response.data());
             emitter.success(context);
 
         } catch (Exception e) {
-            emitter.logger().error("Error processing data {}", e.getMessage(), e);
+            emitter.logger().error("Error processing data: {}", e.getMessage(), e);
             emitter.failure(e);
         }
     }

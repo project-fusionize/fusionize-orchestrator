@@ -25,4 +25,24 @@ public class WorkflowNodeGraphAdapter implements NodeAdapter<WorkflowNode, Strin
     public void setChildrenIds(WorkflowNode n, Collection<String> ids) {
         n.setChildrenIds(new ArrayList<>(ids));
     }
+
+    @Override
+    public Collection<WorkflowNode> getSecondaryChildren(WorkflowNode n) {
+        return n.getCompensateNodes();
+    }
+
+    @Override
+    public void setSecondaryChildren(WorkflowNode n, Collection<WorkflowNode> c) {
+        n.setCompensateNodes(new ArrayList<>(c));
+    }
+
+    @Override
+    public Collection<String> getSecondaryChildrenIds(WorkflowNode n) {
+        return n.getCompensateNodeIds();
+    }
+
+    @Override
+    public void setSecondaryChildrenIds(WorkflowNode n, Collection<String> ids) {
+        n.setCompensateNodeIds(new ArrayList<>(ids));
+    }
 }
