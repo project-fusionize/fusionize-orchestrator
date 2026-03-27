@@ -19,6 +19,7 @@ allprojects {
 }
 subprojects {
     apply plugin: 'java'
+    apply plugin: 'jacoco'
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
@@ -37,6 +38,27 @@ subprojects {
             showStandardStreams = true
         }
         jvmArgs '-XX:+EnableDynamicAgentLoading'
+        finalizedBy jacocoTestReport
+    }
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+        }
+    }
+    jacocoTestCoverageVerification {
+        dependsOn jacocoTestReport
+        violationRules {
+            rule {
+                limit {
+                    minimum = 0.80
+                }
+            }
+        }
+    }
+    tasks.named('check') {
+        dependsOn jacocoTestCoverageVerification
     }
 }
 

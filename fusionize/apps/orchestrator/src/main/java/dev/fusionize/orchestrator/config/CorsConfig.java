@@ -16,19 +16,19 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
     @Bean("allowedOriginPattern")
-    @Profile("local")
+    @Profile({"local", "docker"})
     List<String> localAllowedOriginPattern() {
         return List.of("*");
     }
 
     @Bean("allowedOriginPattern")
-    @Profile("!local")
+    @Profile({"!local & !docker"})
     List<String> allowedOriginPattern() {
         return List.of("https://fusionize.dev", "https://*.fusionize.dev");
     }
 
     @Bean
-    @Profile("local")
+    @Profile({"local", "docker"})
     @Primary
     CorsConfigurationSource corsLocalConfigurationSource(
             @Qualifier("allowedOriginPattern") List<String> origins) {
@@ -36,7 +36,7 @@ public class CorsConfig {
     }
 
     @Bean
-    @Profile("!local")
+    @Profile({"!local & !docker"})
     @Primary
     CorsConfigurationSource corsConfigurationSource(
             @Qualifier("allowedOriginPattern") List<String> origins) {

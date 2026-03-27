@@ -1,6 +1,7 @@
 {
   "realm": "fuz",
   "enabled": true,
+  "sslRequired": "none",
   "accessTokenLifespan": 3600,
   "ssoSessionIdleTimeout": 3600,
   "ssoSessionMaxLifespan": 28800,

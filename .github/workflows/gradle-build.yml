@@ -33,5 +33,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew build --stacktrace
+      - name: Build and verify coverage
+        run: ./gradlew build check --stacktrace
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: build/**/jacocoTestReport/
+          retention-days: 14
