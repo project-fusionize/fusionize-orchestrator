@@ -10,5 +10,11 @@ public interface NodeAdapter<N, ID> {
 
     Collection<ID> getChildrenIds(N node);
     void setChildrenIds(N node, Collection<ID> ids);
+
+    default Collection<N> getSecondaryChildren(N node) { return null; }
+    default void setSecondaryChildren(N node, Collection<N> children) {}
+
+    default Collection<ID> getSecondaryChildrenIds(N node) { return null; }
+    default void setSecondaryChildrenIds(N node, Collection<ID> ids) {}
 }
 

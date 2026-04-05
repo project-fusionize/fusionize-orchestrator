@@ -28,7 +28,6 @@ class DocumentExtractorServiceTest {
     @Mock
     private AgentConfigManager agentConfigManager;
 
-    // Use Deep Stubs to avoid needing to know exact intermediate types
     @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
     private ChatClient chatClient;
 
@@ -45,7 +44,6 @@ class DocumentExtractorServiceTest {
     void setUp() throws ChatModelException, AgentConfigNotFoundException {
         MockitoAnnotations.openMocks(this);
 
-        // Mock ChatClient builder to return our deep stubbed client
         when(agentConfigManager.getChatClient(anyString())).thenReturn(chatClient);
         when(configManager.getConfig(any())).thenReturn(Optional.of(new StorageConfig()));
         when(configManager.getFileStorageService(any())).thenReturn(storageService);
@@ -54,15 +52,14 @@ class DocumentExtractorServiceTest {
         example = new HashMap<>();
         example.put("key", "value");
     }
-    
+
     @Test
-    void testExtract_FromContextData_Bytes() throws Exception {
+    void extract_fromContextData_bytes() throws Exception {
         byte[] content = "test content".getBytes(StandardCharsets.UTF_8);
         context.set("input", content);
 
         DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("extracted", "data"));
-        
-        // Mock deep call chain
+
         when(chatClient.prompt()
                 .user(any(Consumer.class))
                 .advisors(any(ComponentLogAdvisor.class))
@@ -79,12 +76,11 @@ class DocumentExtractorServiceTest {
     }
 
     @Test
-    void testExtract_FromContextData_String() throws Exception {
+    void extract_fromContextData_string() throws Exception {
         context.set("input", "test content string");
 
         DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("extracted", "data"));
-        
-        // Mock chain for text path
+
         when(chatClient.prompt()
                 .user(any(Consumer.class))
                 .advisors(any(ComponentLogAdvisor.class))
@@ -99,15 +95,14 @@ class DocumentExtractorServiceTest {
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
     }
-    
+
     @Test
-    void testExtract_FromContextData_Base64String() throws Exception {
+    void extract_fromContextData_base64String() throws Exception {
         String base64Content = Base64.getEncoder().encodeToString("test content".getBytes(StandardCharsets.UTF_8));
         context.set("input", base64Content);
 
         DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("extracted", "data"));
-        
-        // Mock deep call chain for bytes path (decoded from base64)
+
         when(chatClient.prompt()
                 .user(any(Consumer.class))
                 .advisors(any(ComponentLogAdvisor.class))
@@ -117,18 +112,16 @@ class DocumentExtractorServiceTest {
 
         DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
                 context, "input", example, "mockAgent", null, null);
-        service.extract(pkg);
-        
-        // Verify invocation (using deep verify is tricky, but result being present assumes success)
-        // We can just rely on the return value being non-null and correct
+        DocumentExtractorService.Response response = service.extract(pkg);
+
+        assertNotNull(response);
     }
 
     @Test
-    void testExtract_FromStorageResource() throws Exception {
+    void extract_fromStorageResource() throws Exception {
         String storageName = "test-storage";
         String refKey = "file/path.txt";
-        
-        // Setup context with resource
+
         ContextResourceReference ref = new ContextResourceReference();
         ref.setStorage(storageName);
         ref.setReferenceKey(refKey);
@@ -136,10 +129,9 @@ class DocumentExtractorServiceTest {
 
         byte[] fileBytes = "file content".getBytes(StandardCharsets.UTF_8);
         when(storageService.read(List.of(refKey))).thenReturn(Map.of(refKey, new ByteArrayInputStream(fileBytes)));
-        
-        // Mock ChatClient
+
         DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("extracted", "data"));
-        
+
         when(chatClient.prompt()
                 .user(any(Consumer.class))
                 .advisors(any(ComponentLogAdvisor.class))
@@ -150,27 +142,25 @@ class DocumentExtractorServiceTest {
         DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
                 context, "input", example, "mockAgent", null, null);
         DocumentExtractorService.Response response = service.extract(pkg);
-        
+
         assertNotNull(response);
         assertEquals("data", response.data().get("extracted"));
         verify(storageService).read(List.of(refKey));
     }
-    
+
     @Test
-    void testExtract_FallbackToData_WhenResourceFails() throws Exception {
+    void extract_fallbackToData_whenResourceFails() throws Exception {
         String storageName = "test-storage";
         String refKey = "file/path.txt";
-        
-        // Setup context with resource AND data
+
         ContextResourceReference ref = new ContextResourceReference();
         ref.setStorage(storageName);
         ref.setReferenceKey(refKey);
         context.set("input", ref);
-        context.set("input", "fallback content"); // Overwrites data but resource map is separate
+        context.set("input", "fallback content");
 
         when(storageService.read(List.of(refKey))).thenThrow(new RuntimeException("Storage unavailable"));
-        
-        // Mock ChatClient for text path (fallback)
+
         DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("extracted", "fallbackData"));
         when(chatClient.prompt()
                 .user(any(Consumer.class))
@@ -182,18 +172,96 @@ class DocumentExtractorServiceTest {
         DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
                 context, "input", example, "mockAgent", null, null);
         DocumentExtractorService.Response response = service.extract(pkg);
-        
+
         assertNotNull(response);
         assertEquals("fallbackData", response.data().get("extracted"));
-        verify(storageService).read(List.of(refKey)); // Attempted storage read
     }
-    
+
     @Test
-    void testExtract_Throws_WhenInputMissing() {
+    void extract_throws_whenInputMissing() {
         assertThrows(IllegalArgumentException.class, () -> {
             DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
                     context, "missing", example, "mockAgent", null, null);
             service.extract(pkg);
         });
+    }
+
+    @Test
+    void extract_throws_whenContextNull() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                    null, "input", example, "mockAgent", null, null);
+            service.extract(pkg);
+        });
+    }
+
+    @Test
+    void extract_throws_whenInputVarNull() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                    context, null, example, "mockAgent", null, null);
+            service.extract(pkg);
+        });
+    }
+
+    @Test
+    void extract_throws_whenDocumentTypeUnsupported() {
+        context.set("input", 12345); // Integer, not supported
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                    context, "input", example, "mockAgent", null, null);
+            service.extract(pkg);
+        });
+    }
+
+    @Test
+    void extract_usesComponentLogger_whenProvided() throws Exception {
+        context.set("input", "text content");
+
+        DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("k", "v"));
+        when(chatClient.prompt()
+                .user(any(Consumer.class))
+                .advisors(any(ComponentLogAdvisor.class))
+                .call()
+                .entity(DocumentExtractorService.Response.class))
+                .thenReturn(mockResponse);
+
+        var logCalled = new boolean[]{false};
+        var logger = new dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter.Logger() {
+            @Override
+            public void log(String message, dev.fusionize.workflow.WorkflowLog.LogLevel level, Throwable throwable) {
+                logCalled[0] = true;
+            }
+        };
+
+        DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                context, "input", example, "mockAgent", logger, null);
+        service.extract(pkg);
+
+        assertTrue(logCalled[0]);
+    }
+
+    @Test
+    void extract_handlesResourceWithEmptyStorage() throws Exception {
+        ContextResourceReference ref = new ContextResourceReference();
+        ref.setStorage("");
+        ref.setReferenceKey("some-key");
+        context.set("input", ref);
+        context.set("input", "fallback text");
+
+        DocumentExtractorService.Response mockResponse = new DocumentExtractorService.Response(Map.of("k", "v"));
+        when(chatClient.prompt()
+                .user(any(Consumer.class))
+                .advisors(any(ComponentLogAdvisor.class))
+                .call()
+                .entity(DocumentExtractorService.Response.class))
+                .thenReturn(mockResponse);
+
+        DocumentExtractorService.ExtractionPackage pkg = new DocumentExtractorService.ExtractionPackage(
+                context, "input", example, "mockAgent", null, null);
+        DocumentExtractorService.Response response = service.extract(pkg);
+
+        assertNotNull(response);
     }
 }

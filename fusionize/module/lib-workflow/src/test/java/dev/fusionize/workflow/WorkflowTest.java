@@ -266,6 +266,114 @@ class WorkflowTest {
     }
     
     @Test
+    void flattenAndInflate_ShouldPreserveCompensationNodes() {
+        // Build: start -> task -> end, task compensate -> undo
+        WorkflowNode undo = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("undo")
+                .workflowNodeId("undo-id")
+                .component("task:payment.refund")
+                .build();
+
+        WorkflowNode end = WorkflowNode.builder()
+                .type(WorkflowNodeType.END)
+                .workflowNodeKey("end")
+                .workflowNodeId("end-id")
+                .build();
+
+        WorkflowNode task = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("task")
+                .workflowNodeId("task-id")
+                .component("task:payment.charge")
+                .addChild(end)
+                .addCompensateNode(undo)
+                .build();
+
+        WorkflowNode start = WorkflowNode.builder()
+                .type(WorkflowNodeType.START)
+                .workflowNodeKey("start")
+                .workflowNodeId("start-id")
+                .addChild(task)
+                .build();
+
+        Workflow workflow = Workflow.builder("test")
+                .withName("Compensation Test")
+                .addNode(start)
+                .build();
+
+        // Flatten
+        workflow.flatten();
+
+        // All nodes including compensation target should be in nodeMap
+        assertTrue(workflow.getNodeMap().containsKey("start-id"));
+        assertTrue(workflow.getNodeMap().containsKey("task-id"));
+        assertTrue(workflow.getNodeMap().containsKey("end-id"));
+        assertTrue(workflow.getNodeMap().containsKey("undo-id"));
+
+        // Task node should have compensateNodeIds set
+        WorkflowNode flatTask = workflow.getNodeMap().get("task-id");
+        assertNotNull(flatTask.getCompensateNodeIds());
+        assertEquals(1, flatTask.getCompensateNodeIds().size());
+        assertTrue(flatTask.getCompensateNodeIds().contains("undo-id"));
+
+        // Now inflate
+        workflow.inflate();
+
+        // Find task node and verify compensation relationship is restored
+        WorkflowNode inflatedTask = workflow.getNodeMap().get("task-id");
+        assertNotNull(inflatedTask.getCompensateNodes());
+        assertEquals(1, inflatedTask.getCompensateNodes().size());
+        assertEquals("undo-id", inflatedTask.getCompensateNodes().get(0).getWorkflowNodeId());
+    }
+
+    @Test
+    void flattenAndInflate_WithCompensationChain_ShouldPreserveFullSubTree() {
+        // task compensate -> undo -> notify
+        WorkflowNode notify = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("notify")
+                .workflowNodeId("notify-id")
+                .component("task:notification.fail")
+                .build();
+
+        WorkflowNode undo = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("undo")
+                .workflowNodeId("undo-id")
+                .component("task:payment.refund")
+                .addChild(notify)
+                .build();
+
+        WorkflowNode task = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .workflowNodeKey("task")
+                .workflowNodeId("task-id")
+                .component("task:payment.charge")
+                .addCompensateNode(undo)
+                .build();
+
+        Workflow workflow = Workflow.builder("test")
+                .addNode(task)
+                .build();
+
+        workflow.flatten();
+
+        // All nodes in the compensation chain should be flattened
+        assertTrue(workflow.getNodeMap().containsKey("undo-id"));
+        assertTrue(workflow.getNodeMap().containsKey("notify-id"));
+
+        workflow.inflate();
+
+        WorkflowNode inflatedTask = workflow.getNodeMap().get("task-id");
+        assertEquals(1, inflatedTask.getCompensateNodes().size());
+        WorkflowNode inflatedUndo = inflatedTask.getCompensateNodes().get(0);
+        assertEquals("undo-id", inflatedUndo.getWorkflowNodeId());
+        assertEquals(1, inflatedUndo.getChildren().size());
+        assertEquals("notify-id", inflatedUndo.getChildren().get(0).getWorkflowNodeId());
+    }
+
+    @Test
     void mergeFrom_ShouldHandleRemovedNodes() {
         WorkflowNode node1 = WorkflowNode.builder().workflowNodeKey("n1").build();
         WorkflowNode node2 = WorkflowNode.builder().workflowNodeKey("n2").build();

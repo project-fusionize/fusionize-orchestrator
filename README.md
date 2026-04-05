@@ -20,7 +20,6 @@ Fusionize is an open-source, event-driven BPMS (Business Process Management Syst
 ## 📦 Getting Started
 ### Prerequisites
 - Docker & Docker Compose
-- Java 21+
 
 ### Installation
 
@@ -29,18 +28,27 @@ Fusionize is an open-source, event-driven BPMS (Business Process Management Syst
    git clone git@github.com:project-fusionize/fusionize-orchestrator.git
    ```
 
-2. **Start Infrastructure:**
+2. **Start everything:**
    ```bash
    cd fusionize-orchestrator
    docker-compose up -d
    ```
-   > **Note:** The first startup may take some time as it pulls images and initializes containers (especially Keycloak and MongoDB).
+   > **Note:** The first startup may take some time as it pulls images, downloads Gradle dependencies, and initializes containers (especially Keycloak and MongoDB).
 
-3. **Start the Application:**
-   ```bash
-   ./gradlew dev
-   ```
-   > **Troubleshooting:** If you encounter an authentication error on startup, it is likely because Keycloak is not yet fully ready. Please wait a few moments and restart the application.
+   This single command starts all infrastructure (MongoDB, RabbitMQ, Keycloak) **and** the Fusionize application.
+
+   The application uses **Spring DevTools** for hot-reloading — any code changes you make on the host are automatically detected and the application restarts inside the container without needing a rebuild.
+
+   > **Troubleshooting:** If you encounter an authentication error on startup, it is likely because Keycloak is not yet fully ready. Wait a few moments and restart the app container: `docker-compose restart fusionize-app`
+
+### Local Development (without Docker for the app)
+
+If you prefer to run the application outside Docker (e.g., from your IDE), you can start only the infrastructure:
+
+```bash
+docker-compose up -d mongodb rabbitmq keycloak keycloak-db fusionize-hub
+./gradlew dev
+```
 
 ### Accessing Services
 

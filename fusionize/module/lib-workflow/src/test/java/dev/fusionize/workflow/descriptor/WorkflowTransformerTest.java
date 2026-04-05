@@ -400,6 +400,183 @@ class WorkflowTransformerTest {
     }
 
     @Test
+    void toWorkflow_WithCompensateField_ShouldBuildCompensationRelationships() {
+        // Given: start -> task1 -> end, with task1 compensate -> undoTask1
+        WorkflowDescription description = createSimpleWorkflowDescription();
+
+        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start",
+                List.of("task1"));
+        WorkflowNodeDescription taskNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.task",
+                List.of("end1"));
+        taskNode.setCompensate(List.of("undoTask1"));
+        WorkflowNodeDescription undoNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.undo",
+                new ArrayList<>());
+        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end",
+                new ArrayList<>());
+
+        Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
+        nodes.put("start1", startNode);
+        nodes.put("task1", taskNode);
+        nodes.put("undoTask1", undoNode);
+        nodes.put("end1", endNode);
+        description.setNodes(nodes);
+
+        // When
+        Workflow workflow = transformer.toWorkflow(description);
+
+        // Then
+        assertNotNull(workflow);
+        // Root is start1. undoTask1 is not a root (referenced in compensate).
+        assertEquals(1, workflow.getNodes().size());
+        WorkflowNode root = workflow.getNodes().get(0);
+        assertEquals("start1", root.getWorkflowNodeKey());
+
+        // task1 should have compensation nodes
+        WorkflowNode task = root.getChildren().get(0);
+        assertEquals("task1", task.getWorkflowNodeKey());
+        assertNotNull(task.getCompensateNodes());
+        assertEquals(1, task.getCompensateNodes().size());
+        assertEquals("undoTask1", task.getCompensateNodes().get(0).getWorkflowNodeKey());
+    }
+
+    @Test
+    void toWorkflow_WithCompensateChain_ShouldResolveCompensationSubTree() {
+        // Given: task1 compensate -> undo1 -> notifyFailure -> end
+        WorkflowDescription description = createSimpleWorkflowDescription();
+
+        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start",
+                List.of("task1"));
+        WorkflowNodeDescription taskNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.task",
+                List.of("end1"));
+        taskNode.setCompensate(List.of("undo1"));
+        WorkflowNodeDescription undoNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.undo",
+                List.of("notifyFailure"));
+        WorkflowNodeDescription notifyNode = createNodeDescription(WorkflowNodeType.TASK, "task:notification.fail",
+                List.of("end1"));
+        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end",
+                new ArrayList<>());
+
+        Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
+        nodes.put("start1", startNode);
+        nodes.put("task1", taskNode);
+        nodes.put("undo1", undoNode);
+        nodes.put("notifyFailure", notifyNode);
+        nodes.put("end1", endNode);
+        description.setNodes(nodes);
+
+        // When
+        Workflow workflow = transformer.toWorkflow(description);
+
+        // Then: undo1 is compensation target, notifyFailure is its child
+        WorkflowNode task = workflow.getNodes().get(0).getChildren().get(0);
+        assertEquals(1, task.getCompensateNodes().size());
+        WorkflowNode undo = task.getCompensateNodes().get(0);
+        assertEquals("undo1", undo.getWorkflowNodeKey());
+        assertEquals(1, undo.getChildren().size());
+        assertEquals("notifyFailure", undo.getChildren().get(0).getWorkflowNodeKey());
+    }
+
+    @Test
+    void toWorkflowDescription_WithCompensateNodes_ShouldIncludeCompensateField() {
+        // Given: task1 with compensation node
+        WorkflowNode undoNode = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .component("task:test.undo")
+                .workflowNodeKey("undo1")
+                .build();
+
+        WorkflowNode endNode = WorkflowNode.builder()
+                .type(WorkflowNodeType.END)
+                .component("end:test.end")
+                .workflowNodeKey("end1")
+                .build();
+
+        WorkflowNode taskNode = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .component("task:test.task")
+                .workflowNodeKey("task1")
+                .addChild(endNode)
+                .addCompensateNode(undoNode)
+                .build();
+
+        WorkflowNode startNode = WorkflowNode.builder()
+                .type(WorkflowNodeType.START)
+                .component("start:test.start")
+                .workflowNodeKey("start1")
+                .addChild(taskNode)
+                .build();
+
+        Workflow workflow = createSimpleWorkflow();
+        workflow.setNodes(List.of(startNode));
+
+        // When
+        WorkflowDescription result = transformer.toWorkflowDescription(workflow);
+
+        // Then
+        assertNotNull(result.getNodes().get("task1"));
+        List<String> compensate = result.getNodes().get("task1").getCompensate();
+        assertNotNull(compensate);
+        assertEquals(1, compensate.size());
+        assertTrue(compensate.contains("undo1"));
+
+        // The undo node should also appear in the node map
+        assertNotNull(result.getNodes().get("undo1"));
+    }
+
+    @Test
+    void roundTrip_WithCompensation_ShouldPreserveRelationships() {
+        // Given
+        WorkflowDescription original = createSimpleWorkflowDescription();
+
+        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start",
+                List.of("task1"));
+        WorkflowNodeDescription taskNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.task",
+                List.of("end1"));
+        taskNode.setCompensate(List.of("undo1"));
+        WorkflowNodeDescription undoNode = createNodeDescription(WorkflowNodeType.TASK, "task:test.undo",
+                new ArrayList<>());
+        WorkflowNodeDescription endNode = createNodeDescription(WorkflowNodeType.END, "end:test.end",
+                new ArrayList<>());
+
+        Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
+        nodes.put("start1", startNode);
+        nodes.put("task1", taskNode);
+        nodes.put("undo1", undoNode);
+        nodes.put("end1", endNode);
+        original.setNodes(nodes);
+
+        // When: Transform to workflow and back
+        Workflow workflow = transformer.toWorkflow(original);
+        WorkflowDescription result = transformer.toWorkflowDescription(workflow);
+
+        // Then
+        assertEquals(4, result.getNodes().size());
+        WorkflowNodeDescription resultTask = result.getNodes().get("task1");
+        assertNotNull(resultTask);
+        assertEquals(1, resultTask.getCompensate().size());
+        assertTrue(resultTask.getCompensate().contains("undo1"));
+    }
+
+    @Test
+    void toWorkflow_WithInvalidCompensateRef_ShouldNotCrash() {
+        WorkflowDescription description = createSimpleWorkflowDescription();
+
+        WorkflowNodeDescription startNode = createNodeDescription(WorkflowNodeType.START, "start:test.start",
+                new ArrayList<>());
+        startNode.setCompensate(List.of("nonExistent"));
+
+        Map<String, WorkflowNodeDescription> nodes = new HashMap<>();
+        nodes.put("start1", startNode);
+        description.setNodes(nodes);
+
+        Workflow workflow = transformer.toWorkflow(description);
+
+        assertNotNull(workflow);
+        WorkflowNode root = workflow.getNodes().get(0);
+        assertTrue(root.getCompensateNodes().isEmpty());
+    }
+
+    @Test
     void toWorkflow_WithNodesMissingInNextField_ShouldNotCrash() {
         // Given: A node references a non-existent node in its "next" field
         WorkflowDescription description = createSimpleWorkflowDescription();

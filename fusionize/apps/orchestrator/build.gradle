@@ -20,6 +20,8 @@ dependencies {
 
     implementation project(':fusionize:spring-boot-starter:worker-spring-boot-starter')
 
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.security:spring-security-messaging'
@@ -35,6 +37,7 @@ dependencies {
     implementation 'org.freemarker:freemarker'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
 }
 
 bootRun {

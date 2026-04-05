@@ -1,0 +1,56 @@
+kind: Workflow
+apiVersion: v1
+name: Payment Workflow
+domain: test.payment
+key: payment-workflow-key
+description: A workflow with compensation nodes
+version: 1
+active: true
+nodes:
+  start:
+    type: START
+    component: test.start
+    config: {}
+    next:
+      - chargePayment
+
+  chargePayment:
+    type: TASK
+    actor: system
+    component: payment.charge
+    config:
+      currency: USD
+    next:
+      - sendConfirmation
+    compensate:
+      - refundPayment
+
+  refundPayment:
+    type: TASK
+    actor: system
+    component: payment.refund
+    config: {}
+    next:
+      - notifyFailure
+
+  notifyFailure:
+    type: TASK
+    actor: system
+    component: notification.failure
+    config: {}
+    next:
+      - end
+
+  sendConfirmation:
+    type: TASK
+    actor: system
+    component: notification.success
+    config: {}
+    next:
+      - end
+
+  end:
+    type: END
+    component: test.end
+    config: {}
+    next: []

@@ -19,6 +19,7 @@ allprojects {
 }
 subprojects {
     apply plugin: 'java'
+    apply plugin: 'jacoco'
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
@@ -37,6 +38,82 @@ subprojects {
             showStandardStreams = true
         }
         jvmArgs '-XX:+EnableDynamicAgentLoading'
+        finalizedBy jacocoTestReport
+    }
+    def jacocoExcludes = [
+        '**/config/*Config*',
+        '**/config/*Security*',
+        '**/WorkerAutoConfiguration*',
+        '**/WorkerMongoAutoConfiguration*',
+        '**/WorkerAmqpAutoConfiguration*',
+        '**/RuntimeComponentBeanRegistrar*',
+        '**/vector/MongoVectorStorageService*',
+        '**/vector/PineconeVectorStorageService*',
+        '**/file/FileStorageServiceS3*',
+    ]
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+        }
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect {
+                fileTree(dir: it, excludes: jacocoExcludes)
+            }))
+        }
+        doLast {
+            def report = reports.xml.outputLocation.asFile.get()
+            if (report.exists()) {
+                def parser = new XmlSlurper()
+                parser.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false)
+                parser.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+                def xml = parser.parse(report)
+                def counters = xml.counter
+                def line = counters.find { it.@type == 'LINE' }
+                def branch = counters.find { it.@type == 'BRANCH' }
+                def instr = counters.find { it.@type == 'INSTRUCTION' }
+                if (line) {
+                    def missed = line.@missed.toInteger()
+                    def covered = line.@covered.toInteger()
+                    def total = missed + covered
+                    def pct = total > 0 ? (covered * 100.0 / total).round(2) : 0
+                    logger.lifecycle(">> ${project.name} LINE coverage: ${pct}% (${covered}/${total})")
+                }
+                if (branch) {
+                    def missed = branch.@missed.toInteger()
+                    def covered = branch.@covered.toInteger()
+                    def total = missed + covered
+                    def pct = total > 0 ? (covered * 100.0 / total).round(2) : 0
+                    logger.lifecycle(">> ${project.name} BRANCH coverage: ${pct}% (${covered}/${total})")
+                }
+                if (instr) {
+                    def missed = instr.@missed.toInteger()
+                    def covered = instr.@covered.toInteger()
+                    def total = missed + covered
+                    def pct = total > 0 ? (covered * 100.0 / total).round(2) : 0
+                    logger.lifecycle(">> ${project.name} INSTRUCTION coverage: ${pct}% (${covered}/${total})")
+                }
+            }
+        }
+    }
+    jacocoTestCoverageVerification {
+        dependsOn jacocoTestReport
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect {
+                fileTree(dir: it, excludes: jacocoExcludes)
+            }))
+        }
+        violationRules {
+            rule {
+                limit {
+                    minimum = 0.80
+                }
+            }
+        }
+    }
+    tasks.named('check') {
+        dependsOn jacocoTestCoverageVerification
     }
 }
 

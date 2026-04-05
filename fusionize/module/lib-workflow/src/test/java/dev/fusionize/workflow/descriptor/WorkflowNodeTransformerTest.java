@@ -267,6 +267,50 @@ class WorkflowNodeTransformerTest {
     }
 
     @Test
+    void toWorkflowNodeDescription_WithCompensateNodes_ShouldIncludeCompensateKeys() {
+        WorkflowNode compNode1 = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .component("task:payment.refund")
+                .workflowNodeKey("refund")
+                .build();
+
+        WorkflowNode compNode2 = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .component("task:notification.failure")
+                .workflowNodeKey("notifyFailure")
+                .build();
+
+        WorkflowNode node = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .component("task:payment.charge")
+                .workflowNodeKey("charge")
+                .addCompensateNode(compNode1)
+                .addCompensateNode(compNode2)
+                .build();
+
+        WorkflowNodeDescription description = transformer.toWorkflowNodeDescription(node);
+
+        assertNotNull(description.getCompensate());
+        assertEquals(2, description.getCompensate().size());
+        assertTrue(description.getCompensate().contains("refund"));
+        assertTrue(description.getCompensate().contains("notifyFailure"));
+    }
+
+    @Test
+    void toWorkflowNodeDescription_WithNoCompensateNodes_ShouldReturnEmptyList() {
+        WorkflowNode node = WorkflowNode.builder()
+                .type(WorkflowNodeType.TASK)
+                .component("task:test.task")
+                .workflowNodeKey("task1")
+                .build();
+
+        WorkflowNodeDescription description = transformer.toWorkflowNodeDescription(node);
+
+        assertNotNull(description.getCompensate());
+        assertTrue(description.getCompensate().isEmpty());
+    }
+
+    @Test
     void roundTripTransformation_ShouldPreserveData() {
         // Given
         WorkflowNodeDescription original = new WorkflowNodeDescription();

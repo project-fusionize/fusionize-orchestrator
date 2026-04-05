@@ -72,17 +72,37 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-
       KC_DB: postgres
       KC_DB_URL_HOST: keycloak-db
       KC_DB_URL_DATABASE: keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak
-
+      KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
     ports:
       - "8080:8080"
+    networks:
+      - fusionize-network
+
+  fusionize-app:
+    image: eclipse-temurin:21-jdk
+    container_name: fusionize-app
+    restart: always
+    depends_on:
+      - mongodb
+      - rabbitmq
+      - keycloak
+    ports:
+      - "8081:8081"
+    volumes:
+      - .:/workspace
+      - gradle_cache:/root/.gradle
+    working_dir: /workspace
+    command: bash -c "chmod +x ./gradlew && ./gradlew dev -Dspring.profiles.active=docker"
+    environment:
+      JAVA_TOOL_OPTIONS: "-Dspring.devtools.restart.enabled=true"
+      GRADLE_USER_HOME: /root/.gradle
     networks:
       - fusionize-network
 
@@ -93,3 +113,4 @@ networks:
 volumes:
   mongo_data:
   keycloak_pg:
+  gradle_cache:

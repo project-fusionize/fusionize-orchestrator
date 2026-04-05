@@ -48,6 +48,17 @@ public final class GraphUtil {
         }
 
         adapter.setChildrenIds(node, childIds);
+
+        // Flatten secondary edges (e.g. compensation nodes)
+        Collection<N> secondaryChildren = adapter.getSecondaryChildren(node);
+        if (secondaryChildren != null && !secondaryChildren.isEmpty()) {
+            Collection<ID> secondaryIds = new ArrayList<>();
+            for (N secondary : secondaryChildren) {
+                secondaryIds.add(adapter.getId(secondary));
+                flattenNode(secondary, adapter, nodeMap);
+            }
+            adapter.setSecondaryChildrenIds(node, secondaryIds);
+        }
     }
 
     /* ===================== INFLATE ===================== */
@@ -57,7 +68,7 @@ public final class GraphUtil {
             Collection<ID> rootIds,
             NodeAdapter<N, ID> adapter
     ) {
-        // Link children
+        // Link children and secondary children
         for (N node : nodeMap.values()) {
             Collection<N> children = new ArrayList<>();
             Collection<ID> childIds = adapter.getChildrenIds(node);
@@ -72,6 +83,18 @@ public final class GraphUtil {
             }
 
             adapter.setChildren(node, children);
+
+            Collection<ID> secondaryIds = adapter.getSecondaryChildrenIds(node);
+            if (secondaryIds != null && !secondaryIds.isEmpty()) {
+                Collection<N> secondaryChildren = new ArrayList<>();
+                for (ID secId : secondaryIds) {
+                    N secChild = nodeMap.get(secId);
+                    if (secChild != null) {
+                        secondaryChildren.add(secChild);
+                    }
+                }
+                adapter.setSecondaryChildren(node, secondaryChildren);
+            }
         }
 
         // Resolve roots

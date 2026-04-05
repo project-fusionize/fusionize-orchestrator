@@ -1,8 +1,6 @@
 package dev.fusionize.web;
 
-
 import dev.fusionize.web.services.FileInboundConnectorService;
-import dev.fusionize.web.services.HttpInboundConnectorService;
 import dev.fusionize.worker.component.annotations.RuntimeComponentDefinition;
 import dev.fusionize.workflow.component.Actor;
 import dev.fusionize.workflow.component.runtime.ComponentRuntimeFactory;
@@ -14,14 +12,13 @@ import org.springframework.stereotype.Component;
         domain = "fuz.connector.FileInbound",
         name = "File Inbound Connector",
         description = "File Inbound Connector component",
-        actors = { Actor.SYSTEM, Actor.HUMAN  })
+        actors = {Actor.SYSTEM, Actor.HUMAN})
 public class FileInboundConnectorFactory implements ComponentRuntimeFactory<FileInboundConnector> {
     private final FileInboundConnectorService fileInboundConnectorService;
 
     public FileInboundConnectorFactory(FileInboundConnectorService fileInboundConnectorService) {
         this.fileInboundConnectorService = fileInboundConnectorService;
     }
-
 
     @Override
     public FileInboundConnector create() {

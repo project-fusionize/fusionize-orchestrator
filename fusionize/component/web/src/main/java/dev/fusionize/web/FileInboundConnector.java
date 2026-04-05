@@ -8,9 +8,6 @@ import dev.fusionize.workflow.component.runtime.interfaces.ComponentRuntime;
 import dev.fusionize.workflow.component.runtime.interfaces.ComponentUpdateEmitter;
 import dev.fusionize.workflow.context.Context;
 import dev.fusionize.workflow.context.ContextResourceReference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,7 +18,7 @@ public class FileInboundConnector implements ComponentRuntime {
     private final FileInboundConnectorService fileInboundConnectorService;
     private FileStorageService fileStorageService;
 
-    private String outputKey;
+    private String outputKey = "file";
     private String storage;
 
     public FileInboundConnector(FileInboundConnectorService fileInboundConnectorService) {
@@ -30,17 +27,18 @@ public class FileInboundConnector implements ComponentRuntime {
 
     @Override
     public void configure(ComponentRuntimeConfig config) {
-        this.outputKey = config.varString("output").orElse(null);
-        this.storage = config.varString("storage").orElse(null);
-        if(storage!=null && !storage.isEmpty()){
+        config.varString("output").ifPresent(s -> this.outputKey = s);
+        config.varString("storage").ifPresent(s -> this.storage = s);
+        if (storage != null && !storage.isEmpty()) {
             this.fileStorageService = fileInboundConnectorService.getFileStorageService(storage);
         }
     }
 
     @Override
     public void canActivate(Context context, ComponentUpdateEmitter emitter) {
-        if(fileStorageService==null){
-            emitter.failure(new Exception("FileStorageService is not found: " + this.storage ));
+        if (fileStorageService == null) {
+            emitter.failure(new IllegalStateException("FileStorageService not found for storage: " + this.storage));
+            return;
         }
         emitter.logger().info("File inbound connector activated, storing in -> {}", this.storage);
         emitter.success(context);
@@ -67,7 +65,6 @@ public class FileInboundConnector implements ComponentRuntime {
                 Map<String, OutputStream> writeMap = fileStorageService.write(List.of(randomKey));
                 OutputStream outputStream = writeMap.get(randomKey);
 
-
                 if (outputStream != null) {
                     try (InputStream inputStream = file.getInputStream(); outputStream) {
                         inputStream.transferTo(outputStream);
@@ -80,13 +77,10 @@ public class FileInboundConnector implements ComponentRuntime {
                             .withName(file.getOriginalFilename())
                             .build();
 
-                    if (outputKey != null) {
-                        context.set(outputKey, storageReference);
-                    }
-//                    fileInboundConnectorService.removeListener(key); // Cleanup
+                    context.set(outputKey, storageReference);
                     emitter.success(context);
                 } else {
-                     emitter.failure(new IllegalStateException("Failed to obtain output stream for key: " + randomKey));
+                    emitter.failure(new IllegalStateException("Failed to obtain output stream for key: " + randomKey));
                 }
 
             } catch (Exception e) {

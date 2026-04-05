@@ -1,0 +1,20 @@
+spring:
+  devtools:
+    restart:
+      poll-interval: 2s
+      quiet-period: 1s
+  security:
+    oauth2:
+      client:
+        provider:
+          fusionize:
+            token-uri: http://fusionize-keycloak:8080/realms/fuz/protocol/openid-connect/token
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://fusionize-keycloak:8080/realms/fuz/protocol/openid-connect/certs
+
+fusionize:
+  worker:
+    orchestrator-url: http://fusionize-app:8081
+    orchestrator-mongo: mongodb://fusionize:fusionize@fusionize-mongo:27017/fuzdb?authSource=admin
+    orchestrator-amqp: amqp://fusionize:fusionize@fusionize-rabbitmq:5672
